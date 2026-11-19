@@ -187,16 +187,17 @@ lab01/
   <p>从此 <code>git status</code> 永远干净:改了哪个 .v、动了哪行 tcl,一眼见底。以后每个 Lab 的 README 里都有一行"资源账本"(见下),配合这份干净,任何一台新机器 <code>git clone</code> + <code>make build</code> 就能完整复现你的工程——这才是工程师的仓库。</p>
 
   <h3>8 · 资源账本:看着你的电路长大</h3>
-  <p>从 Lab01 起,每课跑完 build,顺手把利用率报告里的两个数记进 README——这不是仪式感,是你对"电路尺寸"的手感积累(将来别人说"这设计大概两千 LUT",你要有数感)。全班账本(★=以你机器跑出的报告为准;后几行是预估,跑完填实):</p>
+  <p>从 Lab01 起,每课跑完 build,顺手把利用率报告里的两个数记进 README——这不是仪式感,是你对"电路尺寸"的手感积累(将来别人说"这设计大概两千 LUT",你要有数感)。全班账本(除 lab03 增量外均为 2026.1 实测;★=以你机器跑出的报告为准复核):</p>
   <table>
     <tr><th>Lab</th><th>电路</th><th>LUT</th><th>FF</th><th>占 7z020(53,200 LUT / 106,400 FF)</th></tr>
-    <tr><td>lab01</td><td>24 位计数器闪烁</td><td>≈24 ★</td><td>24 ★</td><td>0.05% / 0.02%</td></tr>
-    <tr><td>lab02</td><td>消抖器(阈值计数+边沿检测)</td><td>≈35 ★</td><td>≈45 ★</td><td>约 0.07% / 0.04%</td></tr>
+    <tr><td>lab01</td><td>24 位计数器闪烁</td><td>2 ★</td><td>24 ★</td><td>0.004% / 0.02%</td></tr>
+    <tr><td>lab02</td><td>消抖器(阈值计数+边沿检测)</td><td>9 ★</td><td>23 ★</td><td>0.02% / 0.02%</td></tr>
     <tr><td>lab03 v2</td><td>+ 两级同步器</td><td>+1 ★</td><td>+2 ★</td><td>保险费,几乎免费</td></tr>
-    <tr><td>lab05</td><td>PWM 呼吸灯(tick+相位+亮度)</td><td>≈55 ★</td><td>≈40 ★</td><td>约 0.1%</td></tr>
-    <tr><td>ch06</td><td>UART 发送器</td><td>≈150(预估)</td><td>≈120(预估)</td><td>约 0.3%</td></tr>
-    <tr><td>ch08</td><td>AXI-Lite 从机</td><td>≈200(预估)</td><td>≈250(预估)</td><td>约 0.4%</td></tr>
-    <tr><td>—</td><td>7z020 全片</td><td>53,200</td><td>106,400</td><td>100%(你目前住了千分之一)</td></tr>
+    <tr><td>lab05</td><td>PWM 呼吸灯(tick+相位+亮度)</td><td>29 ★</td><td>37 ★</td><td>0.05% / 0.03%</td></tr>
+    <tr><td>ch06(eye)</td><td>UART 发送器(肉眼版顶层)</td><td>25 ★</td><td>63 ★</td><td>0.05% / 0.06%</td></tr>
+    <tr><td>ch08</td><td>AXI-Lite 从机</td><td>8 ★</td><td>100 ★</td><td>0.02% / 0.09%</td></tr>
+    <tr><td>lab09</td><td>会师顶层(PS7+AXI 从机+呼吸灯)</td><td>61 ★</td><td>166 ★</td><td>0.11% / 0.16%(WNS +15.690ns)</td></tr>
+    <tr><td>—</td><td>7z020 全片</td><td>53,200</td><td>106,400</td><td>100%(最大的 lab09 也只住千分之一)</td></tr>
   </table>
 
   <h3>9 · 常见坑</h3>

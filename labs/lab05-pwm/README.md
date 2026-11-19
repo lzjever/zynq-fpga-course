@@ -46,10 +46,10 @@ vivado -mode batch -source program.tcl
 
 | Lab | LUT | FF |
 |---|---|---|
-| lab05 | ____(抄 lab05_utilization.rpt) | ____ |
+| lab05 | 29 | 37 |
 
-预估 ≈55 LUT / ≈40 FF(tick 分频 19 FF + phase 8 + duty 8 + 比较逻辑),
-以你的报告为准。
+2026.1 实测 29 LUT / 37 FF(tick 分频 19 FF + phase 8 + duty 8 + 比较逻辑;
+引脚侧取反综合进了既有 LUT,不另占资源),以你的报告为准复核。
 
 ## 选做(不增加主线负担)
 

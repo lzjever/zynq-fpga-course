@@ -71,6 +71,7 @@ details[open]{border-color:var(--step)}
   <table>
     <tr><th style="width:110px">项目</th><th>要求</th></tr>
     <tr><td>模块名/端口</td><td><code>uart_rx</code>:<code>clk, rst_n, rx</code> 入;<code>rx_data[7:0], rx_done</code> 出;参数 <code>BAUD_DIV</code>(与 TX 同义)</td></tr>
+    <tr><td>端口补充</td><td>另需输出 <code>frame_err</code> 与观察窗 <code>bit_cnt[3:0]</code>(0=验起始位,1..8=数据位)、<code>state[1:0]</code>——这三个端口<strong>仅声明即可</strong>(供顶层与测试台按名接线,不要求驱动逻辑;<code>frame_err</code> 的驱动属功能 3 的加分项)。测试台按名连接它们,<strong>少声明任何一个,仿真一开跑就 elaboration 报错</strong>——别把 45 分钟浪费在找端口上</td></tr>
     <tr><td>功能 1</td><td>检测 rx 的<strong>下降沿</strong>(= 对方开口),从它开始按 8N1 帧格式接收</td></tr>
     <tr><td>功能 2</td><td>8 个数据位在<strong>每位正中</strong>采样,LSB 先行拼装;停止位验到 1 才算数</td></tr>
     <tr><td>功能 3</td><td><code>rx_done</code> 单周期脉冲 + <code>rx_data</code> 更新;<strong>加分项</strong>:假起始位(半位处验线已回高 → 丢弃)与帧错误(<code>frame_err</code>)检测</td></tr>

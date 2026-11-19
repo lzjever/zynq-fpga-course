@@ -81,12 +81,12 @@
     <tr><td>主机</td><td><code>xsim sim -R</code></td><td>运行:<code>-R</code> 跑到 <code>$finish</code>,自检打印 PASS/FAIL;参数细节见各课 sim.tcl</td></tr>
   </table>
 
-  <h3>C.4 Linux 侧:ssh / 串口 / FPGA Manager / devmem(学在 <a href="ch09-merge.html">ch09</a>)</h3>
+  <h3>C.4 Linux 侧:ssh / 串口 / FPGA Manager / devmem(学在 <a href="ch09-merge.html">ch09</a>;uart.py 属于姊妹手册工具链)</h3>
   <table>
     <tr><th>在哪</th><th>命令</th><th>用途</th></tr>
-    <tr><td>主机</td><td><code>python3 uart.py listen 120</code></td><td>串口监听 120 秒(抓启动日志;上电前先开,工具支持自动重连)</td></tr>
-    <tr><td>主机</td><td><code>python3 uart.py probe</code></td><td>发个回车,探板子当前停在哪个界面</td></tr>
-    <tr><td>主机</td><td><code>python3 uart.py send "文字"</code></td><td>发一行看回显(登录名、命令都靠它)</td></tr>
+    <tr><td>主机</td><td><code>python3 uart.py listen 120</code></td><td>串口监听 120 秒(抓启动日志;上电前先开,工具支持自动重连)。<strong>属于姊妹手册工具链</strong>:uart.py 在 <a href="https://github.com/lzjever/zynq-z7nano-mainline-linux">姊妹手册仓库</a>(主线 Linux 手册)的 <code>tools/</code> 目录,不在本课程仓库</td></tr>
+    <tr><td>主机</td><td><code>python3 uart.py probe</code></td><td>发个回车,探板子当前停在哪个界面(工具同上:姊妹手册 <code>tools/</code> 的 uart.py)</td></tr>
+    <tr><td>主机</td><td><code>python3 uart.py send "文字"</code></td><td>发一行看回显(登录名、命令都靠它;工具同上)</td></tr>
     <tr><td>主机</td><td><code>ssh root@192.168.1.10</code></td><td>上板(密码 root);比串口快,日常操作走这条</td></tr>
     <tr><td>主机</td><td><code>python3 bit2bin.py lab01.bit</code></td><td>.bit → .bin:剥头 + 每 32 位字节序交换(FPGA Manager 的要求;脚本在 labs/)</td></tr>
     <tr><td>主机</td><td><code>scp lab01.bin root@192.168.1.10:/lib/firmware/</code></td><td>把 bin 送进板上固件目录</td></tr>

@@ -16,12 +16,13 @@ module lab06_ila_top #(
 )(
     input  wire clk,      // N18,50MHz —— 也是 ILA 的采样时钟
     input  wire key,      // P14
-    output wire led       // R14(还是接 tx,按一次"看不到什么"是正常的,看 ILA 去)
+    output wire led       // R14(接取反后的 tx;按一次"看不到什么"是正常的,看 ILA 去)
 );
     wire tick;
     wire busy;
     wire [3:0] bit_cnt;
     wire [1:0] state;
+    wire tx_w;    // tx 串口线(协议电平:空闲 1)—— 探针探它,LED 接它的取反
 
     key_pulse u_key (
         .clk   (clk),
@@ -35,16 +36,19 @@ module lab06_ila_top #(
         .rst_n  (1'b1),
         .start  (tick),
         .data   (CHAR),
-        .tx     (led),
+        .tx     (tx_w),      // tx 串口线(协议电平:空闲 1),与 lab06_top 同款接法
         .busy   (busy),
         .bit_cnt(bit_cnt),   // 观察窗接出,喂给探针
         .state  (state)
     );
 
+    // R14 低电平点亮:引脚侧单点取反(与 lab06_top 一致)—— 线路 0(起始位/数据 0)→ LED 亮
+    assign led = ~tx_w;
+
     // ILA 核:ila_uart(build.tcl 里 create_ip 生成,探针宽度必须和 IP 配置一致)
     ila_uart u_ila (
         .clk    (clk),        // 采样时钟 = 系统时钟:50MHz 采样,每拍记 5 个信号的值
-        .probe0 (led),        // tx
+        .probe0 (tx_w),       // tx(协议电平,空闲 1;触发 tx==0 = 起始位)
         .probe1 (busy),
         .probe2 (tick),
         .probe3 (bit_cnt),

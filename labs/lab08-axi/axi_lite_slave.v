@@ -9,7 +9,8 @@
 //
 // 本课纯仿真:TB 假扮 ARM 来敲门(ch09 才接真 ARM)。
 // 端口名沿用 Xilinx 惯例 S_AXI_*(S = Slave,AXI 侧),
-// ch09 里它们会原封不动地连到 PS7 的 M_AXI_GP0(M = Master)上。
+// ch09 里它们会原封不动地连到 PS7 的 MAXIGP0*(M = Master;原语实名不带下划线,
+// IP 封装名才写作 M_AXI_GP0_*)上。
 module axi_lite_slave #(
     parameter ADDR_W = 4            // 地址位宽:4 位足够覆盖 16 字节 = 4 个 32 位寄存器的空间
 )(

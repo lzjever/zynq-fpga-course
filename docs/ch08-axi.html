@@ -171,7 +171,7 @@
     <span class="c">// ……W / B / AR / R 四个通道同理,完整版见 lab 文件</span>
     <span class="k">output</span> wire [<span class="s">31</span>:<span class="s">0</span>]       knob       <span class="c">// ★ 寄存器的影子:旋钮手柄,给外电路抓</span>
 );</code></pre>
-  <p>没有函数、没有调用——从机的"API"就是这一排端口。命名 <code>S_AXI_*</code> 是 Xilinx 惯例(S = Slave 侧),ch09 它们会原封不动连到 PS7 的 <code>M_AXI_GP0_*</code>(M = Master 侧)。</p>
+  <p>没有函数、没有调用——从机的"API"就是这一排端口。命名 <code>S_AXI_*</code> 是 Xilinx 惯例(S = Slave 侧),ch09 它们会原封不动连到 PS7 的 <code>MAXIGP0*</code>(M = Master 侧;IP 封装名带下划线写作 M_AXI_GP0_*,PS7 原语实名不带)。</p>
   <h4>写路径:两个通道各自记账,到齐才落寄存器</h4>
   <pre><code><span class="k">reg</span>        aw_seen, w_seen;          <span class="c">// 地址到了吗 / 数据到了吗(各自成交拍置位)</span>
 <span class="k">reg</span> [<span class="s">31</span>:<span class="s">0</span>] wbuf;                   <span class="c">// W 成交拍锁存的数据(必须锁!见下方坑 3)</span>

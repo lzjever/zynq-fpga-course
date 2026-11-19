@@ -7,3 +7,19 @@ xvlog.*
 *.pb
 *.bit
 !.gitignore
+
+# ===== 各 lab 的 Vivado 工程产物(同款规则,模板见 labs/lab01-blink/.gitignore)=====
+# 工程目录:build.tcl 的 create_project 落盘(labNN/),GUI 建的 labNN_gui/ 同样命中
+labs/*/lab*/
+# 工程内部目录(GUI 工程库若把 .runs 等落在源码旁,兜底命中)
+labs/*/*.runs/
+labs/*/*.cache/
+labs/*/*.hw/
+labs/*/*.ip_user_files/
+labs/*/*.sim/
+labs/*/*.gen/
+# build.tcl 收尾生成的资源报告
+labs/*/util_*.rpt
+labs/*/*_utilization.rpt
+# 仿真波形转储
+*.vcd

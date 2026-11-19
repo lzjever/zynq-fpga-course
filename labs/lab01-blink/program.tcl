@@ -9,10 +9,11 @@ connect_hw_server              ;# 启动/连接本机 hw_server(默认 localhost
 open_hw_target                 ;# 打开板上的 JTAG 链
 
 set dev [lindex [get_hw_devices xc7z020*] 0]     ;# 链上的 7z020
-set_property PROGRAM.FILE [glob ./lab01.runs/impl_1/*.bit] $dev
+set_property PROGRAM.FILE [glob ./lab01/*.runs/impl_1/*.bit] $dev
 program_hw_devices $dev        ;# 烧!
 
 puts "=============================="
 puts " 烧写完成:PL 已按 lab01 工程的比特流配置"
 puts " 断电或按 RST 会清掉配置(比特流不驻留 Flash)"
 puts "=============================="
+close_hw_manager

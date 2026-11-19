@@ -50,12 +50,14 @@
 
 # ① FCLK0 现状:先读后写(工程师的礼貌)
 devmem 0xF8000170
-# 若 bit24 已是 1(时钟已活)→ 跳过 ②
+# 若 bit0 已是 1(时钟已活)→ 跳过 ②
 
-# ② 使能 FCLK0 = 50MHz —— "给电路接电源"的仪式
-#    组装:bit24=1(使能) | DIV1=1<<16 | DIV0=20<<8 | 源=IOPLL(00<<4)
-#    IO PLL 1000MHz ÷ DIV0(20) ÷ DIV1(1) = 50MHz
-devmem 0xF8000170 32 0x01011400
+# ② 使能 FCLK0 = 50MHz —— "给电路接电源"的仪式(两拍:先解锁 SLCR,再写值)
+devmem 0xF8000008 32 0xDF0D          # 解锁 SLCR(SLCR 写操作前必须;待上板验证)
+#    魔数账:0x00101401 = bit0(时钟使能 CLKENABLE)| [13:8]=0x14(DIV0=20)
+#            | [25:20]=0x1(DIV1=1)| [17:16]=00(源选 IO PLL)
+#    位域对照 Zynq TRM 的 FPGA0_CLK_CTRL,别背,会查
+devmem 0xF8000170 32 0x00101401      # 使能,IO PLL 1000MHz ÷20 ÷1 = 50MHz
 # (除数以板上 IO PLL 实际值为准;先读回旧值换算,别盲写)
 
 # ③ L0 点灯:CTRL 的 bit0 写 1 / 写 0
@@ -87,7 +89,7 @@ devmem 0x40000004
 |---|---|---|
 | 谁装载 | Debian(`load_fpga.sh`:bit2bin → scp → echo 固件名) | PC(`program.tcl`,先 `pkill -x openocd`) |
 | 前置 | 三绿验收门已过 | 无(FIQ 修复不依赖) |
-| 装载后 | 已是运行态,直接跑命令卡 ③ | 先跑命令卡 ①②(FCLK0 使能 = 接电源仪式) |
+| 装载后 | 已是运行态,直接跑命令卡 ③ | 先跑命令卡 ①②(FCLK0 解锁+使能 = 接电源仪式) |
 | 注意 | .bit 必须先过 bit2bin.py | JTAG 装的流会顶掉 Manager 装的流,反之亦然 |
 
 ## 步骤
@@ -108,7 +110,7 @@ devmem 0x40000004
 
 本 lab 是"待实测"三件套的实地考场(板子恢复后首日补测):
 
-1. **PS7 原语端口名**:若综合报未定义端口(FCLKCLK0 / M_AXI_GP0_*),查 2026.1 原语库的实际拼写,改 top 即可
+1. **PS7 原语端口名** —— 已按 2026.1 PS7.v 实名修复(2026-11-20,无需再排查):FCLKCLK 为 4 位总线、取 [0] 当 FCLK0;GP0 端口实名 MAXIGP0*(无下划线,IP 封装名才写作 M_AXI_GP0_*)
 2. **AXI3 直挂**(方案甲):若 devmem ③ 写了 LED 没反应/读回 0xDEAD 之类的脏值 → 切 build.tcl 里的预案乙垫桥
 3. **FCLK0 除数**:0xF8000170 读回值先手算一遍再写;若内核 clk 框架已把 FCLK0 挂走,`cat /sys/kernel/debug/clk/clk_summary | grep -i fclk` 看状态
 4. **频率一致性**:SLCR 里配了非 50MHz → lab09.xdc 的 create_clock 周期要同步改,否则 WNS 是错的

@@ -1,7 +1,7 @@
 # Lab 01 · LED 闪烁 — 上手教程与实验报告
 
 > 章节:docs/ch00-verilog101.html(预备篇:读懂 led_blink.v)· docs/ch01-sim.html(仿真课)
-> 硬件:Z7-Nano R20 · 50MHz=N18 · PL_KEY=P14(按下=0)· LED=R14(高=亮)
+> 硬件:Z7-Nano R20 · 50MHz=N18 · PL_KEY=P14(按下=0)· LED=R14(低电平点亮,0=亮;本电路是方波闪烁,极性无感)
 > **警示:丝印 RST 的按键 = 整芯片硬复位(清 PL + 重启 Debian)。本课程用的按键是丝印 PL_KEY 的那颗。**
 
 ## 0 · 文件清单
@@ -20,7 +20,7 @@
 2. **加源**:Add Sources → Add or Create Design Sources → Add File → `led_blink.v`(顶层自动识别为 `led_blink`);回到 Add Sources → Add or Create Constraints → `lab01.xdc`。
 3. **Generate Bitstream → 烧写**:Flow Navigator 点 **Generate Bitstream**(它自动先跑综合和实现,一键到底)→ 完成后 Open Hardware Manager → Open Target(板子上电、JTAG 线插好)→ **Program Device**,选 `lab01_gui.runs/impl_1/*.bit` → 烧。
 
-**验收现象**:LED 以约 3Hz 心跳闪烁;按住 PL_KEY 灯灭松开恢复(按键清零计数器,`cnt=0 → led=0`)。
+**验收现象**:LED 以约 3Hz 心跳闪烁;按住 PL_KEY 灯亮、松开恢复闪烁(按键清零计数器,`cnt=0 → led=0`,R14 低电平点亮 → 0 恰好是亮)。
 断电或按 RST 配置即失——比特流不驻留 Flash,这正是 ch04/program.tcl 要讲的事。
 GUI 这三步背后就是 build.tcl 的五步舞(ch04 会拆开看每一幕)。
 
@@ -56,7 +56,7 @@ vivado -mode batch -source sim.tcl
 
 ## 4 · 交作业清单
 
-- [ ] 板上验收:约 3Hz 心跳 + 按住 PL_KEY 灯灭(两个现象都拍到/记下)
+- [ ] 板上验收:约 3Hz 心跳 + 按住 PL_KEY 灯亮(两个现象都拍到/记下)
 - [ ] ch00 的三个改数实验(cnt[22] / cnt[0] / 4 位计数器):每个先写预测,再烧板验证
 - [ ] (ch01 后)sim.tcl 跑通,终端出现测试台的 PASS 判词
 - [ ] 资源账本 lab01 行与你自己 build 打印的 WNS/LUT/FF 对得上

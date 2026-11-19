@@ -145,7 +145,7 @@
   <p>① <strong>存在方式</strong>:函数调用是"用完即走";例化出的子电路<strong>永久存在、永远上电</strong>——例化两次就是两块真实电路并行工作,不是"调用了两遍";② <strong>传值方式</strong>:函数靠参数表传值;模块靠<strong>导线</strong>连端口——例化处的括号就是在"接线";③ <strong>层级</strong>:顶层模块(Top-level Module)是直接接引脚的那层(我们的 pwm_breathe),它可以例化子模块,子模块再例化子模块——Vivado 左侧的 Hierarchy 面板就是这棵树。软件是调用栈,电路是积木。</p></div>
 
   <h4>parameter:每个实例一份自己的常数</h4>
-  <p>ch01 你用过 parameter 缩小仿真规模,今天它当主角:<code>#(.DIV(...))</code> 在例化的那一刻把常数"灌进"这一颗零件。<code>2**23</code> 是 lab01 的节奏,<code>390_625</code> 是下面的呼吸步进,<code>434</code> 是 ch06 的 UART 位节拍——<strong>同一份 tick_gen.v,三种性格</strong>。两个细节:</p>
+  <p>parameter 不是新面孔——ch02 的消抖阈值 <code>STABLE_CYCLES</code> 你已经在关 3 里拧过 50/200/400 三档,当时说好"第 5 章正式开讲",现在兑现:<code>#(.DIV(...))</code> 在例化的那一刻把常数"灌进"这一颗零件。<code>2**23</code> 是 lab01 的节奏,<code>390_625</code> 是下面的呼吸步进;ch06 的波特率节拍(数满 434 个时钟 = 一位)是同一手法的第三次出场——不过它长在状态机肚子里、要跟着状态走停,所以不单独例化,到时候你会看清这点差别。<strong>同一个旋钮思想,处处可拧。</strong>两个细节:</p>
   <ul>
     <li><code>localparam</code> 是"内部常数"($clog2 算出的位宽 W),外部改不了;parameter 才对外开放。该开的开,该关的关;</li>
     <li><code>$clog2(DIV)</code> 编译期自动算位宽,以后改 DIV 不用跟着改线宽——手写位宽迟早忘。</li>
@@ -214,7 +214,7 @@
   </table>
 
   <h3>8 · 小结与自测</h3>
-  <p>一条线:DRY 烦躁 → 抽出 tick_gen(parameter 化的零件)→ 例化进 led_blink2(和 cnt[23] 殊途同归)→ 例化进 pwm_breathe,三角波亮度喂给 PWM 比较器 → 呼吸灯。你第一次拥有了<strong>多模块工程</strong>:Vivado 左侧 Hierarchy 面板里那棵树,就是你的积木结构。tick_gen 请收好——ch06 它要换上 DIV=434 再出场。</p>
+  <p>一条线:DRY 烦躁 → 抽出 tick_gen(parameter 化的零件)→ 例化进 led_blink2(和 cnt[23] 殊途同归)→ 例化进 pwm_breathe,三角波亮度喂给 PWM 比较器 → 呼吸灯。你第一次拥有了<strong>多模块工程</strong>:Vivado 左侧 Hierarchy 面板里那棵树,就是你的积木结构。"数满 N 产一拍"这个手法请收好——ch06 的波特率、ch09 的换主频,都是它的亲戚。</p>
   <div class="box box-know"><div class="box-title">本章新词卡(附录 B 汇总)</div>
   <p>脉冲宽度调制(Pulse Width Modulation, PWM)· 占空比(Duty Cycle)· 载波频率(Carrier Frequency)· 分辨率(Resolution)· 模块例化(Module Instantiation)· 顶层模块(Top-level Module)·(选做)只读存储器(Read-Only Memory, ROM)</p></div>
 
@@ -230,7 +230,7 @@
   </details></div>
 
   <h3>9 · 下一课预告:板子该开口说话了</h3>
-  <p>呼吸很美,但到现在为止,你的 PL 一直在自说自话:呼吸自己呼吸,闪自己闪——它还没对<em>你</em>说过一个字。而你跟这块板最熟的通道,恰恰是串口:调 Debian 全靠那个 115200。下一课,亲手造一个 UART 发送器:把 'H' 这个字符拆成 10 个时间片,一位一位拍上线——你会发现"波特率"不过是又一个 tick 而已(<code>DIV=434</code>,零件已就位)。还有个关于 CH340 的坏消息,到时候先摊牌。</p>
+  <p>呼吸很美,但到现在为止,你的 PL 一直在自说自话:呼吸自己呼吸,闪自己闪——它还没对<em>你</em>说过一个字。而你跟这块板最熟的通道,恰恰是串口:调 Debian 全靠那个 115200。下一课,亲手造一个 UART 发送器:把 'H' 这个字符拆成 10 个时间片,一位一位拍上线——你会发现"波特率"不过是又一次数满 N 的算术(<code>434</code> 个时钟一位)。还有个关于 CH340 的坏消息,到时候先摊牌。</p>
 
   <div class="pager">
     <a href="ch04-vivado.html">← 上一章:Vivado 幕后与一键化</a>

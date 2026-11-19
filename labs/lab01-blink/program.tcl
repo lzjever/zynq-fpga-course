@@ -13,6 +13,6 @@ set_property PROGRAM.FILE [glob ./lab01.runs/impl_1/*.bit] $dev
 program_hw_devices $dev        ;# 烧!
 
 puts "=============================="
-puts " 烧写完成:PL 已按 lab01.bit 配置"
+puts " 烧写完成:PL 已按 lab01 工程的比特流配置"
 puts " 断电或按 RST 会清掉配置(比特流不驻留 Flash)"
 puts "=============================="

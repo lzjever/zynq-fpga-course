@@ -149,8 +149,9 @@ clean:
   </table>
   <p>那 <code>labs/lab01-blink/lab01.bin</code> 和 .bit 什么关系?——它是给 ch09 的:你移植的 Debian 里,<strong>FPGA Manager</strong> 从 Linux 侧装载 FPGA,走的是 <strong>处理器配置访问端口(Processor Configuration Access Port, PCAP)</strong>,而不是 JTAG;内核的 zynq-fpga 驱动要求喂给它"从同步字开始、每个 32 位字做了字节序交换"的裸数据——也就是 .bin。转换脚本早就写好了(<code>labs/bit2bin.py</code>,20 行,注释里链着内核驱动源码):</p>
   <pre><code>cd labs/lab01-blink
-python3 ../bit2bin.py lab01.runs/impl_1/lab01.bit lab01.bin
-# 输出: OK: lab01.bin (4045520 字节, 同步字 @文件偏移 0x??)</code></pre>
+python3 ../bit2bin.py lab01.runs/impl_1/led_blink.bit lab01.bin
+# 输出示意(字节数以你这次构建的 .bit 为准):
+# OK: lab01.bin (4045520 字节, 同步字 @文件偏移 0x??)</code></pre>
   <p>用 xxd 验一眼字节序交换(这是本仓库里 lab01.bin 的真实前 16 字节):</p>
   <pre><code>$ xxd lab01.bin | head -1
 00000000: ffff ffff 6655 99aa 0000 0020 0120 0230</code></pre>

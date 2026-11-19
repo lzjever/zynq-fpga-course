@@ -233,12 +233,14 @@ vivado -mode batch -source program.tcl   <span class="c"># 烧写前先 pkill -f
     <tr><td>LED</td><td>灭</td><td>亮</td><td>灭</td><td>亮</td><td>灭</td><td>亮起后常亮</td></tr>
     <tr><td>位值</td><td>0 0 0 0</td><td>1</td><td>0 0</td><td>1</td><td>0</td><td>1</td></tr>
   </table>
-  <p>读出来的数据位序列(LSB 起):0001 0010 → 倒着拼 = <strong>0100 1000 = 0x48 = 'H'</strong>。你的视网膜刚刚扮演了一台 2 波特的串口终端。<strong>同一个人眼,同一个代码,现在换合同</strong>:</p>
+  <p>读出来的数据位序列(LSB 起):0001 0010 → 倒着拼 = <strong>0100 1000 = 0x48 = 'H'</strong>。你的视网膜刚刚扮演了一台 2 波特的串口终端。<strong>同一个人眼,同一份代码,现在逐级换合同</strong>(build.tcl 的 <code>-tclargs</code> 换一个词,源码零改动):</p>
   <table>
-    <tr><th>模式</th><th>BAUD_DIV</th><th>一个位</th><th>一帧</th><th>按一次键,LED?</th><th>谁在当接收器</th></tr>
-    <tr><td>eye</td><td>25_000_000</td><td>0.5 s</td><td>5 s</td><td>上表的 5 秒演出</td><td>你的眼睛(2 波特终端)</td></tr>
-    <tr><td>real</td><td>434</td><td>8.68 µs</td><td>86.8 µs</td><td>几乎无感——事件太快,肉眼带宽只有几十赫兹</td><td>肉眼失效 → 需要下一节</td></tr>
+    <tr><th>模式</th><th>BAUD_DIV</th><th>波特</th><th>一个位</th><th>一帧</th><th>按一次键,LED?</th><th>谁在当接收器</th></tr>
+    <tr><td>eye</td><td>25_000_000</td><td>2</td><td>0.5 s</td><td>5 s</td><td>上表的 5 秒演出,逐位可读</td><td>你的眼睛(2 波特终端)</td></tr>
+    <tr><td>slow</td><td>5_208</td><td>9600</td><td>104 µs</td><td>1.04 ms</td><td>短促一闪——能看到"有事发生",读不出任何一位</td><td>眼睛勉强够到边</td></tr>
+    <tr><td>real</td><td>434</td><td>115200</td><td>8.68 µs</td><td>86.8 µs</td><td>几乎无感——肉眼带宽只有几十赫兹,彻底缴械</td><td>肉眼失效 → 需要下一节</td></tr>
   </table>
+  <p>2 波特可读、9600 可见、115200 不可见——<strong>三级跳跳的是同一个参数,变的是你的眼睛还剩多少话语权</strong>。最后一级交给仪器。</p>
   <div class="box box-win"><div class="box-title">成果 · parameter 的三级跳(全书主题第 2 跳)</div>
   <p>第 1 跳在 ch01:仿真跑不动 1600 万周期,把计数器参数改小,<strong>压缩时间</strong>;第 2 跳是今天:把波特率参数改大,<strong>放大时间</strong>到肉眼可读;第 3 跳在 ch09:换主频参数,电路从 N18 时钟搬到 ARM 送来的 FCLK——<strong>同一份代码,时间尺度随意伸缩</strong>。parameter 不是语法糖,是你对"时间"的定价权。</p></div>
 

@@ -30,7 +30,7 @@ xsim tear_tb_sim -tclbatch sim.tcl      # 批处理出报表
 iverilog -g2005 -o tear_sim tear_demo.v tear_tb.v && ./tear_sim
 ```
 
-## 预期输出(实测,2026-11,iverilog 12 / XSIM 2026.1)
+## 预期输出(iverilog 12 实测;XSIM 跑同样判据,数字可能有 ±几处出入,结构应一致)
 
 ```
 [1133 ns] 撕裂! 上一拍 11 → 本拍 13   (合法值只有 11 或 12)

@@ -6,6 +6,6 @@
 #   xsim tb_sim -R
 # -R = 跑完自动退出;-debug typical 让波形数据库可看(想开 GUI 就去掉 -R)
 
-exec xvlog axi_lite_slave.v tb_axi_slave.v
-exec xelab -debug typical tb_axi_slave -s tb_sim
-exec xsim tb_sim -R
+puts [exec xvlog axi_lite_slave.v tb_axi_slave.v 2>@1]
+puts [exec xelab -debug typical tb_axi_slave -s tb_sim 2>@1]
+puts [exec xsim tb_sim -R 2>@1]

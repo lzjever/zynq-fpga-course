@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="附录 B 术语表:全书每个缩写与术语的中文全称、英文全称、人话解释、首现章节——忘了就回来查,首现链接带你回到当初的语境。">
+<title>附录 B · 术语表 — Zynq FPGA 从零到实战</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <span class="chip">ZYNQ · FPGA</span>
+    <h1>从零到实战</h1>
+    <p>Verilog · Vivado · Z7-Nano</p>
+  </div>
+  <nav>
+    <a href="index.html"><span class="num">00</span>封面 · 课程地图</a>
+    <a href="ch00-verilog101.html"><span class="num">01</span>Verilog 101</a>
+    <a href="ch01-sim.html"><span class="num">02</span>仿真入门</a>
+    <a href="ch02-debounce.html"><span class="num">03</span>Lab02 按键消抖</a>
+    <a href="ch03-cdc.html"><span class="num">04</span>亚稳态与 CDC</a>
+    <a href="ch04-vivado.html"><span class="num">05</span>Vivado 幕后</a>
+    <a href="ch05-pwm.html"><span class="num">06</span>PWM 呼吸灯</a>
+    <a href="ch06-uart-tx.html"><span class="num">07</span>UART 发送器</a>
+    <a href="ch07-uart-rx.html"><span class="num">08</span>UART 自环回</a>
+    <a href="ch08-axi.html"><span class="num">09</span>AXI 总线</a>
+    <a href="ch09-merge.html"><span class="num">10</span>PS-PL 会师</a>
+    <a href="ch10-capstone.html"><span class="num">11</span>毕业设计</a>
+    <a href="appendix-board.html"><span class="num">附A</span>板卡手册</a>
+    <a href="appendix-glossary.html" class="active"><span class="num">附B</span>术语表</a>
+    <a href="appendix-cheatsheet.html"><span class="num">附C</span>命令速查</a>
+  </nav>
+  <footer>硬件:Z7-Nano R20 · XC7Z020<br>软件:Vivado 2026.1 免费档<br>姊妹篇:主线 Linux 手册</footer>
+</aside>
+<main class="main">
+  <div class="chapter-tag">APPENDIX B</div>
+  <h2 class="title">术语表</h2>
+  <p class="subtitle">全书每一个缩写与黑话的户口本:全称、人话解释、首现章节——第一次遇到生词来这里查。</p>
+
+  <div class="box box-know">
+    <div class="box-title">怎么用本表</div>
+    <p><strong>第一次遇到生词来这里查;「首现」链接带你回到当初的语境。</strong>三张表按你手里拿到的词分流:</p>
+    <ul>
+      <li><strong>B-1 按字母序</strong>:词形是缩写或英文(AXI、WNS、tick、bank)→ 查这里;</li>
+      <li><strong>B-2 按拼音序</strong>:词形是中文(亚稳态、消抖、打两拍)→ 查这里;</li>
+      <li><strong>B-3 专名</strong>:工具、芯片、板卡、系统、文档的名字(Vivado、CH340、UG585)→ 查这里。</li>
+    </ul>
+    <p>两条口径:命令行命令不收词(集中在<a href="appendix-cheatsheet.html">附C 命令速查卡</a>);Verilog 基础关键字(assign / always / posedge 一类)在 <a href="ch00-verilog101.html">ch00</a> 有专节讲解,不重复收。解释一律与首现章节的口径一致;各章小结的「本章新词卡」就是本表的登记来源,新词卡里的每一条都能在这里查到。标 <strong>*</strong> 的条目:全书未给出英文全称或未展开,解释取自上下文,待各章补全后回填。</p>
+  </div>
+
+  <h3>B-1 缩写与英文名(按字母序)</h3>
+  <table>
+    <tr><th>缩写 / 常用名</th><th>中文全称(English Full Name)</th><th>一句话解释</th><th>首现</th></tr>
+    <tr><td><code>/dev/mem</code></td><td>—(内核接口)</td><td>内核开的物理内存窗口,devmem 借它读写物理地址</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
+    <tr><td><code>$clog2</code></td><td>—(Verilog 系统函数)</td><td>编译期自动算"装下 N 要几位";参数一改,位宽自己长</td><td><a href="ch05-pwm.html">ch05 · PWM 呼吸灯</a></td></tr>
+    <tr><td>8N1</td><td>8 数据位、无校验(No parity)、1 停止位</td><td>串口一帧格式的黑话;加上波特率(如 115200-8N1)即完整通信合同</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
+    <tr><td>AMBA</td><td>高级微控制器总线架构(Advanced Microcontroller Bus Architecture)</td><td>ARM 的总线规范家族,AXI 是其第三代成员</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>AXI</td><td>高级可扩展接口(Advanced eXtensible Interface)</td><td>FPGA 界事实上的普通话总线;"FPGA 界的 HTTP",谁都听得懂</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>AXI3</td><td>AXI 第三版规范</td><td>Zynq GP 口说的"方言";单拍传输行为与 AXI4-Lite 高度重合</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>AXI4</td><td>AXI 完整版</td><td>带突发的全功能读写,高性能数据搬运(DDR、视频流);本课只在路线图提名字</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>AXI4-Lite</td><td>AXI 轻量版</td><td>无突发、一次一笔的寄存器读写——"拨旋钮"需求的精确对位,本课程主角</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>AXI4-Stream</td><td>AXI 流版</td><td>无地址的纯数据流,视频/网络包专用</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>bank</td><td>—(引脚分组)</td><td>PL 引脚按 bank 分组,同组引脚共享一个供电脚 VCCO;本板排针在 bank 34/35</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>BOOT_MODE</td><td>启动模式寄存器</td><td>挂在 SLCR 空间 0xF800025C;JTAG 读回 5 = 跳线在 SD 档</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>BootROM *</td><td>—(全书未展开)</td><td>不在 SD 档时"空等"的芯片固化启动程序,串口全静默的元凶</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>BRAM *</td><td>—(全书未给全称)</td><td>利用率报告里与 LUT / FF 并列统计的资源项(本课程只提名)</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>CDC</td><td>跨时钟域(Cross-Domain Crossing)</td><td>信号从一个时钟域进入另一个时钟域;多比特跨域会数值撕裂</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
+    <tr><td>CLB</td><td>可配置逻辑块(Configurable Logic Block)</td><td>芯片里格子状的基本单位;布局就是给零件挑塞进哪一格</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>DDR3</td><td>双倍速率三代同步内存(Double Data Rate 3)</td><td>板上 512MB,归 PS 管,跑 Debian 全靠它;PL 课程不碰</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>DMA *</td><td>—(全书未展开)</td><td>ch10 路线图提名的数据搬运概念(与 AXI4 搭配出现)</td><td><a href="ch10-capstone.html">ch10 · 毕业设计</a></td></tr>
+    <tr><td>DRC</td><td>设计规则检查(Design Rule Check)</td><td>IOSTANDARD 写错时轻则报它,重则电平不匹配</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>DUT</td><td>被测器件(Device Under Test)</td><td>被测电路的行话;仿真器能看到 DUT 内部每一根线</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+    <tr><td>eth0 / PS ETH / PL ETH</td><td>—(网络接口)</td><td>eth0 是 Debian 的网卡(PS ETH 可用);PL ETH 无驱动,插错表现为无载波(NO-CARRIER)</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>FF</td><td>触发器(Flip-Flop)</td><td>只在时钟沿"拍照"的存储零件,寄存器的物理本体;详见 B-2「触发器」</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>FIQ</td><td>快速中断请求(Fast Interrupt ReQuest)</td><td>PS 侧中断;FIQ 风暴曾把整机打穿冻死——根源在 PS,与你的 PL 电路无关</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
+    <tr><td>FCLK</td><td>结构时钟(Fabric Clock)</td><td>PS 送给 PL 的时钟(FCLK0);会师后整个设计的唯一节拍,由 SLCR 定频率</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
+    <tr><td>force / release</td><td>—(TB 专用方言)</td><td>测试台里强制改写信号的手段;写进设计代码,综合器直接报错</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
+    <tr><td>FPGA *</td><td>—(全书未给全称)</td><td>本课主角:出厂空白的可编程芯片,三种零件遍地都是,烧进比特流后"捏"成你的电路</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>FPGA Manager</td><td>FPGA 管理器</td><td>Linux 内核的 FPGA 装载框架,经 PCAP 把 .bin 灌进 PL;会师主路</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
+    <tr><td>GP0</td><td>通用端口(General Purpose Port)</td><td>ARM 侧伸进 PL 的 AXI 窗口,给你的从机划段从 0x4000_0000 开始</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>GIC *</td><td>—(全书未展开全称)</td><td>PS 侧中断分发器;其安全世界配置被锁是 FIQ 风暴的根源</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
+    <tr><td>GPIO *</td><td>—(全书未展开全称)</td><td>板边两排 40 脚通用 IO 排针的信号名(GPIO1=JP1、GPIO2=JP2,全表在附A.5)</td><td><a href="index.html">封面 · 课程地图</a></td></tr>
+    <tr><td>HDMI</td><td>高清多媒体接口(High-Definition Multimedia Interface)</td><td>毕业路线图方向之一:TMDS 串行 + 像素时钟域</td><td><a href="ch10-capstone.html">ch10 · 毕业设计</a></td></tr>
+    <tr><td>HP 口 *</td><td>—(全书未展开)</td><td>路线图:大流量数据经它进出 PS DDR(HP = 高性能端口,书内未展开)</td><td><a href="ch10-capstone.html">ch10 · 毕业设计</a></td></tr>
+    <tr><td>ILA</td><td>集成逻辑分析仪(Integrated Logic Analyzer)</td><td>住进芯片的"显微镜"IP:按系统时钟记录、循环覆盖,触发时冻结上传真波形</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
+    <tr><td>IIO</td><td>工业输入输出子系统(Industrial I/O)</td><td>Linux 里挂 XADC 的子系统,读法在 /sys/bus/iio/</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>IP 核 *</td><td>—(全书未展开全称)</td><td>Vivado 生成的现成电路单元;ILA 就是一个 IP 核</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
+    <tr><td>JTAG</td><td>联合测试工作组接口(Joint Test Action Group)</td><td>烧写 / ILA 走的调试通道;装载是易失的,断电即失;与 OpenOCD 会互杀</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>Journal(.jou)</td><td>日志回放文件(Journal)</td><td>Vivado 每个会话把执行过的 Tcl 逐条写进 .jou;翻它 = 找回"刚才那个操作叫什么"</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>localparam</td><td>—(Verilog 关键字)</td><td>模块内部常数,外部改不了($clog2 算出的位宽用它存)</td><td><a href="ch05-pwm.html">ch05 · PWM 呼吸灯</a></td></tr>
+    <tr><td>LSB First</td><td>最低有效位先行(Least Significant Bit First)</td><td>UART 数据位从 byte 第 0 位开始发;双方必须一致,反着发会解出另一个字节</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
+    <tr><td>LUT</td><td>查找表(Look-Up Table)</td><td>一张 64 格真值表的"万能可编程门";7z020 有 53,200 个</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>LVCMOS33</td><td>3.3V 低压 CMOS 电平标准(Low-Voltage CMOS 33)</td><td>本板 bank 34/35 的电气标准;XDC 里 IOSTANDARD 与此一致</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>MRCC *</td><td>—(全书未展开)</td><td>时钟专用输入脚;N18 就是 bank 34 的时钟专用脚</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>MTBF</td><td>平均无故障时间(Mean Time Between Failures)</td><td>两次亚稳态事故的平均间隔;每多打一拍,指数翻倍</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
+    <tr><td>MUX *</td><td>数据选择器(全书未给全称)</td><td>在两路信号里挑一路的组合电路——if/else 分支的硬件真身</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>N18 / P14 / R14</td><td>—(封装引脚,核心三脚)</td><td>50MHz 时钟 / 按键 PL_KEY(按下=0)/ LED(高=亮);全在 bank 34</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>PCAP</td><td>处理器配置访问端口(Processor Configuration Access Port)</td><td>FPGA Manager 从 Linux 侧装载比特流走的通道(不走 JTAG);要求喂 .bin</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>PL</td><td>可编程逻辑(Programmable Logic)</td><td>Zynq 上你在写的那半边 FPGA;导线/寄存器/时钟三种零件遍地都是,本课程全部电路的家</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
+    <tr><td>PLL / PLLE2</td><td>锁相环(Phase-Locked Loop)</td><td>片内 4 个,可把 50MHz 倍频/分频;课程进阶篇之外自行探索</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>PS</td><td>处理系统(Processing System)</td><td>Zynq 上跑 Debian 的 ARM 那半边;你移植 Linux 时武装的就是它</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
+    <tr><td>PS7</td><td>—(可例化原语名)</td><td>代表 PS 半边的模块名;ch09 直接在 Verilog 里例化它,不进 Block Design</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
+    <tr><td>PS_CLK *</td><td>—(全书未展开)</td><td>PS 自己独立的时钟;PL 与 PS 是两套时钟,上电时互相不认识</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>PWM</td><td>脉冲宽度调制(Pulse Width Modulation)</td><td>0/1 方波靠占空比编码"平均值";数字系统造模拟效果的第一工具</td><td><a href="ch05-pwm.html">ch05 · PWM 呼吸灯</a></td></tr>
+    <tr><td>QSPI *</td><td>—(全书未展开)</td><td>启动跳线档位之一(课程全程放 SD 档)</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>ROM</td><td>只读存储器(Read-Only Memory)</td><td>存固定数据表(如正弦表)的单元;呼吸灯的正弦表就查它</td><td><a href="ch05-pwm.html">ch05 · PWM 呼吸灯</a></td></tr>
+    <tr><td>RS232 *</td><td>—(全书未给全称)</td><td>±12V 的老式串口电平,会打坏 3.3V IO——买 USB-TTL 严禁此版</td><td><a href="index.html">封面 · 课程地图</a></td></tr>
+    <tr><td>RTL *</td><td>寄存器传输级(全书未给英文全称)</td><td>"寄存器+导线"的描述风格,即可综合的 Verilog 写法</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>RST / PL_KEY</td><td>—(板上丝印)</td><td>RST=整芯片硬复位(Debian 重启+PL 配置清空);PL_KEY=课程按键,接 P14</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>SLCR</td><td>系统级控制寄存器(System Level Control Register)</td><td>PS 的系统控制寄存器组;0xF8000170 定 FCLK0 频率,是电路的"电源开关"</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
+    <tr><td>SoC</td><td>片上系统(System on a Chip)</td><td>一颗芯片塞进两个世界;本板的 Zynq XC7Z020 就是(PS+PL)</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>STA</td><td>静态时序分析(Static Timing Analysis)</td><td>不跑仿真、纯查表算全芯片每条路径延迟的检查;一条路径都不漏</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>TB</td><td>测试台(Testbench)</td><td>写给仿真器的软件,不是电路;造时钟、造激励、说停;详见 B-2「测试台」</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+    <tr><td>task</td><td>—(Verilog TB 语法)</td><td>测试台里把一段动作封装成可调用的"函数"(如 axi_write/axi_read)</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>TNS *</td><td>—(全书未给英文全称)</td><td>违反时序路径的总量;为 0 即全过</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>TMDS *</td><td>—(全书未展开)</td><td>HDMI 路线图提名的串行传输方式</td><td><a href="ch10-capstone.html">ch10 · 毕业设计</a></td></tr>
+    <tr><td>UART</td><td>通用异步收发传输器(Universal Asynchronous Receiver/Transmitter)</td><td>电路世界最古老、至今没死的社交协议;你调 Debian 的那根 115200 串口线</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
+    <tr><td>VCCO *</td><td>—(全书未展开)</td><td>bank 的供电脚,输出电压由它决定(本板 bank 34/35 接 3.3V)</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>WNS</td><td>最差负裕量(Worst Negative Slack)</td><td>全芯片最差路径的 slack;WNS ≥ 0 = 每条路径的建立时间都被满足</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>XADC</td><td>片内模数转换器(Xilinx Analog-to-Digital Converter)</td><td>芯片自带的体检报告:内部温度传感器 + 各路电源轨</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>XDC *</td><td>约束文件(全书未给全称)</td><td>引脚/时序的"接线说明书":PACKAGE_PIN、IOSTANDARD、create_clock 都写在里面</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>XSIM</td><td>—(Xilinx Simulator)</td><td>Vivado 自带仿真器;命令行三步舞 xvlog → xelab → xsim</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+  </table>
+
+  <h3>B-2 中文术语(按拼音序)</h3>
+  <table>
+    <tr><th>常用名</th><th>全称(English Full Name)</th><th>一句话解释</th><th>首现</th></tr>
+    <tr><td>保持时间</td><td>(Hold Time, th)</td><td>时钟沿之后,输入必须继续稳定的最短时间</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
+    <tr><td>比特流</td><td>(Bitstream)</td><td>几百万个开关状态打包成的文件(.bit);烧写 = 把"开关总账"灌进芯片</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>边沿检测</td><td>(Edge Detection)</td><td>"上一拍 &amp; ~本拍"从电平里抠出恰好一拍脉冲;全课程最高频的惯用法</td><td><a href="ch02-debounce.html">ch02 · 按键消抖</a></td></tr>
+    <tr><td>波特率</td><td>(Baud Rate)</td><td>每秒传输的位个数;它不是一个时钟,是一句双方共享的约定话</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
+    <tr><td>波形</td><td>(Waveform)</td><td>时间的照片:横轴时间、每行一根信号</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+    <tr><td>布局</td><td>(Placement)</td><td>给每个零件挑物理坐标(塞进哪一格 CLB);零件放得好,线就短</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>布线</td><td>(Routing)</td><td>把图纸上的每根连线变成芯片里真实的金属线段,一路闭合可编程开关</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>采样</td><td>(Sampling)</td><td>接收方按节拍读线上电平的动作</td><td><a href="ch07-uart-rx.html">ch07 · UART 自环回</a></td></tr>
+    <tr><td>采样窗口 *</td><td>—(全书未给英文)</td><td>建立 + 保持拼成的窗口;期间输入变了 = 违反时序(violation)</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
+    <tr><td>采样深度</td><td>(Sample Depth)</td><td>ILA 循环记录的深度;8192 点能装下 115200 的一帧半(一帧 4340 点)</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
+    <tr><td>参数</td><td>(Parameter)</td><td>模块的"出厂可调旋钮",例化时用 #() 灌入这一颗零件</td><td><a href="ch02-debounce.html">ch02 · 按键消抖</a></td></tr>
+    <tr><td>测试台</td><td>(Testbench, TB)</td><td>写给仿真器的软件,不是电路:造时钟、造激励、说停;永远不会被做成硬件</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+    <tr><td>差一错误</td><td>(off-by-one,数轴陷阱)</td><td>从 0 数到 N-1 恰好是 N 拍;计数器电路第一大坑</td><td><a href="ch02-debounce.html">ch02 · 按键消抖</a></td></tr>
+    <tr><td>从机</td><td>(Slave)</td><td>总线上应答的一方;你写的电路就是从机,寄存器是它的 API</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>触发器</td><td>(Flip-Flop, FF)</td><td>只在时钟上升沿"拍照"存值的零件;D 触发器并排一捆就是寄存器</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>单周期脉冲</td><td>(Single-cycle Pulse)</td><td>宽度恰好一个时钟拍的"点名",不是一段状态</td><td><a href="ch02-debounce.html">ch02 · 按键消抖</a></td></tr>
+    <tr><td>导线</td><td>(wire)</td><td>信号瞬间传导的连接,两端永远是同一个值,没有记忆</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>低有效 *</td><td>—(全书未给英文)</td><td>0 表示"动作"的极性约定;信号名后缀 _n 即此意(rst_n)</td><td><a href="ch02-debounce.html">ch02 · 按键消抖</a></td></tr>
+    <tr><td>地址映射</td><td>(Address Map)</td><td>寄存器映射在系统层面的说法:每个从机在整个地址空间里占一段</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>地址译码</td><td>(Address Decode)</td><td>从机内部的事:拿地址低几位选寄存器</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>顶层模块</td><td>(Top-level Module)</td><td>直接接引脚的那层;它例化子模块,子模块再例化子模块</td><td><a href="ch05-pwm.html">ch05 · PWM 呼吸灯</a></td></tr>
+    <tr><td>抖动</td><td>(Bounce)</td><td>机械触点闭合瞬间的弹跳:按下 5~20ms 里几十次按-松-按-松</td><td><a href="ch02-debounce.html">ch02 · 按键消抖</a></td></tr>
+    <tr><td>杜邦线</td><td>—</td><td>母对母连接线,排针飞线用——"接线即外设",这是排针存在的意义</td><td><a href="index.html">封面 · 课程地图</a></td></tr>
+    <tr><td>翻转触发器</td><td>(Toggle Flip-Flop,T 触发器)</td><td>每收到一个脉冲翻转一次;tick 的"可见化仪表"</td><td><a href="ch02-debounce.html">ch02 · 按键消抖</a></td></tr>
+    <tr><td>仿真</td><td>(Simulation)</td><td>在电脑内存里按你的描述把电路"演"出来</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+    <tr><td>仿真器</td><td>(Simulator)</td><td>不要钱、不要烙铁的"时间显微镜":把每根线每一纳秒的值画成图</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+    <tr><td>仿真时间</td><td>(Simulation Time)</td><td>波形横轴的纯数字;走得多快取决于电脑,与电路真实速度无关</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+    <tr><td>非阻塞赋值 / 阻塞赋值 *</td><td>—(全书未给英文)</td><td>&lt;= 与 =:时序块一律用 &lt;=(全体先读旧值,沿后齐更新)</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>分辨率</td><td>(Resolution)</td><td>PWM 亮度分几档;8 位 = 256 档,占空比颗粒细到够绸缎般顺滑</td><td><a href="ch05-pwm.html">ch05 · PWM 呼吸灯</a></td></tr>
+    <tr><td>分层引用 *</td><td>—(全书未给英文)</td><td>测试台按信号名直接观察 DUT 内部寄存器的仿真特权</td><td><a href="ch02-debounce.html">ch02 · 按键消抖</a></td></tr>
+    <tr><td>分频 *</td><td>—(全书未给英文)</td><td>计数器第 N 位输出方波频率 = 时钟 ÷ 2^(N+1);FPGA 造时基的第一手法</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>格雷码</td><td>(Gray Code)</td><td>相邻数值恰好只差一位的编码;跨域计数器防撕裂的解药</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
+    <tr><td>共地</td><td>(GND)</td><td>电压是相对参考点的差;接外部设备时 GND 必须先接,否则 0 和 1 都没有定义</td><td><a href="ch07-uart-rx.html">ch07 · UART 自环回</a></td></tr>
+    <tr><td>过采样</td><td>(Oversampling)</td><td>一个位里挤着 434 个采样时钟;串口接收的一切从容来自这份冗余</td><td><a href="ch07-uart-rx.html">ch07 · UART 自环回</a></td></tr>
+    <tr><td>建立时间</td><td>(Setup Time, tsu)</td><td>时钟沿之前,输入必须已经稳定的最短时间</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
+    <tr><td>假起始位</td><td>(False Start Bit)</td><td>半位处验线已回高的"假下降沿"(毛刺冒充);验出即丢弃回 IDLE</td><td><a href="ch07-uart-rx.html">ch07 · UART 自环回</a></td></tr>
+    <tr><td>寄存器</td><td>(reg)</td><td>每个时钟沿"拍照"存储的零件;一捆触发器并排 = 寄存器组</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>寄存器映射</td><td>(Register Map)</td><td>哪个偏移地址对应哪个旋钮的编号表;从机对外就是这张表</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>激励</td><td>(Stimulus)</td><td>测试台扮演外部世界拨出的信号:按下/松开按键、送数据、复位</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+    <tr><td>结温</td><td>(junction temperature)</td><td>芯片硅片内部温度,比手摸外壳更真实;本板空闲基准约 55°C</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>浸泡测试</td><td>(Soak Test)</td><td>长时间大量随机输入泡着跑(256 个随机字节全对)</td><td><a href="ch07-uart-rx.html">ch07 · UART 自环回</a></td></tr>
+    <tr><td>晶振</td><td>(有源晶振)</td><td>板上 50MHz 时钟源,经 33Ω 串阻接进 N18;全板 PL 唯一时钟源</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>可综合子集</td><td>(Synthesizable Subset)</td><td>Verilog 里能被综合接受的那半方言;# 延时、$finish 永远不在其中</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+    <tr><td>快照</td><td>(Snapshot)</td><td>xelab 把测试台连起来装配出的可运行仿真镜像</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+    <tr><td>例化</td><td>(→ 模块例化)</td><td>模块例化的简称;第一次见面在 ch01 的 DUT 接法,正式开讲在 ch05</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+    <tr><td>利用率</td><td>(Utilization)</td><td>你的电路在芯片里占了多大地方;每课跑完 build 记进 README 账本</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>两级同步器</td><td>(Two-stage Synchronizer,打两拍)</td><td>两个触发器背靠背接同一时钟,给亚稳态一个完整的"安静房间"</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
+    <tr><td>毛刺</td><td>(Glitch)</td><td>组合逻辑在输入翻转瞬间输出的短暂乱抖;只喂给时钟沿就无害</td><td><a href="ch02-debounce.html">ch02 · 按键消抖</a></td></tr>
+    <tr><td>模块例化</td><td>(Module Instantiation)</td><td>把子电路"摆一颗"进大电路;例化出的电路永久存在,例化两次就是两块真电路</td><td><a href="ch05-pwm.html">ch05 · PWM 呼吸灯</a></td></tr>
+    <tr><td>配置帧</td><td>(Configuration Frame)</td><td>.bit 里固定长度的数据块;每帧负责芯片一小片区域的 LUT 真值表、FF 配置、布线开关状态</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>偏斜</td><td>(Skew)</td><td>布线造成的多根线到达不齐;撕裂的温床</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
+    <tr><td>起始位</td><td>(Start Bit)</td><td>拉低一个位时间 = "预备";接收方唯一的时间基准,全靠盯这记下降沿对表</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
+    <tr><td>上拉电阻</td><td>(Pull-up Resistor)</td><td>让悬空脚读恒 1(空闲)而非乱读;拔线后"静默"的科学保证</td><td><a href="ch07-uart-rx.html">ch07 · UART 自环回</a></td></tr>
+    <tr><td>设备树</td><td>(Device Tree)</td><td>Linux 里描述硬件的文件;你移植时给 fpga 区域留的那几行,会师时接上实物流</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
+    <tr><td>示波器 *</td><td>—(全书未给英文)</td><td>看信号波形的仪器;本课以"你手边没有示波器"为前提,用仿真器替代它</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>时间标度</td><td>(Time Scale)</td><td><code>timescale</code> 定义:斜杠前是"一块钱多大"(单位),后是"最小分币多小"(精度)</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+    <tr><td>时间步</td><td>(Time Step)</td><td>仿真器推进的最小节拍;每步把所有电路的值算一遍</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+    <tr><td>使能脉冲</td><td>(Enable Pulse,tick)</td><td>单周期脉冲的行话名——"这一拍允许你动一下";全课程最重要的惯用法</td><td><a href="ch02-debounce.html">ch02 · 按键消抖</a></td></tr>
+    <tr><td>时序逻辑 *</td><td>—(全书未给英文)</td><td>always @(posedge clk) 造出来的有记忆电路:每拍集体更新一次</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>时序收敛 *</td><td>—(全书未给英文)</td><td>把设计调到时序满足(WNS ≥ 0)的工程过程;毕业路线图建议的第一站</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>时序裕量</td><td>(Slack)</td><td>slack = 可用时间 − 实际需要时间;每条路径一个数</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>时钟</td><td>(clk)</td><td>等腰方波心跳;50MHz = 每秒 5000 万个上升沿,全芯片寄存器齐步走</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>时钟域</td><td>(Clock Domain)</td><td>听同一个时钟号令的所有触发器</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
+    <tr><td>数值撕裂</td><td>(value tearing)</td><td>多比特跨域采到"半个旧值拼半个新值"(7→8 的路上会拍到 15)</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
+    <tr><td>四态仿真 *</td><td>—(全书未给英文)</td><td>Verilog 的 0/1/X/Z 四值;X 是逻辑上的未知,只传染不收敛,演不出亚稳态</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
+    <tr><td>死锁</td><td>(deadlock)</td><td>两边永远互相等的僵局;VALID 撤单、回执早收都会造成</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>丝印 *</td><td>—</td><td>板面印刷的标注;认口、认键全靠它(PL_KEY 与 RST 之分值一个晚上)</td><td><a href="index.html">封面 · 课程地图</a></td></tr>
+    <tr><td>探针</td><td>(Probe)</td><td>ILA 里被记录的被测信号;多位总线算 1 个,免费档每核限 5 个</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
+    <tr><td>停止位</td><td>(Stop Bit)</td><td>拉高至少一个位时间 = "完";同时把线路还原成空闲态 1</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
+    <tr><td>同步器</td><td>(Synchronizer)</td><td>见「两级同步器」;ch02 新词卡预告,ch03 正式主角</td><td><a href="ch02-debounce.html">ch02 · 按键消抖</a></td></tr>
+    <tr><td>同步设计 *</td><td>—(全书未给英文)</td><td>所有寄存器听同一个时钟、每沿集体更新;FPGA 设计的第一定律</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>通道</td><td>(Channel)</td><td>AXI 的五个独立"传单槽":AW/W/B(写三通道)+ AR/R(读两通道)</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>网表</td><td>(Netlist)</td><td>"零件 + 连线"的图纸;零件是 LUT、FF、进位链这些芯片里真实存在的东西</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>握手</td><td>(Handshake)</td><td>VALID/READY 两线协议:同一拍同高即成交;VALID 一旦举起不得撤销</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>系统任务</td><td>(System Task)</td><td>$display / $finish 这类仿真器"软件方言",长得像函数调用</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+    <tr><td>消抖</td><td>(Debounce)</td><td>时间滤波器:信号连续稳定满窗口才改判,抖回原电平哪怕一拍就清零重数</td><td><a href="ch02-debounce.html">ch02 · 按键消抖</a></td></tr>
+    <tr><td>亚稳态</td><td>(Metastability)</td><td>输出悬在高低之间的中间电压,倒向由噪声决定;无法消除,只能把概率压到可忽略</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
+    <tr><td>异步信号</td><td>(Asynchronous Signal)</td><td>和你设计的时钟没有任何时间关系的输入;先打两拍再进时序逻辑</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
+    <tr><td>移位寄存器</td><td>(Shift Register)</td><td>并行进、串行出,把并排的 8 位一位位挤上线;所有串行协议的心脏</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
+    <tr><td>游标</td><td>(Cursor)</td><td>波形窗口里的卡尺:点一下自动吸附最近的翻转沿,量周期全靠它</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+    <tr><td>有限状态机</td><td>(Finite State Machine, FSM,状态机)</td><td>一组触发器存"干到第几步"+ 一段组合逻辑算"下一步去哪"</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
+    <tr><td>载波频率</td><td>(Carrier Frequency)</td><td>PWM 方波跑多快;195kHz 比人眼暂留高四个数量级,绝不频闪</td><td><a href="ch05-pwm.html">ch05 · PWM 呼吸灯</a></td></tr>
+    <tr><td>占空比</td><td>(Duty Cycle)</td><td>高电平占整个周期的比例;PWM 用它编码平均亮度</td><td><a href="ch05-pwm.html">ch05 · PWM 呼吸灯</a></td></tr>
+    <tr><td>帧</td><td>(Frame)</td><td>UART 把每个字节包装成的 10 个位:起始 + 8 数据(LSB 先行)+ 停止</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
+    <tr><td>帧错误</td><td>(Frame Error)</td><td>停止位中点读到 0;正常自环到不了这状态,要人为制造才看得见</td><td><a href="ch07-uart-rx.html">ch07 · UART 自环回</a></td></tr>
+    <tr><td>中点采样</td><td>(Mid-bit Sampling)</td><td>把采样点推迟到每位正中;时钟偏差只要不超半个位时间就永远安全</td><td><a href="ch07-uart-rx.html">ch07 · UART 自环回</a></td></tr>
+    <tr><td>主机</td><td>(Master)</td><td>总线上发起交互的一方;ch08 由 TB 出演,ch09 真身是 ARM</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>状态转移图</td><td>(State Transition Diagram)</td><td>状态机的图:圈 = 状态、弧 = 跳转条件;先有图再有代码(铁律三)</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
+    <tr><td>综合 / 综合器</td><td>(Synthesis / Synthesizer)</td><td>把描述翻译成真电路(网表)的步骤;干这活的工具叫综合器</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
+    <tr><td>总线</td><td>(Bus)</td><td>多方互通的标准接口规矩;硬件世界的"HTTP 之于 Web"</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>组合逻辑 *</td><td>—(全书未给英文)</td><td>assign 造出来的无记忆电路:输入一变,输出立刻跟着变</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>最差负裕量</td><td>(Worst Negative Slack, WNS)</td><td>见 B-1「WNS」;build.tcl 最后打印的那个数</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>自环回 *</td><td>—</td><td>TX 直接短接 RX 的闭环实验;有"同源的错误回环查不出"的结构性盲区</td><td><a href="ch07-uart-rx.html">ch07 · UART 自环回</a></td></tr>
+  </table>
+
+  <h3>B-3 工具、器件与文档专名</h3>
+  <table>
+    <tr><th>类别</th><th>名称</th><th>说明(取自首现章节口径)</th><th>首现</th></tr>
+    <tr><td>板卡</td><td>Z7-Nano R20</td><td>微相科技(MicroPhase)出品,本课程唯一指定板卡</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>芯片</td><td>Zynq / XC7Z020-2CLG400</td><td>本板芯片:一块硅、PS+PL 两个世界;型号尾缀 -2 是速度等级(写错时序全变),CLG400 为 400 脚封装</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>芯片</td><td>Artix-7</td><td>PL 那半边相当的 FPGA 架构等级(附A 口径"Artix-7 级 FPGA")</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>芯片</td><td>Cortex-A9</td><td>PS 的双核 ARM 处理器</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>器件</td><td>CH340 / CH340E</td><td>USB 转串口芯片,焊死在 PS 侧接 ARM 的 UART——PL 的 TX 永远出不了这根线</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
+    <tr><td>器件</td><td>FT232H</td><td>USB 转 JTAG 芯片(USB ID 0403:6014),独占设备;hw_server 与 OpenOCD 抢它</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>工具</td><td>Vivado</td><td>FPGA 开发工具;母语是 Tcl,GUI 只是它的皮;本课用 2026.1 免费档(安装名 Vivado ML Standard)</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>工具</td><td>Verilog</td><td>描述电路的语言:可综合子集 + 仿真方言,两页语法一种语言</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>工具</td><td>Tcl</td><td>(Tool Command Language)Vivado 的母语、工具胶水语言;GUI 每次点击都被翻译成一条 Tcl</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>工具</td><td>OpenOCD</td><td>开源 JTAG 服务器,姊妹手册里的排雷工具箱;与 hw_server 互杀</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>工具</td><td>hw_server</td><td>Vivado 的硬件服务器进程(Hardware Manager、ILA、烧写都用它)</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>工具</td><td>devmem</td><td>busybox 的物理地址读写工具;会师的那一枪(devmem 0x40000000 32 0x1)</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
+    <tr><td>系统</td><td>Debian</td><td>你亲手移植的 Linux 发行版,跑在 PS 上;会师时由它装载你的电路</td><td><a href="index.html">封面 · 课程地图</a></td></tr>
+    <tr><td>系统</td><td>U-Boot</td><td>启动加载器;改写 GIC 配置的阶段打包在 BOOT.BIN 里(主线移植期你配过)</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
+    <tr><td>系统</td><td>FSBL *</td><td>启动链组件,与 U-Boot/Debian 并提(全书未展开)</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
+    <tr><td>系统</td><td>BOOT.BIN</td><td>打包的启动镜像;内含 U-Boot 阶段改写 GIC 配置的修复版</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
+    <tr><td>工具</td><td>Block Design</td><td>Vivado 图形化连 PS/PL 的常规方式;本课反其道,走 PS7 直例化</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>工具</td><td>AXI Interconnect</td><td>免费的协议转换 IP(ch08 预案乙:AXI3 主侧 ↔ AXI4-Lite 从侧)</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>文档</td><td>UG585</td><td>官方《Zynq-7000 TRM》技术手册;GP 口/SLCR 的每句话都出自它</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>文档</td><td>IHI0022</td><td>ARM 的 AMBA AXI 规范编号——ch08 五通道的完整版</td><td><a href="ch10-capstone.html">ch10 · 毕业设计</a></td></tr>
+  </table>
+
+  <div class="box box-win">
+    <div class="box-title">口径说明</div>
+    <p>每条解释与首现章节的口径一致,不引入新事实;各章「本章新词卡」是本表的登记来源。命令的用法与参数细节集中在本站<a href="appendix-cheatsheet.html">附C 命令速查卡</a>;板上引脚的完整户口在<a href="appendix-board.html">附A 板卡手册</a>。</p>
+  </div>
+
+  <div class="pager">
+    <a href="appendix-board.html">← 上一页:附录 A 板卡手册</a>
+    <a href="appendix-cheatsheet.html">下一页:附录 C 命令速查 →</a>
+  </div>
+</main>
+</body>
+</html>

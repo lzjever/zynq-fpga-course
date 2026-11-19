@@ -110,7 +110,7 @@ details[open]{border-color:var(--step)}
       <line class="gate" x1="240" y1="210" x2="240" y2="188"/><polygon points="240,184 234,196 246,196" fill="#4a5568"/>
       <text class="lbl" x="420" y="212" text-anchor="middle" fill="#4a5568">若采在位边界:恰好落在电平切换的刀刃上 —— 两位各有一半可能,听天由命</text>
     </g>
-    <text class="mono" x="195" y="235" text-anchor="middle">时钟偏差只要不超过半个位时间,中点永远安全 —— 8N1 的宽容度 ±~434clk,宽裕得奢侈</text>
+    <text class="mono" x="285" y="235" text-anchor="middle">时钟偏差只要不超过半个位,中点永远安全 —— 8N1 的宽容度 ±217clk(半个位,整帧累计约 ±5%),宽裕得奢侈</text>
   </svg>
   <div class="cap">图 1 · 中点采样:起始沿对表之后,接收方把每次采样推迟到"位的正中"。绿色容差带 = 允许双方时钟累计偏差的范围;只要采样点还在带内,偏 1% 还是 2% 都无所谓。</div>
   </div>

@@ -21,7 +21,7 @@ module uart_rx #(
     input  wire       rx,                  // 串口输入线(自环时来自杜邦线另一头的 TX)
     output reg  [7:0] rx_data = 8'd0,      // 收到的字节(仅在 rx_done 那一拍更新)
     output reg        rx_done = 1'b0,      // 单周期脉冲:一个字节完整收到且停止位合法
-    output wire       frame_err,           // 单周期脉冲:停止位位置读到 0,帧不可信,已丢弃
+    output wire       frame_err,           // 单周期脉冲:停止位位置读到 0,帧不可信,不提交(rx_done 不发)
     output wire [3:0] bit_cnt,             // 观察窗:0=验起始位,1..8=采数据位 0..7
     output wire [1:0] state                // 观察窗:状态机当前状态
 );

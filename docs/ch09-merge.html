@@ -132,7 +132,7 @@
   <p>方案甲一刀斩:<strong>全体逻辑搬进 FCLK0 域,一个时钟,雷不存在</strong>。代价只有一条:FCLK0 的开关在 PS 手里——所以"使能 FCLK0"那条 devmem 命令,是这门课真正意义上的<strong>"Linux 的一条命令,给你的电路接上电源"</strong>:时钟不来,设计全体冻结;命令一到,呼吸开始。</p></div>
   <div class="box box-know"><div class="box-title">选做 · 方案乙(想练 CDC 技艺再看)</div>
   <p>保持双域也能活:对 SPEED 逐位打两拍 + 握手脉冲(Gray 码只适合计数器,不适合任意值)。ch03 的知识在毕业章回收,教学上很美——但给顶点周加活,本课降为选做,默认方案甲。</p></div>
-  <p>顺带一提,这是全书 <code>parameter</code> 主题的第三级跳:ch01 缩仿真时间、ch07 放大波特率(肉眼 UART)、ch09 换主频——<code>pwm_breather</code> 的时间公式按 FCLK0 重新算一遍(README 命令卡里已给结论)。注意 FCLK0 频率不是天上掉下来的:它由 PS 侧 SLCR(System Level Control Register,系统级控制寄存器)的 0xF8000170 号寄存器决定,除数装多少、频率就是多少——先读回,再决定写不写。</p>
+  <p>顺带一提,这是全书 <code>parameter</code> 主题的第三级跳:ch01 缩仿真时间、ch07 放大波特率(肉眼 UART)、ch09 换主频——<code>pwm_breather</code> 的时间公式按 FCLK0 重新算一遍(README 命令卡里已给结论)。注意 FCLK0 频率不是天上掉下来的:它由 PS 侧 SLCR(System Level Control Registers,系统级控制寄存器)的 0xF8000170 号寄存器决定,除数装多少、频率就是多少——先读回,再决定写不写。</p>
 
   <h3>5 · 手写 create_clock:时序报告对你的第一句谎话</h3>
   <p>ch04 你学会读 WNS;ch08 结尾留了个伏笔"什么时候才有 WNS"。现在摊牌:</p>
@@ -211,7 +211,7 @@ devmem 0x40000004                  <span class="c"># 读回:应回显 0x5FB(读 
     <li>毕业考:手绘 devmem 全路径——全课程一条线</li>
   </ul>
   <div class="box box-know"><div class="box-title">本章新词卡(已登记附录 B)</div>
-  <p>处理系统(Processing System, PS)· 可编程逻辑(Programmable Logic, PL)· FCLK(Fabric Clock,结构时钟)· 系统级控制寄存器(System Level Control Register, SLCR)· FPGA 管理器(FPGA Manager)· 快速中断请求(Fast Interrupt ReQuest, FIQ)· 处理器配置访问端口(Processor Configuration Access Port, PCAP)· 设备树(Device Tree)· devmem(busybox 物理地址读写工具)</p></div>
+  <p>处理系统(Processing System, PS)· 可编程逻辑(Programmable Logic, PL)· FCLK(Fabric Clock,结构时钟)· 系统级控制寄存器(System Level Control Registers, SLCR)· FPGA 管理器(FPGA Manager)· 快速中断请求(Fast Interrupt ReQuest, FIQ)· 处理器配置访问端口(Processor Configuration Access Port, PCAP)· 设备树(Device Tree)· devmem(busybox 物理地址读写工具)</p></div>
 
   <h3>11 · 三档自测</h3>
   <p><strong>A(送分题,你的主场)</strong>· 为什么用户态不能直接写 0x40000000,而 devmem 可以?</p>

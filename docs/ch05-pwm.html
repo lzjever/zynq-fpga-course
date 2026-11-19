@@ -186,7 +186,7 @@
   <div class="cap">图 2 · pwm_breathe 结构:tick 定步速,duty 是亮度目标,phase 是高速锯齿,比较器输出方波</div>
   </div>
 
-  <p>对照代码读(<code>labs/lab05-pwm/pwm_breathe.v</code>,逐行注释版)。三段各司其职:载波相位每拍 +1 转圈(195.3kHz);亮度 duty 收到 step_tick 才动一步,三角波往返(0↔255 各 255 步,顶底各停一步);比较器每拍判决 <code>phase &lt; duty</code> 输出方波。呼吸周期一笔账:</p>
+  <p>对照代码读(<code>labs/lab05-pwm/pwm_breathe.v</code>,逐行注释版)。三段各司其职:载波相位每拍 +1 转圈(195.3kHz);亮度 duty 收到 step_tick 才动一步,三角波往返(0↔255 各 255 步,转折发生在 255/0 那一步);比较器每拍判决 <code>phase &lt; duty</code> 输出方波。呼吸周期一笔账:</p>
   <pre><code>呼吸周期 = (255 亮步 + 255 暗步) × STEP_DIV ÷ 50MHz
          = 510 × 390625 × 20ns ≈ 4.0 s</code></pre>
 

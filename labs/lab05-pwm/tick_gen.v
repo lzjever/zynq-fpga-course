@@ -20,7 +20,7 @@ module tick_gen #(
     output reg  tick        // 每 DIV 个时钟,高电平恰好 1 拍
 );
 
-    // 需要几位的计数器:clog2(390625)=19(8'd 形式的自动位宽)
+    // 需要几位的计数器:clog2(390625)=19
     localparam W = $clog2(DIV);
 
     reg [W-1:0] div_cnt;

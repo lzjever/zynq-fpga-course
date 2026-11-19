@@ -46,7 +46,7 @@ module uart_tx #(
     initial state_r = S_IDLE;
 
     // ---------- 第一段(时序):状态寄存器 + 数据寄存器 ----------
-    always @(posedge clk or negedge rst_n) begin
+    always @(posedge clk) begin
         if (!rst_n) begin
             state_r   <= S_IDLE;
             tx        <= 1'b1;          // 复位后线上必须是 1(空闲电平)

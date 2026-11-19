@@ -39,20 +39,20 @@ module uart_rx #(
 
     // ---------- 第 0 级:打两拍同步(ch03 的保险,异步串口线是"野信号"本尊) ----------
     reg [1:0] sync = 2'b11;                    // 初值 = 空闲电平 1(声明处初值,上电即生效)
-    always @(posedge clk or negedge rst_n)
+    always @(posedge clk)
         if (!rst_n) sync <= 2'b11;             // 空闲电平是 1
         else       sync <= {sync[0], rx};
     wire rx_s = sync[1];
 
     // ---------- 起始沿检测:旧值 1、新值 0 = 对方开口了 ----------
     reg rx_s_q = 1'b1;
-    always @(posedge clk or negedge rst_n)
+    always @(posedge clk)
         if (!rst_n) rx_s_q <= 1'b1;
         else        rx_s_q <= rx_s;
     wire start_fall = rx_s_q & ~rx_s;          // 单周期宽的下降沿标志
 
     // ---------- 时序段:寄存器 + 各状态的数据动作 ----------
-    always @(posedge clk or negedge rst_n) begin
+    always @(posedge clk) begin
         if (!rst_n) begin
             state_r   <= S_IDLE;
             baud_cnt  <= 0;
@@ -122,7 +122,7 @@ module uart_rx #(
 
     // 帧错误 = 停止位正中读到的却是 0(双方节拍彻底对不上 / 线被拔了半截)
     reg err_r = 1'b0;
-    always @(posedge clk or negedge rst_n)
+    always @(posedge clk)
         if (!rst_n) err_r <= 1'b0;
         else        err_r <= (state_r == S_STOP) && (baud_cnt == BAUD_DIV-1) && !rx_s;
     assign frame_err = err_r;

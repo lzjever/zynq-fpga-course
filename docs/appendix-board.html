@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Z7-Nano 板卡手册:引脚全表(N18/P14/R14 与 GPIO1/GPIO2 排针 40+40 脚)、供电、RST 警示、JTAG 互杀、XADC 温度读法、启动跳线。">
+<title>附录 A · 板卡手册 Z7-Nano — Zynq FPGA 从零到实战</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <span class="chip">ZYNQ · FPGA</span>
+    <h1>从零到实战</h1>
+    <p>Verilog · Vivado · Z7-Nano</p>
+  </div>
+  <nav>
+    <a href="index.html"><span class="num">00</span>封面 · 课程地图</a>
+    <a href="ch00-verilog101.html"><span class="num">01</span>Verilog 101</a>
+    <a href="ch01-sim.html"><span class="num">02</span>仿真入门</a>
+    <a href="ch02-debounce.html"><span class="num">03</span>Lab02 按键消抖</a>
+    <a href="ch03-cdc.html"><span class="num">04</span>亚稳态与 CDC</a>
+    <a href="ch04-vivado.html"><span class="num">05</span>Vivado 幕后</a>
+    <a href="ch05-pwm.html"><span class="num">06</span>PWM 呼吸灯</a>
+    <a href="ch06-uart-tx.html"><span class="num">07</span>UART 发送器</a>
+    <a href="ch07-uart-rx.html"><span class="num">08</span>UART 自环回</a>
+    <a href="ch08-axi.html"><span class="num">09</span>AXI 总线</a>
+    <a href="ch09-merge.html"><span class="num">10</span>PS-PL 会师</a>
+    <a href="ch10-capstone.html"><span class="num">11</span>毕业设计</a>
+    <a href="appendix-board.html" class="active"><span class="num">附A</span>板卡手册</a>
+    <a href="appendix-glossary.html"><span class="num">附B</span>术语表</a>
+    <a href="appendix-cheatsheet.html"><span class="num">附C</span>命令速查</a>
+  </nav>
+  <footer>硬件:Z7-Nano R20 · XC7Z020<br>软件:Vivado 2026.1 免费档<br>姊妹篇:主线 Linux 手册</footer>
+</aside>
+<main class="main">
+  <div class="chapter-tag">APPENDIX A</div>
+  <h2 class="title">板卡手册:Z7-Nano</h2>
+  <p class="subtitle">这块板子的户口本:引脚、供电、按键、跳线、温度——板上出任何玄学,先翻这页再动手。</p>
+
+  <div class="box box-step">
+    <div class="box-title">本页怎么用</div>
+    <ul>
+      <li>写约束(XDC)抄引脚 → <a href="#pins">A.5 引脚总表</a>;</li>
+      <li>现象突然消失、怀疑板子坏了 → <a href="#rst">A.6 RST 警示</a> + <a href="#jtag">A.7 JTAG 互杀</a>;</li>
+      <li>第一次插线、第一次飞线 → <a href="#power">A.3 供电须知</a>(排针上<strong>没有 GND 脚</strong>);</li>
+      <li>怀疑板子过热 → <a href="#temp">A.8 温度读法</a>(55°C 是这台板的基准体温);</li>
+      <li>串口全静默 → <a href="#ports">A.2 接口辨认</a>(十有八九是跳线或插口问题)。</li>
+    </ul>
+  </div>
+
+  <h3 id="profile">A.1 板卡档案:一表流</h3>
+  <p>主角:微相科技(MicroPhase)Z7-Nano R20。它是一颗片上系统(System on a Chip, SoC)——Zynq XC7Z020-2CLG400,体内塞了两个世界:跑 Debian 的处理系统(Processing System, PS,双核 ARM Cortex-A9)和你在写的可编程逻辑(Programmable Logic, PL,Artix-7 级 FPGA)。本课程在 PL 里造电路,到 <a href="ch09-merge.html">ch09</a> 才让两边握手。</p>
+  <table>
+    <tr><th>项目</th><th>规格 / 实况</th><th>对课程意味着什么</th></tr>
+    <tr>
+      <td>芯片</td>
+      <td>Zynq XC7Z020-<strong>2</strong>CLG400(速度等级 -2,400 脚封装)</td>
+      <td>build.tcl 里 part 写 <code>xc7z020clg400-2</code>,等级写错时序全变</td>
+    </tr>
+    <tr>
+      <td>内存</td>
+      <td>DDR3(双倍速率三代同步内存,Double Data Rate 3, DDR3)512MB,归 PS 管</td>
+      <td>PL 课程不碰;PS 侧跑 Debian 全靠它</td>
+    </tr>
+    <tr>
+      <td>PL 时钟</td>
+      <td>50MHz 有源晶振 → 引脚 <strong>N18</strong>(全板 PL 唯一时钟源)</td>
+      <td>所有 Lab 的 <code>create_clock -period 20.000</code> 由它而来(<a href="#clock">A.4</a>)</td>
+    </tr>
+    <tr>
+      <td>PL 外设</td>
+      <td>LED ×1(<strong>R14</strong>,高电平点亮)+ 按键 ×1(<strong>P14</strong>,按下=0)+ 40pin 排针 ×2</td>
+      <td>板上输出就一个 LED:多输出靠时间复用、PWM、排针飞线(<a href="#pins">A.5</a>)</td>
+    </tr>
+    <tr>
+      <td>串口</td>
+      <td>PS 的 UART0 @ 0xE0000000 → <strong>CH340E</strong> 芯片 → type-C「UART」口,115200 8N1</td>
+      <td><strong>CH340 是 PS 专属</strong>:PL 的 TX 永远出不了这根线——ch06 开篇会摊牌这个坏消息</td>
+    </tr>
+    <tr>
+      <td>JTAG</td>
+      <td>板载 <strong>FT232H</strong>(USB ID 0403:6014)→ type-C「JTAG」口</td>
+      <td>Vivado 烧写/ILA 与 OpenOCD 共用它,会互杀(<a href="#jtag">A.7</a>)</td>
+    </tr>
+    <tr>
+      <td>网口 ×2</td>
+      <td><strong>PS ETH</strong>=Linux 的 eth0(可用);<strong>PL ETH</strong> 要自写逻辑,课程不用</td>
+      <td>网线只插 PS ETH;插错的症状见 <a href="#ports">A.2</a></td>
+    </tr>
+    <tr>
+      <td>启动选择</td>
+      <td>跳线选 SD / QSPI / JTAG,课程全程 <strong>SD 档</strong></td>
+      <td>跳错档=串口全静默,像"板子坏了"(<a href="#ports">A.2</a>有读寄存器验法)</td>
+    </tr>
+    <tr>
+      <td>供电</td>
+      <td>两个 type-C 口任一可供电(OR 二极管合路)</td>
+      <td>只插 JTAG 口一根线也能烧写(<a href="#power">A.3</a>)</td>
+    </tr>
+  </table>
+
+  <div class="box box-know">
+    <div class="box-title">知识框:为什么引脚表里全是 LVCMOS33</div>
+    <p>PL 的引脚按 <strong>bank</strong> 分组,同组引脚共享一个供电脚 VCCO(输出电压由它决定)。本板排针和核心三脚所在的 bank 34 / bank 35,VCCO 都接 3.3V(已从原理图核实)——所以这一页所有 IO 的电气标准都写 <strong>LVCMOS33</strong>(3.3V 低压 CMOS 电平标准,Low-Voltage CMOS 33)。约束文件里 <code>IOSTANDARD</code> 与此一致,写错标准轻则报设计规则检查(Design Rule Check, DRC)错误,重则电平不匹配。</p>
+  </div>
+
+  <h3 id="ports">A.2 接口辨认:两个 type-C、两个 RJ45、一组跳线</h3>
+  <p>板上有几对"长得一样、分工不同"的接口,新手坑几乎都出在这里。总原则:<strong>按功能认口,别按"插上亮不亮"认口</strong>。</p>
+  <table>
+    <tr><th>接口</th><th>怎么认</th><th>插错的症状</th></tr>
+    <tr>
+      <td>type-C ×2</td>
+      <td>丝印「UART」口里是 CH340E(主机 <code>lsusb</code> 认 <code>1a86</code>);丝印「JTAG」口里是 FT232H(认 <code>0403:6014</code>)</td>
+      <td>插 UART 口永远连不上 JTAG,插 JTAG 口永远没串口——两边都能供电,所以"能开机"不代表"插对口"</td>
+    </tr>
+    <tr>
+      <td>RJ45 ×2</td>
+      <td>PS ETH(靠近哪侧以板面丝印为准)才是 Debian 的 eth0;PL ETH 无驱动</td>
+      <td><strong>电脑侧有链路、板上 eth0 无载波(NO-CARRIER)= 插到 PL ETH 了</strong>,换口即愈</td>
+    </tr>
+    <tr>
+      <td>启动跳线</td>
+      <td>多位拨码开关,档位以板面丝印为准;课程全程放 <strong>SD 档</strong></td>
+      <td>不在 SD 档时 BootROM 空等,串口<strong>全静默</strong>——最像"板子坏了"的假死</td>
+    </tr>
+  </table>
+  <p>跳线档位不用猜,芯片里有答案:启动模式寄存器 BOOT_MODE 挂在系统级控制寄存器(System-Level Control Registers, SLCR)空间,地址 <code>0xF800025C</code>,JTAG 一条命令读回——<strong>读回 5 即 SD 档</strong>。寄存器不会撒谎,跳线不会伪装:</p>
+  <pre><code><span class="c"># 主机:OpenOCD 读 BOOT_MODE(三板斧见姊妹手册第 6 章;cfg = 其仓库 openocd-z7nano.cfg)</span>
+<span class="k">openocd</span> -f openocd-z7nano.cfg -c <span class="s">"init"</span> -c <span class="s">"halt"</span> -c <span class="s">"mdw 0xF800025C"</span> -c <span class="s">"resume"</span> -c <span class="s">"shutdown"</span>
+<span class="c"># 输出 0x00000005 = SD 档;不是 5 先去掰跳线,别的都不用看</span></code></pre>
+  <p>这套 JTAG 命令的完整解释在<a href="https://lzjever.github.io/zynq-z7nano-mainline-linux/">姊妹手册</a>(主线 Linux 手册)第 6 章「JTAG 调试方法论」——那是你亲历过的排雷工具箱,速查形态见<a href="appendix-cheatsheet.html">附C</a>。</p>
+
+  <h3 id="power">A.3 供电须知:双 type-C 的 ORing 小聪明</h3>
+  <p>UART、JTAG 两个 type-C 口的 5V(VBUS)各经一只二极管汇到主电源——所谓 <strong>OR 二极管</strong>,就是"谁的电压高用谁",两路互不倒灌。三个推论:</p>
+  <ul>
+    <li><strong>任一口都能独立供电</strong>:只插 JTAG 一根线,烧写、ILA 照常工作(实测单 UART 口供电也能跑完整套 Linux);</li>
+    <li>反过来,<strong>"插了线"不证明"插对口"</strong>——供电通了只说明 5V 到了,功能口认不认还得看丝印;</li>
+    <li>入板 5V,再由板上电源电路分轨;PL 相关的 bank 34/35 的 VCCO 是 3.3V(上节知识框),这就是排针全部 LVCMOS33 的由来。</li>
+  </ul>
+  <div class="box box-warn">
+    <div class="box-title">警告:排针上没有 GND 脚</div>
+    <p>JP1/JP2 各 40 脚里,厂商把 4 个脚给了电源:<strong>11/12 脚 = VCC_5V,29/30 脚 = VCC_3V3</strong>,其余 36 个全是信号脚——<strong>没有一个 GND</strong>(已逐脚核对原理图)。含义:</p>
+    <ul>
+      <li>杜邦线数脚时千万别把电源脚当信号脚:5V 直怼某个信号脚可能损坏对方芯片;</li>
+      <li>接 USB-TTL(ch07 选做)这类需要<strong>共地</strong>的外设时,GND 得从别处取——用万用表蜂鸣档在板的安装孔/金属外壳触点上找到与电源地相通的点,确认后再接;</li>
+      <li>原理图上也没找到专门的 GND 测试柱,所以"共地从哪来"必须先量后接,这是飞线纪律。</li>
+    </ul>
+  </div>
+
+  <h3 id="clock">A.4 时钟树:PL 只有一个 50MHz</h3>
+  <p>PL 侧全板唯一时钟源:一颗 50MHz 有源晶振,经 33Ω 串阻接到引脚 <strong>N18</strong>(bank 34,时钟专用脚 MRCC)。于是:</p>
+  <ul>
+    <li>每个 Lab 的约束都从这三行开始(取自 lab01.xdc):</li>
+  </ul>
+  <pre><code><span class="k">create_clock</span> -period 20.000 -name sys_clk [get_ports clk]   <span class="c"># 50MHz = 周期 20ns</span>
+<span class="k">set_property</span> PACKAGE_PIN N18 [get_ports clk]
+<span class="k">set_property</span> IOSTANDARD LVCMOS33 [get_ports clk]</code></pre>
+  <ul>
+    <li>PS 有自己独立的 PS_CLK,DDR 有自己的时钟域——<strong>PL 和 PS 是两套时钟</strong>,上电时互相不认识,直到 ch09 会师课 PS 才经 GP 口把 FCLK0 送进 PL;</li>
+    <li>片内还有 4 个 PLLE2(锁相环,Phase-Locked Loop, PLL)可把 50MHz 倍频/分频,课程进阶篇之外自行探索;</li>
+    <li><strong>引脚的演变(N18 的退役)</strong>:ch01~ch08 的设计都活在 N18 的 50MHz 域;ch09 起,设计整体搬到 PS 送来的 FCLK0 域(N18 退役)——那时 XDC 里 N18 三行撤下,换成对 FCLK0 网络手写 <code>create_clock</code>(直例化 PS7 没有自动约束,不写的话时序报告"全绿"是假象)。详见 ch09。</li>
+  </ul>
+
+  <h3 id="pins">A.5 引脚总表</h3>
+  <h4>核心三脚:全书代码只认这三个</h4>
+  <table>
+    <tr><th>角色</th><th>封装脚</th><th>bank</th><th>电气标准</th><th>电路细节(原理图核实)</th></tr>
+    <tr>
+      <td>时钟 50MHz</td>
+      <td><strong>N18</strong></td>
+      <td>34</td>
+      <td>LVCMOS33</td>
+      <td>有源晶振 OUT → 33Ω → 引脚;时钟专用输入脚;<code>create_clock -period 20.000</code></td>
+    </tr>
+    <tr>
+      <td>按键 PL_KEY</td>
+      <td><strong>P14</strong></td>
+      <td>34</td>
+      <td>LVCMOS33</td>
+      <td>按下=0:按键另一端接地,板上 10kΩ 上拉 + 100Ω 串阻;不按读 1。丝印是 <strong>PL_KEY</strong>,不是 RST!</td>
+    </tr>
+    <tr>
+      <td>LED</td>
+      <td><strong>R14</strong></td>
+      <td>34</td>
+      <td>LVCMOS33</td>
+      <td>高电平点亮:引脚 → 1kΩ 限流 → 绿色 LED;输出 1 就亮,驱动能力绰绰有余</td>
+    </tr>
+  </table>
+
+  <h4>JP1 / GPIO1(bank 34)——40 脚全表</h4>
+  <p>40pin 排针,物理脚号 1~40(奇数一列、偶数一列)。网络名就是板面丝印(<code>GPIO1_0P</code> 这类):<strong>末尾的 P/N 只是"第几对的正/负编号",两根都是普通单端 IO,不是差分对</strong>。36 个信号脚全部 LVCMOS33。</p>
+  <table>
+    <tr><th>物理脚</th><th>网络(丝印)</th><th>FPGA 封装脚</th><th>标准</th><th>备注(厂商 LCD 例程里的角色)</th></tr>
+    <tr><td>1</td><td>GPIO1_0P</td><td>N17</td><td>LVCMOS33</td><td>数据 rgb[12]</td></tr>
+    <tr><td>2</td><td>GPIO1_0N</td><td>P18</td><td>LVCMOS33</td><td>数据 rgb[8]</td></tr>
+    <tr><td>3</td><td>GPIO1_1P</td><td>R16</td><td>LVCMOS33</td><td>数据 rgb[23]</td></tr>
+    <tr><td>4</td><td>GPIO1_1N</td><td>R17</td><td>LVCMOS33</td><td>数据 rgb[22]</td></tr>
+    <tr><td>5</td><td>GPIO1_2P</td><td>T17</td><td>LVCMOS33</td><td>数据 rgb[21]</td></tr>
+    <tr><td>6</td><td>GPIO1_2N</td><td>R18</td><td>LVCMOS33</td><td>数据 rgb[20]</td></tr>
+    <tr><td>7</td><td>GPIO1_3P</td><td>T16</td><td>LVCMOS33</td><td>数据 rgb[19]</td></tr>
+    <tr><td>8</td><td>GPIO1_3N</td><td>U17</td><td>LVCMOS33</td><td>数据 rgb[18]</td></tr>
+    <tr><td>9</td><td>GPIO1_4P</td><td>W18</td><td>LVCMOS33</td><td>数据 rgb[17]</td></tr>
+    <tr><td>10</td><td>GPIO1_4N</td><td>W19</td><td>LVCMOS33</td><td>数据 rgb[16]</td></tr>
+    <tr><td>11</td><td>VCC_5V</td><td>—</td><td>电源</td><td><strong>电源脚,勿当信号接</strong></td></tr>
+    <tr><td>12</td><td>VCC_5V</td><td>—</td><td>电源</td><td><strong>电源脚,勿当信号接</strong></td></tr>
+    <tr><td>13</td><td>GPIO1_5P</td><td>Y18</td><td>LVCMOS33</td><td>数据 rgb[10]</td></tr>
+    <tr><td>14</td><td>GPIO1_5N</td><td>Y19</td><td>LVCMOS33</td><td>数据 rgb[9]</td></tr>
+    <tr><td>15</td><td>GPIO1_6P</td><td>Y16</td><td>LVCMOS33</td><td>数据 rgb[13]</td></tr>
+    <tr><td>16</td><td>GPIO1_6N</td><td>Y17</td><td>LVCMOS33</td><td>数据 rgb[11]</td></tr>
+    <tr><td>17</td><td>GPIO1_7P</td><td>V17</td><td>LVCMOS33</td><td>数据 rgb[15]</td></tr>
+    <tr><td>18</td><td>GPIO1_7N</td><td>V18</td><td>LVCMOS33</td><td>数据 rgb[14]</td></tr>
+    <tr><td>19</td><td>GPIO1_8P</td><td>V16</td><td>LVCMOS33</td><td>数据 rgb[1]</td></tr>
+    <tr><td>20</td><td>GPIO1_8N</td><td>W16</td><td>LVCMOS33</td><td>数据 rgb[0];备选飞线脚(与 U12 同 bank 好找)</td></tr>
+    <tr><td>21</td><td>GPIO1_9P</td><td>V15</td><td>LVCMOS33</td><td>数据 rgb[3]</td></tr>
+    <tr><td>22</td><td>GPIO1_9N</td><td>W15</td><td>LVCMOS33</td><td>数据 rgb[2]</td></tr>
+    <tr><td>23</td><td>GPIO1_10P</td><td>U14</td><td>LVCMOS33</td><td>数据 rgb[5]</td></tr>
+    <tr><td>24</td><td>GPIO1_10N</td><td>U15</td><td>LVCMOS33</td><td>数据 rgb[4]</td></tr>
+    <tr><td>25</td><td>GPIO1_11P</td><td>U13</td><td>LVCMOS33</td><td>数据 rgb[7]</td></tr>
+    <tr><td>26</td><td>GPIO1_11N</td><td>V13</td><td>LVCMOS33</td><td>数据 rgb[6]</td></tr>
+    <tr><td>27</td><td>GPIO1_12P</td><td>T12</td><td>LVCMOS33</td><td>控制 disp</td></tr>
+    <tr><td>28</td><td>GPIO1_12N</td><td>U12</td><td>LVCMOS33</td><td>控制 pclk;<strong>ch07 选做 USB-TTL 建议用这脚</strong></td></tr>
+    <tr><td>29</td><td>VCC_3V3</td><td>—</td><td>电源</td><td><strong>电源脚,勿当信号接</strong></td></tr>
+    <tr><td>30</td><td>VCC_3V3</td><td>—</td><td>电源</td><td><strong>电源脚,勿当信号接</strong></td></tr>
+    <tr><td>31</td><td>GPIO1_13P</td><td>W14</td><td>LVCMOS33</td><td>控制 vs</td></tr>
+    <tr><td>32</td><td>GPIO1_13N</td><td>Y14</td><td>LVCMOS33</td><td>控制 hs</td></tr>
+    <tr><td>33</td><td>GPIO1_14P</td><td>V12</td><td>LVCMOS33</td><td>—(LCD 例程未用)</td></tr>
+    <tr><td>34</td><td>GPIO1_14N</td><td>W13</td><td>LVCMOS33</td><td>控制 de</td></tr>
+    <tr><td>35</td><td>GPIO1_15P</td><td>T14</td><td>LVCMOS33</td><td>—(例程未用)</td></tr>
+    <tr><td>36</td><td>GPIO1_15N</td><td>T15</td><td>LVCMOS33</td><td>—(例程未用)</td></tr>
+    <tr><td>37</td><td>GPIO1_16P</td><td>T11</td><td>LVCMOS33</td><td>—(例程未用)</td></tr>
+    <tr><td>38</td><td>GPIO1_16N</td><td>T10</td><td>LVCMOS33</td><td>—(例程未用)</td></tr>
+    <tr><td>39</td><td>GPIO1_17P</td><td><strong>P14</strong></td><td>LVCMOS33</td><td><strong>就是板上按键 PL_KEY</strong>(按=0)</td></tr>
+    <tr><td>40</td><td>GPIO1_17N</td><td><strong>R14</strong></td><td>LVCMOS33</td><td><strong>就是板上 LED</strong>(高=亮)</td></tr>
+  </table>
+
+  <h4>JP2 / GPIO2(bank 35)——40 脚全表</h4>
+  <p>结构与 JP1 完全对称:同样 40pin、同样 11/12=VCC_5V、29/30=VCC_3V3、无 GND。注意这一排在 bank 35,且部分引脚与 PL 以太网 PHY 的功能规划有重叠——课程不用 PL ETH,当普通 IO 用即可,别同时跑厂商以太网例程。</p>
+  <table>
+    <tr><th>物理脚</th><th>网络(丝印)</th><th>FPGA 封装脚</th><th>标准</th><th>备注(厂商 LCD 例程里的角色)</th></tr>
+    <tr><td>1</td><td>GPIO2_0P</td><td>H15</td><td>LVCMOS33</td><td>数据 rgb[12]</td></tr>
+    <tr><td>2</td><td>GPIO2_0N</td><td>G15</td><td>LVCMOS33</td><td>数据 rgb[8]</td></tr>
+    <tr><td>3</td><td>GPIO2_1P</td><td>F16</td><td>LVCMOS33</td><td>数据 rgb[23]</td></tr>
+    <tr><td>4</td><td>GPIO2_1N</td><td>F17</td><td>LVCMOS33</td><td>数据 rgb[22]</td></tr>
+    <tr><td>5</td><td>GPIO2_2P</td><td>E17</td><td>LVCMOS33</td><td>数据 rgb[21]</td></tr>
+    <tr><td>6</td><td>GPIO2_2N</td><td>D18</td><td>LVCMOS33</td><td>数据 rgb[20]</td></tr>
+    <tr><td>7</td><td>GPIO2_3P</td><td>E18</td><td>LVCMOS33</td><td>数据 rgb[19]</td></tr>
+    <tr><td>8</td><td>GPIO2_3N</td><td>E19</td><td>LVCMOS33</td><td>数据 rgb[18]</td></tr>
+    <tr><td>9</td><td>GPIO2_4P</td><td>G17</td><td>LVCMOS33</td><td>数据 rgb[17]</td></tr>
+    <tr><td>10</td><td>GPIO2_4N</td><td>G18</td><td>LVCMOS33</td><td>数据 rgb[16]</td></tr>
+    <tr><td>11</td><td>VCC_5V</td><td>—</td><td>电源</td><td><strong>电源脚,勿当信号接</strong></td></tr>
+    <tr><td>12</td><td>VCC_5V</td><td>—</td><td>电源</td><td><strong>电源脚,勿当信号接</strong></td></tr>
+    <tr><td>13</td><td>GPIO2_5P</td><td>H16</td><td>LVCMOS33</td><td>数据 rgb[10]</td></tr>
+    <tr><td>14</td><td>GPIO2_5N</td><td>H17</td><td>LVCMOS33</td><td>数据 rgb[9]</td></tr>
+    <tr><td>15</td><td>GPIO2_6P</td><td>B19</td><td>LVCMOS33</td><td>数据 rgb[13]</td></tr>
+    <tr><td>16</td><td>GPIO2_6N</td><td>A20</td><td>LVCMOS33</td><td>数据 rgb[11]</td></tr>
+    <tr><td>17</td><td>GPIO2_7P</td><td>C20</td><td>LVCMOS33</td><td>数据 rgb[15]</td></tr>
+    <tr><td>18</td><td>GPIO2_7N</td><td>B20</td><td>LVCMOS33</td><td>数据 rgb[14]</td></tr>
+    <tr><td>19</td><td>GPIO2_8P</td><td>D19</td><td>LVCMOS33</td><td>数据 rgb[1]</td></tr>
+    <tr><td>20</td><td>GPIO2_8N</td><td>D20</td><td>LVCMOS33</td><td>数据 rgb[0]</td></tr>
+    <tr><td>21</td><td>GPIO2_9P</td><td>J18</td><td>LVCMOS33</td><td>数据 rgb[3]</td></tr>
+    <tr><td>22</td><td>GPIO2_9N</td><td>H18</td><td>LVCMOS33</td><td>数据 rgb[2]</td></tr>
+    <tr><td>23</td><td>GPIO2_10P</td><td>F19</td><td>LVCMOS33</td><td>数据 rgb[5]</td></tr>
+    <tr><td>24</td><td>GPIO2_10N</td><td>F20</td><td>LVCMOS33</td><td>数据 rgb[4]</td></tr>
+    <tr><td>25</td><td>GPIO2_11P</td><td>G19</td><td>LVCMOS33</td><td>数据 rgb[6]</td></tr>
+    <tr><td>26</td><td>GPIO2_11N</td><td>G20</td><td>LVCMOS33</td><td>数据 rgb[7]</td></tr>
+    <tr><td>27</td><td>GPIO2_12P</td><td>J20</td><td>LVCMOS33</td><td>控制 disp</td></tr>
+    <tr><td>28</td><td>GPIO2_12N</td><td>H20</td><td>LVCMOS33</td><td>控制 pclk</td></tr>
+    <tr><td>29</td><td>VCC_3V3</td><td>—</td><td>电源</td><td><strong>电源脚,勿当信号接</strong></td></tr>
+    <tr><td>30</td><td>VCC_3V3</td><td>—</td><td>电源</td><td><strong>电源脚,勿当信号接</strong></td></tr>
+    <tr><td>31</td><td>GPIO2_13P</td><td>K16</td><td>LVCMOS33</td><td>控制 vs</td></tr>
+    <tr><td>32</td><td>GPIO2_13N</td><td>J16</td><td>LVCMOS33</td><td>控制 hs</td></tr>
+    <tr><td>33</td><td>GPIO2_14P</td><td>K19</td><td>LVCMOS33</td><td>—(例程未用)</td></tr>
+    <tr><td>34</td><td>GPIO2_14N</td><td>J19</td><td>LVCMOS33</td><td>控制 de</td></tr>
+    <tr><td>35</td><td>GPIO2_15P</td><td>L16</td><td>LVCMOS33</td><td>—(例程未用)</td></tr>
+    <tr><td>36</td><td>GPIO2_15N</td><td>L17</td><td>LVCMOS33</td><td>—(例程未用)</td></tr>
+    <tr><td>37</td><td>GPIO2_16P</td><td>M19</td><td>LVCMOS33</td><td>—(例程未用)</td></tr>
+    <tr><td>38</td><td>GPIO2_16N</td><td>M20</td><td>LVCMOS33</td><td>—(例程未用)</td></tr>
+    <tr><td>39</td><td>GPIO2_17P</td><td>L19</td><td>LVCMOS33</td><td>—(例程未用)</td></tr>
+    <tr><td>40</td><td>GPIO2_17N</td><td>L20</td><td>LVCMOS33</td><td>—(例程未用)</td></tr>
+  </table>
+
+  <div class="box box-know">
+    <div class="box-title">这张表的来历(以及可信度)</div>
+    <p>封装脚与角色的第一来源是厂商资料包里 LCD 例程的 <code>top_pin.xdc</code>(GPIO1、GPIO2 两套约束互为注释、同板同排针);物理脚号 ↔ 网络 ↔ 封装脚的对应,又用原理图 Z7-NANO_R21 第 13 页「GPIO Interface」逐脚核对过(两处来源完全一致,包括 39/40 脚就是 P14/R14 这个交叉点)。也就是说:<strong>两列 40 脚,每一脚都有两个独立出处互证</strong>,飞线时可以放心数脚。</p>
+  </div>
+
+  <h3 id="rst">A.6 RST 按键警示:一按回到解放前</h3>
+  <p>板上丝印 <strong>RST</strong> 的按键不是"重启程序",是<strong>整芯片硬复位</strong>(原理图上它经 100Ω 串阻拉低 SYS_RESET_N,直通 PS 复位树)。按下去的一瞬间,两个世界同时遭殃:</p>
+  <div class="flow">
+    <div class="node"><b>按下 RST</b> — PS 硬复位,PL 配置随之清空</div>
+    <div class="arrow">↓</div>
+    <div class="node"><b>PS 侧</b> — Debian 立刻重启:ssh 断开、串口滚启动日志,等几十秒才回来</div>
+    <div class="arrow">↓</div>
+    <div class="node"><b>PL 侧</b> — 你烧的比特流没了:LED 灭、排针无输出,<strong>必须重新烧写</strong>(program.tcl 或 ch09 的装载命令)</div>
+  </div>
+  <div class="box box-warn">
+    <div class="box-title">教训(导师实测):消抖课手一滑,一个晚上白排</div>
+    <p>ch02 消抖实验时手就放在按键区——PL_KEY 和 RST 离得近,手一滑按到 RST:LED「啪」地灭了,第一反应是"代码烧崩了",回头查约束、重跑综合,折腾一大圈。其实是配置被清空了,重烧一次比特流就好。<strong>任何 Lab 现象突然消失,第一件事问自己:是不是按错键了?</strong></p>
+    <p>辨认:丝印 <strong>PL_KEY</strong> 的那个才是我们的按键(接 P14,代码里的 <code>rst_n</code>/<code>key</code>);RST 通常离它不远、个头相仿——上手前先用眼睛把两个丝印分开,这一眼值一个晚上。</p>
+  </div>
+  <table>
+    <tr><th>动作</th><th>PS 侧代价</th><th>PL 侧代价</th><th>恢复动作</th></tr>
+    <tr><td>按 RST</td><td>Debian 重启(几十秒,ssh 断)</td><td>比特流清空,需重烧</td><td>等系统起来 + program.tcl 重烧</td></tr>
+    <tr><td>按 PL_KEY</td><td>无</td><td>无(就是普通输入脚)</td><td>—</td></tr>
+    <tr><td>拔插 type-C 重新供电</td><td>同 RST(整板掉电)</td><td>同 RST</td><td>同 RST</td></tr>
+  </table>
+
+  <h3 id="jtag">A.7 JTAG 互杀:hw_server 与 OpenOCD 抢 FT232H</h3>
+  <p>板上那颗 FT232H 是<strong>独占设备</strong>:同一时刻只允许一个 JTAG 服务器驱动它。Vivado 的硬件服务器进程 <code>hw_server</code>(Hardware Manager、ILA、烧写都用它)和 OpenOCD(你在主线 Linux 手册里用它排过雷)是死对头——谁后启动谁连不上,症状是 <code>connect_hw_server</code> 卡住、OpenOCD 报 adapter 打不开,看起来都像"板子坏了"。</p>
+  <div class="box box-warn">
+    <div class="box-title">互杀口诀:开一个,先杀另一个</div>
+    <pre><code><span class="k">pkill</span> -x openocd      <span class="c"># 要开 Vivado Hardware Manager / 烧写 / ILA 之前</span>
+<span class="k">pkill</span> -x hw_server    <span class="c"># 要开 OpenOCD 之前</span></code></pre>
+    <p><strong>小心 <code>pkill -f</code> 的自匹配陷阱</strong>(导师亲踩):<code>-f</code> 匹配的是<strong>整条命令行</strong>,如果你的脚本名、终端命令、或某个中间进程的参数里恰好含"openocd"字样,它会连你自己一起杀——命令敲下去终端突然没了,就是被自己 pkill 的。所以上面用 <code>-x</code>(精确匹配进程名):慢一点,但只杀目标进程。</p>
+  </div>
+  <p>课程里这颗雷第一次引爆的预定地点是 <a href="ch06-uart-tx.html">ch06</a>(ILA 上场那天):如果你此前挂着 OpenOCD 会话,hw_server 大概率起不来。先背口诀,再看现象。</p>
+
+  <h3 id="temp">A.8 板上温度读法:XADC 三行命令</h3>
+  <p>Zynq 芯片自带一片 XADC(片内模数转换器,Xilinx Analog-to-Digital Converter, XADC),接着内部温度传感器和各路电源轨——芯片自带的体检报告,不用任何外部仪表。Linux 内核把它挂成 IIO(工业输入输出子系统,Industrial I/O, IIO)设备,读法三行:</p>
+  <pre><code><span class="k">ls</span> /sys/bus/iio/devices/                <span class="c"># 找到 iio:device0(设备名 xadc;若没有,先确认内核带 xilinx-xadc)</span>
+<span class="k">cd</span> /sys/bus/iio/devices/iio:device0
+<span class="k">cat</span> *_raw *_scale *_offset               <span class="c"># 各通道原始值/刻度/零偏,通道文件名以 ls 实际输出为准</span></code></pre>
+  <p>换算公式(对任意通道通用):</p>
+  <pre><code>实际值 = (raw + offset) × scale / 1000</code></pre>
+  <p>温度通道代进去,得到的是<strong>结温</strong>(junction temperature,芯片硅片内部温度)——比手摸外壳更真实也更严格。这台板的实测基准:<strong>空闲结温约 55°C</strong>,各电源轨电压正常(出厂系统上量的;换到自己的 Debian 后建议重测一次,当作新基准)。以后跑长仿真、ILA、重负载时温度往上走是正常;显著高于基准且持续爬升,才值得停下来查。</p>
+
+  <h3 id="shopping">A.9 外购物清单(全部可选)</h3>
+  <table>
+    <tr><th>物件</th><th>规格</th><th>给谁用 / 什么时候买</th></tr>
+    <tr><td>杜邦线,母对母</td><td>若干根,几块钱</td><td>排针飞线实验必需(ch07 起);第一次接线先重读 <a href="#power">A.3 的共地警告</a></td></tr>
+    <tr><td>USB-TTL 串口模块</td><td><strong>3.3V LVCMOS 电平版,约 ¥10;严禁 RS232 电平版</strong>(±12V 会打坏 IO)</td><td>ch07 选做(PC 直接看 PL 打的字);非必需,主线实验不依赖它</td></tr>
+    <tr><td>备用 type-C 线一根</td><td>能过数据的那种</td><td>线材接触不良时 CH340 会"干净地"从 USB 消失,极像板子坏了——有根已知好线,排查省半小时</td></tr>
+  </table>
+
+  <div class="box box-win">
+    <div class="box-title">本页小结(值得背下来的五条)</div>
+    <ul>
+      <li>核心三脚:<strong>N18</strong>(50MHz)/ <strong>P14</strong>(PL_KEY,按=0)/ <strong>R14</strong>(LED,高=亮),全 bank 34、LVCMOS33;</li>
+      <li>JP1/JP2 各 40 脚:11/12=VCC_5V、29/30=VCC_3V3,<strong>没有 GND</strong>;39/40(JP1)就是按键和 LED 本尊;</li>
+      <li><strong>RST = 整芯复位</strong>(Debian 重启 + PL 配置清空);现象消失先想"是不是按错键";</li>
+      <li>FT232H 独占:<strong>开一个 JTAG 服务器,先 pkill 另一个</strong>(用 <code>-x</code>,别用 <code>-f</code> 自伤);</li>
+      <li>体温公式 (raw + offset) × scale / 1000,空闲结温基准 <strong>55°C</strong>;串口全静默先查跳线(BOOT_MODE 读回 5 才是 SD 档)。</li>
+    </ul>
+  </div>
+
+  <div class="pager">
+    <a href="ch10-capstone.html">← 上一页:毕业设计</a>
+    <a href="appendix-glossary.html">下一页:附录 B 术语表 →</a>
+  </div>
+</main>
+</body>
+</html>

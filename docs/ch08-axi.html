@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 09 章 · AXI 总线:和 ARM 说同一种话 — Zynq FPGA 从零到实战</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <span class="chip">ZYNQ · FPGA</span>
+    <h1>从零到实战</h1>
+    <p>Verilog · Vivado · Z7-Nano</p>
+  </div>
+  <nav>
+    <a href="index.html"><span class="num">00</span>封面 · 课程地图</a>
+    <a href="ch00-verilog101.html"><span class="num">01</span>Verilog 101</a>
+    <a href="ch01-sim.html"><span class="num">02</span>仿真入门</a>
+    <a href="ch02-debounce.html"><span class="num">03</span>Lab02 按键消抖</a>
+    <a href="ch03-cdc.html"><span class="num">04</span>亚稳态与 CDC</a>
+    <a href="ch04-vivado.html"><span class="num">05</span>Vivado 幕后</a>
+    <a href="ch05-pwm.html"><span class="num">06</span>PWM 呼吸灯</a>
+    <a href="ch06-uart-tx.html"><span class="num">07</span>UART 发送器</a>
+    <a href="ch07-uart-rx.html"><span class="num">08</span>UART 自环回</a>
+    <a href="ch08-axi.html" class="active"><span class="num">09</span>AXI 总线</a>
+    <a href="ch09-merge.html"><span class="num">10</span>PS-PL 会师</a>
+    <a href="ch10-capstone.html"><span class="num">11</span>毕业设计</a>
+    <a href="appendix-board.html"><span class="num">附A</span>板卡手册</a>
+    <a href="appendix-glossary.html"><span class="num">附B</span>术语表</a>
+    <a href="appendix-cheatsheet.html"><span class="num">附C</span>命令速查</a>
+  </nav>
+  <footer>硬件:Z7-Nano R20 · XC7Z020<br>软件:Vivado 2026.1 免费档<br>姊妹篇:主线 Linux 手册</footer>
+</aside>
+<main class="main">
+  <div class="chapter-tag">CHAPTER 09 · 纯仿真章</div>
+  <h2 class="title">AXI 总线:和 ARM 说同一种话</h2>
+  <p class="subtitle">你的 PL 至今是个聋子——今天给它装一扇 ARM 敲得开的门,先在仿真里请一个"假 ARM"来敲。</p>
+
+  <div class="box box-know"><div class="box-title">本章目标(可检验)</div>
+  <ol>
+    <li>能说出总线解决什么问题(点对点连线的爆炸),AXI4-Lite 的适用场景(低速寄存器读写)</li>
+    <li>能背出五个通道(AR/R/AW/W/B)各送什么,复述握手两条铁律</li>
+    <li>能读懂 ~100 行的最小 AXI4-Lite 从机:写 = 存值,读 = 回值</li>
+    <li>能用 task 封装的 axi_write/axi_read 驱动从机,在波形里逐拍数出握手的成交时刻</li>
+    <li>能说清 Zynq GP 口的"AXI3 方言"坑是什么、两套预案分别是什么</li>
+  </ol></div>
+
+  <h3>1 · 钩子:让 ARM 伸手拨你的旋钮</h3>
+  <p>从 lab01 到 lab07,你的电路一直在自说自话:呼吸自己呼吸,发报自己发报。P14 按键是它唯一听得见的输入——而隔壁那颗跑着 Debian 的 ARM,和你的电路明明躺在<strong>同一块硅片</strong>上,却谁也够不着谁。</p>
+  <p>把"够得着"翻译成具体需求,其实特别朴素:</p>
+  <div class="box box-step"><div class="box-title">愿望清单</div>
+  <p>让 ARM 能<strong>伸手拨你的旋钮</strong>——软件往某个地址写一个数,你的电路里就有一个寄存器变成这个数;软件再读这个地址,电路把现在的值报回去。有了这个,ARM 就能像调后台参数一样调你的 PWM 占空比、呼吸速度、任何参数。</p></div>
+  <p>这件事在软件世界你有现成的经验:多方设备互通,靠的是标准接口——HTTP、系统总线。硬件世界一模一样,这门规矩叫<strong>总线</strong>(Bus);FPGA 界事实上的普通话,是 ARM 家的 <strong>AXI</strong>。你可以把它理解成"FPGA 界的 HTTP":谁都听得懂,谁都得按它的格式说话。你写的从机(slave)就是一个最小的"Web 服务",寄存器就是它的 API。</p>
+
+  <h3>2 · AXI 家族:一分钟认亲</h3>
+  <p>AXI 全称高级可扩展接口(Advanced eXtensible Interface, AXI),是 AMBA(Advanced Microcontroller Bus Architecture,高级微控制器总线架构)家族的第三代成员。你只需要认识三兄弟中的两个:</p>
+  <table>
+    <tr><th>成员</th><th>一句话定位</th><th>本课程何时用</th></tr>
+    <tr><td><strong>AXI4</strong>(完整版)</td><td>带突发的全功能读写,高性能数据搬运(DDR、视频流)</td><td>不教(进阶路线图)</td></tr>
+    <tr><td><strong>AXI4-Lite</strong>(轻量版)</td><td>无突发、一次一笔的寄存器读写——就是"拨旋钮"这个需求的精确对位</td><td><strong>本章主角</strong></td></tr>
+    <tr><td><strong>AXI4-Stream</strong>(流版)</td><td>无地址的纯数据流,视频/网络包专用</td><td>只在路线图提名字</td></tr>
+  </table>
+  <p>用 HTTP 类比:AXI4 像支持 keep-alive 和分块传输的完整 HTTP,AXI4-Lite 像"一次一个请求"的极简版——对你的寄存器旋钮来说,极简版刚刚好。</p>
+
+  <h3>3 · 五个通道:一张柜台窗口图</h3>
+  <p>AXI 的所有交互拆成五个独立通道(channel),每个通道都是一根独立的"传单槽"。方向以<strong>谁发起</strong>分:发起方叫主机(Master),应答方叫从机(Slave)。</p>
+  <p><strong>写一笔</strong>要用三个通道:AW(说清往哪写)、W(数据本体)、B(从机的回执)。<strong>读一笔</strong>用两个:AR(说清读哪里)、R(数据 + 回执一起回来)。</p>
+  <div style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin:20px 0;text-align:center;">
+  <svg viewBox="0 0 780 300" style="max-width:100%;" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arC" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#b3541e"/></marker>
+      <marker id="arB" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#1d5c8a"/></marker>
+    </defs>
+    <rect x="30" y="60" width="170" height="190" rx="10" fill="#20262f"/>
+    <text x="115" y="95" text-anchor="middle" fill="#fff" font-size="16" font-weight="bold">主机 Master</text>
+    <text x="115" y="118" text-anchor="middle" fill="#c3cbd6" font-size="12">ARM(ch09 真身)</text>
+    <text x="115" y="136" text-anchor="middle" fill="#c3cbd6" font-size="12">本章 = 你的 TB</text>
+    <rect x="580" y="60" width="170" height="190" rx="10" fill="#f4f1ec" stroke="#b3541e" stroke-width="2"/>
+    <text x="665" y="95" text-anchor="middle" fill="#7c3a12" font-size="16" font-weight="bold">从机 Slave</text>
+    <text x="665" y="118" text-anchor="middle" fill="#4a5568" font-size="12">你的电路:寄存器</text>
+    <text x="665" y="136" text-anchor="middle" fill="#4a5568" font-size="12">= 旋钮本体</text>
+    <!-- 写通道 M->S -->
+    <line x1="200" y1="165" x2="580" y2="165" stroke="#b3541e" stroke-width="2.5" marker-end="url(#arC)"/>
+    <text x="390" y="158" text-anchor="middle" fill="#7c3a12" font-size="13.5" font-weight="bold">AW · 写地址(往哪写)</text>
+    <line x1="200" y1="200" x2="580" y2="200" stroke="#b3541e" stroke-width="2.5" marker-end="url(#arC)"/>
+    <text x="390" y="193" text-anchor="middle" fill="#7c3a12" font-size="13.5" font-weight="bold">W · 写数据(写什么)</text>
+    <line x1="580" y1="235" x2="200" y2="235" stroke="#1d5c8a" stroke-width="2.5" marker-end="url(#arB)"/>
+    <text x="390" y="228" text-anchor="middle" fill="#1d5c8a" font-size="13.5" font-weight="bold">B · 写回执(写成功了吗)</text>
+    <!-- 读通道 -->
+    <line x1="200" y1="70" x2="580" y2="70" stroke="#b3541e" stroke-width="2.5" marker-end="url(#arC)"/>
+    <text x="390" y="63" text-anchor="middle" fill="#7c3a12" font-size="13.5" font-weight="bold">AR · 读地址(读哪里)</text>
+    <line x1="580" y1="105" x2="200" y2="105" stroke="#1d5c8a" stroke-width="2.5" marker-end="url(#arB)"/>
+    <text x="390" y="98" text-anchor="middle" fill="#1d5c8a" font-size="13.5" font-weight="bold">R · 读数据(值 + 回执)</text>
+    <text x="390" y="278" text-anchor="middle" fill="#4a5568" font-size="12.5">铜色箭头 = 主机发出的请求 · 蓝色箭头 = 从机送回的应答(方向看箭头,不是看颜色)</text>
+  </svg>
+  </div>
+  <p>注意一个反直觉:W 是"主机→从机"的数据线,但 B 是"从机→主机"的回执线——写一笔也<strong>有回应</strong>,和 HTTP 的 POST 有 response 一模一样。而 R 把数据和回执合并在一个通道,像 GET 的响应体。</p>
+  <table>
+    <tr><th>通道</th><th>方向</th><th>载荷</th><th>HTTP 类比</th></tr>
+    <tr><td>AW(Write Address)</td><td>主→从</td><td>地址、长度</td><td>POST 的 URL</td></tr>
+    <tr><td>W(Write Data)</td><td>主→从</td><td>数据本体</td><td>POST 的 body</td></tr>
+    <tr><td>B(Write Response)</td><td>从→主</td><td>响应码(OKAY/ERROR)</td><td>POST 的状态码</td></tr>
+    <tr><td>AR(Read Address)</td><td>主→从</td><td>地址</td><td>GET 的 URL</td></tr>
+    <tr><td>R(Read Data)</td><td>从→主</td><td>数据 + 响应码</td><td>GET 的响应体 + 状态码</td></tr>
+  </table>
+
+  <h3>4 · 握手:valid/ready,两个文明人的抬杠仪式</h3>
+  <p>五个通道里的每一个,都靠<strong>同一套</strong>两线协议成交——这是 AXI 全部优雅的来源:</p>
+  <ul>
+    <li><strong>VALID</strong>(发起方举):"我的单子已经放槽里了,<em>有效</em>。"</li>
+    <li><strong>READY</strong>(接收方举):"我这边<em>准备好了</em>,随时能收。"</li>
+  </ul>
+  <p>成交规则一条:<strong>同一时钟上升沿,两根线同时为 1,这一笔单子成交,下一拍各自收线</strong>。谁先举、谁后举都无所谓——VALID 可以举着等 READY(图 4 左半),READY 也可以先举着等 VALID。</p>
+  <div style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin:20px 0;text-align:center;">
+  <svg viewBox="0 0 780 235" style="max-width:100%;" xmlns="http://www.w3.org/2000/svg">
+    <!-- 6 cycles: edges at 60..60+6*110 -->
+    <g stroke="#e2ddd4" stroke-width="1">
+      <line x1="60" y1="20" x2="720" y2="20"/><line x1="60" y1="200" x2="720" y2="200"/>
+    </g>
+    <!-- clk: 6 cycles, rising edges at 60/170/280/390/500/610/720 -->
+    <text x="42" y="45" text-anchor="end" font-size="13" fill="#1a2332" font-weight="bold">clk</text>
+    <path d="M60,26 h55 v32 h55 v-32 h55 v32 h55 v-32 h55 v32 h55 v-32 h55 v32 h55 v-32 h55 v32 h55 v-32 h55 v32 h55" fill="none" stroke="#1a2332" stroke-width="2"/>
+    <!-- rising edge marker at x=500 -->
+    <g>
+      <path d="M500,76 l6,10 l-12,0 z" fill="#2e7d32"/>
+      <text x="500" y="102" text-anchor="middle" font-size="12.5" fill="#2e7d32" font-weight="bold">成交沿</text>
+    </g>
+    <!-- VALID: rises after edge 170, drops after edge 610 -->
+    <text x="42" y="130" text-anchor="end" font-size="13" fill="#b3541e" font-weight="bold">VALID</text>
+    <path d="M60,158 h110 v-32 h440 v32 h110" fill="none" stroke="#b3541e" stroke-width="2.5"/>
+    <text x="390" y="120" text-anchor="middle" font-size="12" fill="#7c3a12">举起后一直举着,等 READY(不得撤销!)</text>
+    <!-- READY: rises after edge 390, drops after edge 610 -->
+    <text x="42" y="190" text-anchor="end" font-size="13" fill="#1d5c8a" font-weight="bold">READY</text>
+    <path d="M60,218 h330 v-32 h220 v32 h110" fill="none" stroke="#1d5c8a" stroke-width="2.5"/>
+    <!-- 成交拍: cycle between edges 500 and 610 -->
+    <rect x="500" y="96" width="110" height="122" fill="#2e7d32" opacity="0.10"/>
+    <circle cx="500" cy="42" r="7" fill="none" stroke="#2e7d32" stroke-width="2.5"/>
+    <text x="555" y="232" text-anchor="middle" font-size="12.5" fill="#2e7d32" font-weight="bold">这一拍两线同高 → 成交,下一拍各自收线</text>
+  </svg>
+  <p style="font-size:13px;color:#4a5568;margin:6px 0 0;">图 4 · VALID 先举、READY 后到的握手:成交发生在"两线同高"的那个上升沿(绿框),之后双方各自收线。</p>
+  </div>
+  <div class="box box-warn"><div class="box-title">握手两条铁律(违反 = 死锁或丢数)</div>
+  <p><strong>① VALID 一旦举起,不得撤销,直到成交。</strong>为什么?接收方可能在你举 VALID 的同一拍就"开始消费"了——比如把数据锁进寄存器。你单方面撤单,它等你、你等它的新单,两边永远互相等:这就是硬件版的死锁(deadlock)。</p>
+  <p><strong>② VALID 举起后,载荷(地址/数据)不得改变。</strong>单子递出去就不能再涂改,道理同上。</p>
+  <p>(READY 没有这个限制:接收方可以随时举、随时放——它是"被动方",撤回的只是"我现在方便"这个状态。)</p></div>
+  <div class="box box-know"><div class="box-title">知识 · AXI 握手本质也是状态机</div>
+  <p>上一章你刚写完 UART 的有限状态机。回头看这个从机:<code>aw_seen/w_seen → write_fire → bvalid</code>,就是"等地址 → 等数据 → 回执"的三态小机器。ch07 的技能直接续上——你不是在学新东西,是在<strong>换一种用途</strong>用旧技能。</p></div>
+
+  <h3>5 · 寄存器映射:旋钮的编号表</h3>
+  <p>从机对外其实就是一张极短的表,叫寄存器映射(Register Map)——哪个偏移地址对应哪个旋钮:</p>
+  <table>
+    <tr><th>偏移</th><th>名字</th><th>读/写</th><th>含义</th></tr>
+    <tr><td><code>0x00</code></td><td>REG0</td><td>读写</td><td>唯一的旋钮:写 = 存值,读 = 回值(本章)</td></tr>
+    <tr><td><code>0x04</code></td><td>—</td><td>—</td><td>lab09 会加:SPEED 呼吸速度寄存器</td></tr>
+  </table>
+  <p>"地址映射"(Address Map)是同一件事在系统层面的说法:每个从机在整个地址空间里占一段。Zynq 上,ARM 侧伸进 PL(可编程逻辑)的通用端口(General Purpose Port, GP0)给你的从机划的窗口从 <code>0x4000_0000</code> 开始——所以 ch09 里你会看到 <code>devmem 0x40000000</code> 这一枪,打中的就是偏移 0x00 的这个寄存器。地址译码(address decode)是从机内部的事:拿地址低几位选寄存器,本章单寄存器版先不译(所有地址都落到 REG0),lab09 的双寄存器版会用一个 <code>case</code> 补上。</p>
+
+  <h3>6 · 动手一:从机逐段解剖(阅读实验,不是从零写)</h3>
+  <p>本章的从机是<strong>阅读材料</strong>——AXI 的坑在握手细节里,第一次就让你从零写等于让你背规范。打开 <code>labs/lab08-axi/axi_lite_slave.v</code>,三个部分:</p>
+  <h4>接口:把五通道原样声明成端口</h4>
+  <pre><code><span class="k">module</span> axi_lite_slave #(
+    <span class="k">parameter</span> ADDR_W = <span class="s">4</span>
+)(
+    <span class="k">input</span>  wire              aclk,      <span class="c">// 总线时钟(TB 给;板上来自 FCLK0)</span>
+    <span class="k">input</span>  wire              aresetn,   <span class="c">// 低有效复位,AXI 惯例带 n</span>
+    <span class="c">// 写地址通道 AW</span>
+    <span class="k">input</span>  wire [ADDR_W<span class="s">-1</span>:<span class="s">0</span>] s_axi_awaddr,
+    <span class="k">input</span>  wire              s_axi_awvalid,
+    <span class="k">output</span> wire              s_axi_awready,
+    <span class="c">// ……W / B / AR / R 四个通道同理,完整版见 lab 文件</span>
+    <span class="k">output</span> wire [<span class="s">31</span>:<span class="s">0</span>]       knob       <span class="c">// ★ 寄存器的影子:旋钮手柄,给外电路抓</span>
+);</code></pre>
+  <p>没有函数、没有调用——从机的"API"就是这一排端口。命名 <code>S_AXI_*</code> 是 Xilinx 惯例(S = Slave 侧),ch09 它们会原封不动连到 PS7 的 <code>M_AXI_GP0_*</code>(M = Master 侧)。</p>
+  <h4>写路径:两个通道各自记账,到齐才落寄存器</h4>
+  <pre><code><span class="k">reg</span>        aw_seen, w_seen;          <span class="c">// 地址到了吗 / 数据到了吗(各自成交拍置位)</span>
+<span class="k">reg</span> [<span class="s">31</span>:<span class="s">0</span>] wbuf;                   <span class="c">// W 成交拍锁存的数据(必须锁!见下方坑 3)</span>
+<span class="k">reg</span> [<span class="s">31</span>:<span class="s">0</span>] reg0;                   <span class="c">// ★ 旋钮本体</span>
+<span class="k">wire</span> write_fire = aw_seen &amp;&amp; w_seen; <span class="c">// 到齐 → 这拍落寄存器</span>
+
+<span class="k">assign</span> s_axi_awready = !aw_seen;     <span class="c">// ready 策略:空闲时永远欢迎</span>
+<span class="k">assign</span> s_axi_wready  = !w_seen;
+
+<span class="k">always</span> @(posedge aclk) <span class="k">begin</span>
+    <span class="k">if</span> (!aresetn) <span class="k">begin</span> ... <span class="k">end</span>
+    <span class="k">else begin</span>
+        <span class="k">if</span> (s_axi_awvalid &amp;&amp; s_axi_awready) <span class="k">begin</span> aw_seen &lt;= <span class="s">1</span>'b1; awbuf &lt;= s_axi_awaddr; <span class="k">end</span>
+        <span class="k">if</span> (s_axi_wvalid  &amp;&amp; s_axi_wready ) <span class="k">begin</span> w_seen  &lt;= <span class="s">1</span>'b1; wbuf  &lt;= s_axi_wdata;  <span class="k">end</span>
+        <span class="k">if</span> (write_fire) <span class="k">begin</span>
+            reg0    &lt;= wbuf;             <span class="c">// ← 拨旋钮的时刻:写 = 存值</span>
+            aw_seen &lt;= <span class="s">1</span>'b0;  w_seen &lt;= <span class="s">1</span>'b0;
+            bvalid  &lt;= <span class="s">1</span>'b1;            <span class="c">// 举回执(B 通道)</span>
+        <span class="k">end</span>
+        <span class="k">if</span> (bvalid &amp;&amp; s_axi_bready) bvalid &lt;= <span class="s">1</span>'b0;  <span class="c">// 回执成交才放下(铁律①)</span>
+    <span class="k">end</span>
+<span class="k">end</span></code></pre>
+  <p>对照柜台图读一遍:AW、W 两个传单槽<strong>各自</strong>握手(第 4-5 行),谁先成交都行;两个 <code>seen</code> 都置位后 <code>write_fire</code>,寄存器落值、B 通道举回执。回执本身又是一次握手——<code>bvalid</code> 举着等主机的 <code>bready</code>,成交才放。一笔写 = 三次握手。</p>
+  <h4>读路径:一次握手,数据保持到成交</h4>
+  <pre><code><span class="k">assign</span> s_axi_arready = !s_axi_rvalid;      <span class="c">// 上一笔没回完,不接新单</span>
+<span class="k">always</span> @(posedge aclk) <span class="k">begin</span>
+    <span class="k">if</span> (!aresetn) <span class="k">begin</span> ... <span class="k">end</span>
+    <span class="k">else if</span> (s_axi_arvalid &amp;&amp; s_axi_arready) <span class="k">begin</span>
+        rvalid &lt;= <span class="s">1</span>'b1;
+        rdata  &lt;= reg0;                    <span class="c">// ← 读 = 回值:把现值端出去</span>
+    <span class="k">end</span>
+    <span class="k">else if</span> (rvalid &amp;&amp; s_axi_rready)
+        rvalid &lt;= <span class="s">1</span>'b0;                     <span class="c">// 成交后放下</span>
+<span class="k">end</span>
+<span class="k">assign</span> knob = reg0;                        <span class="c">// 旋钮手柄:值一变,外电路立刻看得见</span></code></pre>
+
+  <h3>7 · 动手二:TB 假扮 ARM</h3>
+  <p>从机的对方叫主机——本章由 testbench 出演。核心动作:把"一次完整的 AXI 写/读"封进两个 task,以后调用它们就像调函数:</p>
+  <pre><code><span class="c">// 写一笔 ≈ devmem 0x40000000 32 0x55</span>
+<span class="k">task</span> axi_write(<span class="k">input</span> [<span class="s">3</span>:<span class="s">0</span>] addr, <span class="k">input</span> [<span class="s">31</span>:<span class="s">0</span>] data);
+    <span class="k">reg</span> aw_done, w_done;
+    <span class="k">begin</span>
+        @(posedge aclk);
+        s_axi_awvalid &lt;= <span class="s">1</span>'b1; s_axi_awaddr &lt;= addr;   <span class="c">// 举 AW + W(同拍举,协议也允许先后)</span>
+        s_axi_wvalid  &lt;= <span class="s">1</span>'b1; s_axi_wdata  &lt;= data;
+        s_axi_bready  &lt;= <span class="s">1</span>'b1;
+        <span class="k">while</span> (!aw_done || !w_done) <span class="k">begin</span>      <span class="c">// 各通道分别等成交</span>
+            @(posedge aclk);
+            <span class="k">if</span> (s_axi_awvalid &amp;&amp; s_axi_awready) aw_done = <span class="s">1</span>'b1;
+            <span class="k">if</span> (s_axi_wvalid  &amp;&amp; s_axi_wready ) w_done  = <span class="s">1</span>'b1;
+            <span class="k">if</span> (aw_done) s_axi_awvalid &lt;= <span class="s">1</span>'b0;  <span class="c">// 成交拍之后才准撤(铁律①)</span>
+            <span class="k">if</span> (w_done)  s_axi_wvalid  &lt;= <span class="s">1</span>'b0;
+        <span class="k">end</span>
+        <span class="k">while</span> (s_axi_bvalid !== <span class="s">1</span>'b1) @(posedge aclk); <span class="c">// 等回执</span>
+        s_axi_bready &lt;= <span class="s">1</span>'b0;
+    <span class="k">end</span>
+<span class="k">endtask</span></code></pre>
+  <p>读的 <code>axi_read</code> 对称:举 AR → 等 R 成交 → 收走 <code>rdata</code>(完整代码在 <code>tb_axi_slave.v</code>)。剧本主菜只有三行——这就是 ch09 里真 ARM 视角的预演,对软件来说,总线访问缩水成"往一个地址写了个数":</p>
+  <pre><code>axi_write(<span class="s">4</span>'h0, <span class="s">32</span>'h0000_0055);   <span class="c">// 写 0x55 进寄存器</span>
+axi_read (<span class="s">4</span>'h0, rdata);           <span class="c">// 读回来</span>
+<span class="c">// 检查:rdata == 0x55?knob == 0x55?→ PASS/FAIL 自动记分</span></code></pre>
+  <div class="box box-know"><div class="box-title">知识 · task 里的采样时机(防"TB 与 DUT 同源"盲区)</div>
+  <p>task 在 <code>@(posedge aclk)</code> 醒来后<strong>立刻</strong>用阻塞读读握手线。因为 DUT 全用 <code>&lt;=</code> 更新,同一时刻读到的必然是"这一沿之前"的稳定值——恰好就是成交判定条件。ch07 讲过"TB 的采样假设要独立于 DUT",这里是同一件事的握手版。另外注意 TB 是唯一允许用 <code>=</code>、<code>while</code>、<code>#</code> 的地方——它本来就是"写给仿真器的软件"(ch01)。</p></div>
+
+  <h3>8 · 动手三:跑起来</h3>
+  <div class="box box-step"><div class="box-title">步骤(命令卡见 lab README / 附录 C)</div>
+  <pre><code><span class="k">cd</span> labs/lab08-axi
+xvlog axi_lite_slave.v tb_axi_slave.v
+xelab -debug typical tb_axi_slave -s tb_sim
+xsim tb_sim -R</code></pre>
+  <p>最后一步 <code>-R</code> 是"跑完自动退出";想开波形 GUI 就去掉它(run all → 看波形)。</p></div>
+
+  <h3>9 · 现象与验证</h3>
+  <p>终端预期(PASS 12/12):</p>
+  <pre><code>=== Lab08 TB 假扮 ARM:写 0x55,读回验证 ===
+[ OK ] 写响应 bresp=OKAY
+[ OK ] 旋钮 knob 随写变为 55
+[ OK ] 读响应 rresp=OKAY
+[ OK ] 读回 55
+...
+--- PASS (12/12) ---</code></pre>
+  <p>波形里做一次"数拍子"练习——找到第一笔写,依次标出:</p>
+  <ol>
+    <li>AW 成交拍(<code>awvalid &amp;&amp; awready</code> 同高的那个沿)</li>
+    <li>W 成交拍(通常同拍)</li>
+    <li><code>knob</code> 跳到 0x55 的拍(write_fire,比上一步晚一拍——因为 <code>seen</code> 要先置位)</li>
+    <li>B 回执成交拍(<code>bvalid &amp;&amp; bready</code>)</li>
+  </ol>
+  <p>这四拍的先后顺序,就是"ARM 写你一个寄存器"在时间上的全展开。看懂了它,ch09 的 <code>devmem</code> 对你就只是一行压缩。</p>
+
+  <div class="box box-step"><div class="box-title">别跳过:综合体检</div>
+  <p>仿真全过 ≠ 能上板。跑一遍 <code>vivado -mode batch -source build.tcl</code>(只综合,不上板):①提前暴露不可综合写法,别等会师当天炸;②把 AXI 块的 LUT/FF 记进资源账本(预计一百级,和整个 7Z020 的 53200 个 LUT 相比是零头);③本课无 XDC,所以<strong>没有</strong>时序报告可看——"什么时候才有 WNS"这个问题,下一章会变成一个大坑,记住这个伏笔。</p></div>
+
+  <h3>10 · 那条沟:Zynq 的 GP 口说的是"AXI3 方言"</h3>
+  <p>一切美好之下有一件必须如实告诉你:ch09 要把你的 AXI4-Lite 从机直连到 ARM 侧的通用端口 GP0 上,而按官方技术手册 UG585,<strong>Zynq-7000 的 GP 口说的是 AXI3</strong>——AXI 的上一版方言,比 AXI4 多了几个信号(事务 ID、突发长度字段等),和我们学的 AXI4-Lite 并不完全同名同规格。</p>
+  <p>好消息是:devmem 单字访问是"单拍、无突发"的事务,AXI3 单拍传输的行为与 AXI4-Lite 高度重合,从机侧对 AXI3 独有信号置之不理即可——<strong>大概率直连就能工作</strong>。但"大概率"不是工程答案:</p>
+  <div class="box box-warn"><div class="box-title">待实测门(全书三项"待实测"之一)</div>
+  <p><strong>开写 ch09 前必须实测:AXI4-Lite 从机直挂 GP0,是否被容忍。</strong>两套预案都备好了,实测后二选一:</p>
+  <table>
+    <tr><th>方案</th><th>内容</th><th>代价</th></tr>
+    <tr><td><strong>甲 · 免桥直连</strong>(首选)</td><td>GP0 的 AXI3 单拍 ↔ 我们的 Lite 从机,从机忽略 ID/突发类信号</td><td>0 个 IP,顶层最简</td></tr>
+    <tr><td><strong>乙 · 垫 AXI Interconnect</strong></td><td>用免费的 AXI Interconnect IP 做协议转换(AXI3 主侧 ↔ AXI4-Lite 从侧),<code>create_ip</code> 全脚本生成,<strong>不需要进 Block Design</strong></td><td>多一个 IP,资源 +几百 LUT,顶层多一层连线</td></tr>
+  </table>
+  <p>本课和 lab09 的代码按<strong>方案甲</strong>写;若实测落在乙,lab09 的 build.tcl 里预留了注释开关(见其 README)。</p></div>
+  <div class="box box-know"><div class="box-title">预告 · PS7 直例化,不进 Block Design</div>
+  <p>行业里连 PS 和 PL 常用图形化的 Block Design。本课程反其道:ch09 直接在 Verilog 里例化 <code>PS7</code> 原语——像例化一个普通模块那样把 GP0 的几十根线和 FCLK 时钟接出来。对你这个命令行重度用户,这是更诚实的一条路:没有黑盒向导,每一根线都看得见。</p></div>
+
+  <h3>11 · 常见坑</h3>
+  <div class="box box-warn"><div class="box-title">坑 1 · XSIM 不查协议</div>
+  <p>仿真器只仿真你写的逻辑,不检查你是否遵守 AXI 规范。你把 VALID 举起来又撤销,仿真多半照跑不误;上了真总线可能死锁。规范意识要自己带——铁律两条贴在显示器上。</p></div>
+  <div class="box box-warn"><div class="box-title">坑 2 · 只等了一个通道就开始写寄存器</div>
+  <p>AW 和 W 是两个独立握手:可能地址先到、数据后到(常见),也可能反过来。谁先谁后不确定,所以必须 <code>aw_seen &amp;&amp; w_seen</code> 都置位才 fire。只等 W 不等 AW,地址还没到就落寄存器,读回来一看全对(因为单寄存器不译码),一上双寄存器设计立刻写串门。</p></div>
+  <div class="box box-warn"><div class="box-title">坑 3 · 不锁存就晚用</div>
+  <p>W 成交后主机下一拍可能就换数据了。如果 write_fire 隔了一拍才发生,而你直接用 <code>s_axi_wdata</code>,用的已经是<strong>别人的下一笔</strong>。所以成交拍必须锁进 <code>wbuf</code>——这是从机代码里最容易被"看起来对"骗过去的一个细节。</p></div>
+  <div class="box box-warn"><div class="box-title">坑 4 · 回执不等成交就放下</div>
+  <p><code>bvalid</code>/<code>rvalid</code> 的放下条件必须是 <code>&amp;&amp; ready</code>,不能"举一拍就收"。主机可能忙,READY 迟迟不来——你先撤了,它以为你还在,又等回去:死锁。</p></div>
+
+  <h3>12 · 小结</h3>
+  <ul>
+    <li>总线 = 多方互通的标准前台;AXI4-Lite = 一次一笔的寄存器读写,正对"拨旋钮"需求</li>
+    <li>五通道 AW/W/B(写)+ AR/R(读);每通道一套 valid/ready 握手,同拍同高成交</li>
+    <li>铁律:VALID 举起不得撤销、载荷不得变;READY 随便</li>
+    <li>最小从机 = 一个寄存器 + "等地址、等数据、回执"的小状态机;写 = 存值,读 = 回值</li>
+    <li>TB 用 task 假扮主机,封装后一行调用——这正是 ch09 真 ARM(devmem)的视角</li>
+    <li>GP0 说 AXI3:两案备好(直连 / 垫 Interconnect),实测门后二选一</li>
+  </ul>
+  <div class="box box-know"><div class="box-title">本章新词卡(已登记附录 B)</div>
+  <p>总线(Bus)· 高级可扩展接口(Advanced eXtensible Interface, AXI)· AXI4-Lite · 高级微控制器总线架构(Advanced Microcontroller Bus Architecture, AMBA)· 主机(Master)· 从机(Slave)· 通道(Channel)· 握手(Handshake)· 寄存器映射(Register Map)· 地址映射(Address Map)· 地址译码(Address Decode)· 通用端口(General Purpose Port, GP0)· AXI3(AXI 第三版规范,Zynq GP 口方言)</p></div>
+
+  <h3>13 · 三档自测</h3>
+  <p><strong>A(概念复述)</strong>· 用"人话一句话"说清:为什么 VALID 一旦举起就不能撤?(提示:站在接收方角度想它什么时候开始消费)</p>
+  <p><strong>B(预测题)</strong>· 把 TB 里的 <code>s_axi_bready</code> 从"每笔写时才举"改成复位后就永远为 1,其余不动。先猜:波形上 B 通道的握手会少几拍?PASS/FAIL 结果会变吗?</p>
+  <p><strong>C(排错题)</strong>· 同学把从机改成两寄存器版,地址译码写成 <code>case (awaddr)</code> 全比较 <code>4'h0</code> 和 <code>4'h4</code>,却忘了 default 分支。他写 0x00、0x04 都正常,为什么说这颗雷是"下一个读 0x8 的人踩"?</p>
+  <details><summary>展开答案(先自己答,再对)</summary>
+  <p><strong>A</strong>:接收方可能在 VALID 举起的那一拍就把数据锁走/开始处理,它没法预知你会撤;你撤了它还举着 READY 等你,你等它的新单——互相等,死锁。所以规矩是:单子递出去就作数,直到成交。</p>
+  <p><strong>B</strong>:B 通道 <code>bvalid</code> 与 <code>bready</code> 本来就是"从机举、主机在写期间举",bready 恒 1 时成交拍不变(还是 bvalid 举起后的第一个沿),波形几乎不变,PASS 不变。考察点:READY 先举后举都合法,成交只看"同拍同高"。</p>
+  <p><strong>C</strong>:XSIM/综合器对不完整 case 且无 default 的时序逻辑,通常保持原值(latch 倾向)——写 0x8 时没有任何分支命中,寄存器维持旧值"看起来没反应";但不同工具/不同写法下行为未定义,规范做法是 default 里落一个默认值或返回错误响应。地址译码永远写全分支。</p>
+  </details>
+
+  <h3>14 · 下一课预告</h3>
+  <p>仿真里这个假 ARM 已经能让旋钮听话了。真 ARM 就在隔壁的 Debian 里,但它和你之间还隔着三道门:一扇要靠 <strong>PS7 直例化</strong>打开(FCLK 时钟和 GP0 总线从那里出来)、一颗"FIQ 风暴"的螺丝(你亲历的那场冻机排查)、和一条必须<strong>手写</strong>的时钟约束——不写它,时序报告会对你撒一个全绿的谎。下一章:会师。</p>
+
+  <div class="pager">
+    <a href="ch07-uart-rx.html">← 上一章:UART 自环回</a>
+    <a href="ch09-merge.html">下一章:PS-PL 会师 →</a>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="命令速查卡:Tcl 五步、Vivado 烧写、xsim 仿真三步、Linux 侧装载与 devmem、OpenOCD 三板斧、急救口诀——第一次学在章节里,以后查在卡片里。">
+<title>附录 C · 命令速查卡 — Zynq FPGA 从零到实战</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <span class="chip">ZYNQ · FPGA</span>
+    <h1>从零到实战</h1>
+    <p>Verilog · Vivado · Z7-Nano</p>
+  </div>
+  <nav>
+    <a href="index.html"><span class="num">00</span>封面 · 课程地图</a>
+    <a href="ch00-verilog101.html"><span class="num">01</span>Verilog 101</a>
+    <a href="ch01-sim.html"><span class="num">02</span>仿真入门</a>
+    <a href="ch02-debounce.html"><span class="num">03</span>Lab02 按键消抖</a>
+    <a href="ch03-cdc.html"><span class="num">04</span>亚稳态与 CDC</a>
+    <a href="ch04-vivado.html"><span class="num">05</span>Vivado 幕后</a>
+    <a href="ch05-pwm.html"><span class="num">06</span>PWM 呼吸灯</a>
+    <a href="ch06-uart-tx.html"><span class="num">07</span>UART 发送器</a>
+    <a href="ch07-uart-rx.html"><span class="num">08</span>UART 自环回</a>
+    <a href="ch08-axi.html"><span class="num">09</span>AXI 总线</a>
+    <a href="ch09-merge.html"><span class="num">10</span>PS-PL 会师</a>
+    <a href="ch10-capstone.html"><span class="num">11</span>毕业设计</a>
+    <a href="appendix-board.html"><span class="num">附A</span>板卡手册</a>
+    <a href="appendix-glossary.html"><span class="num">附B</span>术语表</a>
+    <a href="appendix-cheatsheet.html" class="active"><span class="num">附C</span>命令速查</a>
+  </nav>
+  <footer>硬件:Z7-Nano R20 · XC7Z020<br>软件:Vivado 2026.1 免费档<br>姊妹篇:主线 Linux 手册</footer>
+</aside>
+<main class="main">
+  <div class="chapter-tag">APPENDIX C</div>
+  <h2 class="title">命令速查卡</h2>
+  <p class="subtitle">全书实战命令的集中收纳:第一次学在章节里,以后查在卡片里。</p>
+
+  <div class="box box-know">
+    <div class="box-title">用卡原则</div>
+    <p>每条命令都在正文里教过一遍(表内"学在"列标了出处),这里只给<strong>命令 + 一行注释</strong>,不重复原理。工具版本口径:Vivado 2026.1 免费档(安装界面名 Vivado ML Standard,授权页称 Basic);OpenOCD 配置沿用<a href="https://lzjever.github.io/zynq-z7nano-mainline-linux/">姊妹手册</a>仓库的 <code>openocd-z7nano.cfg</code>。"主机"= 你的电脑,"板上"= 板子的 Debian 里。</p>
+  </div>
+
+  <h3>C.1 Tcl 五步舞:从源码到比特流(学在 <a href="ch04-vivado.html">ch04</a>)</h3>
+  <pre><code><span class="k">create_project</span> lab01 ./lab01 -part xc7z020clg400-2 -force   <span class="c"># ① 建工程(芯片型号别抄错,-2 是速度等级)</span>
+<span class="k">add_files</span> led_blink.v                                       <span class="c"># ② 加源码</span>
+<span class="k">add_files</span> -fileset constrs_1 lab01.xdc                    <span class="c"># ② 加约束(引脚/时钟)</span>
+<span class="k">set_property</span> top led_blink [current_fileset]              <span class="c"># ② 指定顶层模块</span>
+<span class="k">launch_runs</span> synth_1 -jobs 8                              <span class="c"># ③ 综合:Verilog → 门级电路</span>
+<span class="k">wait_on_run</span> synth_1                                        <span class="c"># ③ 等它跑完</span>
+<span class="k">launch_runs</span> impl_1 -jobs 8                               <span class="c"># ④ 实现:放进真实 LUT/FF、布线</span>
+<span class="k">wait_on_run</span> impl_1                                         <span class="c"># ④ 等它跑完</span>
+<span class="k">launch_runs</span> impl_1 -to_step write_bitstream -jobs 8       <span class="c"># ⑤ 生成比特流 .bit</span>
+<span class="k">wait_on_run</span> impl_1                                         <span class="c"># ⑤ 等它跑完</span></code></pre>
+  <table>
+    <tr><th>在哪</th><th>命令</th><th>用途</th></tr>
+    <tr><td>主机</td><td><code>vivado -mode batch -source build.tcl</code></td><td>一条命令跑完五步(~2 分钟吐出 WNS 和 .bit),不用开 GUI</td></tr>
+    <tr><td>脚本尾</td><td><code>set wns [get_property SLACK [get_timing_paths]]</code></td><td>读时序最差负余量(Worst Negative Slack, WNS)——≥0 才算时序达标</td></tr>
+    <tr><td>脚本尾</td><td><code>report_utilization</code></td><td>资源账本:查找表(Look-Up Table, LUT)与触发器(Flip-Flop, FF)用量,记进每课 README</td></tr>
+  </table>
+
+  <h3>C.2 烧写与硬件管理器(学在 ch04 / <a href="ch09-merge.html">ch09</a>)</h3>
+  <table>
+    <tr><th>在哪</th><th>命令</th><th>用途</th></tr>
+    <tr><td>主机</td><td><code>pkill -x openocd</code></td><td>烧写/ILA 前<strong>必做</strong>:清掉 OpenOCD,不然 hw_server 连不上板(附A.7)</td></tr>
+    <tr><td>主机</td><td><code>vivado -mode batch -source program.tcl</code></td><td>一条命令烧写(免开 GUI);下面五行就是 program.tcl 的骨架</td></tr>
+    <tr><td>Tcl</td><td><code>open_hw_manager</code></td><td>打开硬件管理器</td></tr>
+    <tr><td>Tcl</td><td><code>connect_hw_server</code></td><td>连上本机 hw_server(它再经 FT232H 连板)</td></tr>
+    <tr><td>Tcl</td><td><code>open_hw_target</code></td><td>打开 JTAG 链</td></tr>
+    <tr><td>Tcl</td><td><code>set_property PROGRAM.FILE {lab01.bit} [get_hw_devices]</code></td><td>指定要烧的比特流</td></tr>
+    <tr><td>Tcl</td><td><code>program_hw_devices [get_hw_devices]</code></td><td>烧!</td></tr>
+  </table>
+
+  <h3>C.3 仿真三步舞:xvlog / xelab / xsim(学在 <a href="ch01-sim.html">ch01</a>)</h3>
+  <table>
+    <tr><th>在哪</th><th>命令</th><th>用途</th></tr>
+    <tr><td>主机</td><td><code>xvlog led_blink.v tb_led_blink.v</code></td><td>编译:RTL 和测试平台(testbench)一起过语法,生成 .sdb</td></tr>
+    <tr><td>主机</td><td><code>xelab tb_led_blink -snapshot sim</code></td><td>装配:展开例化层次,生成仿真快照(顶层是 TB 不是 RTL)</td></tr>
+    <tr><td>主机</td><td><code>xsim sim -R</code></td><td>运行:<code>-R</code> 跑到 <code>$finish</code>,自检打印 PASS/FAIL;参数细节见各课 sim.tcl</td></tr>
+  </table>
+
+  <h3>C.4 Linux 侧:ssh / 串口 / FPGA Manager / devmem(学在 <a href="ch09-merge.html">ch09</a>)</h3>
+  <table>
+    <tr><th>在哪</th><th>命令</th><th>用途</th></tr>
+    <tr><td>主机</td><td><code>python3 uart.py listen 120</code></td><td>串口监听 120 秒(抓启动日志;上电前先开,工具支持自动重连)</td></tr>
+    <tr><td>主机</td><td><code>python3 uart.py probe</code></td><td>发个回车,探板子当前停在哪个界面</td></tr>
+    <tr><td>主机</td><td><code>python3 uart.py send "文字"</code></td><td>发一行看回显(登录名、命令都靠它)</td></tr>
+    <tr><td>主机</td><td><code>ssh root@192.168.1.10</code></td><td>上板(密码 root);比串口快,日常操作走这条</td></tr>
+    <tr><td>主机</td><td><code>python3 bit2bin.py lab01.bit</code></td><td>.bit → .bin:剥头 + 每 32 位字节序交换(FPGA Manager 的要求;脚本在 labs/)</td></tr>
+    <tr><td>主机</td><td><code>scp lab01.bin root@192.168.1.10:/lib/firmware/</code></td><td>把 bin 送进板上固件目录</td></tr>
+    <tr><td>板上</td><td><code>echo lab01.bin &gt; /sys/class/fpga_manager/fpga0/firmware</code></td><td>让 FPGA Manager(Linux 内核的 FPGA 装载框架)装载你的电路——ch09 会师主路</td></tr>
+    <tr><td>板上</td><td><code>cat /sys/class/fpga_manager/fpga0/state</code></td><td>查状态:<code>operating</code> = 装好,PL 已在跑</td></tr>
+    <tr><td>板上</td><td><code>devmem 0xF8000170 32 值</code></td><td>写 SLCR(系统级控制寄存器,System-Level Control Registers, SLCR)使能 FCLK0——值的除数计算见 ch09"会师仪式"</td></tr>
+    <tr><td>板上</td><td><code>devmem 0x40000000 32 0x2</code></td><td>往 GP0 直挂从机的 0 号寄存器写值(示例:写 duty=2;地址怎么来的见 ch09)</td></tr>
+    <tr><td>板上</td><td><code>devmem 0x40000000</code></td><td>读回:验证版本魔数 / 寄存器写对了没</td></tr>
+  </table>
+
+  <h3>C.5 OpenOCD 三板斧:halt / reg pc / resume(学在姊妹手册第 6 章)</h3>
+  <table>
+    <tr><th>在哪</th><th>命令</th><th>用途</th></tr>
+    <tr><td>主机</td><td><code>lsusb | grep 0403:6014</code></td><td>先确认 FT232H 在 USB 上(物理层不通,后面全白搭)</td></tr>
+    <tr><td>主机</td><td><code>pkill -x hw_server</code></td><td>开 OpenOCD 前<strong>必做</strong>:清掉 Vivado 的 JTAG 服务器(互杀口诀,附A.7)</td></tr>
+    <tr><td>主机</td><td><code>openocd -f openocd-z7nano.cfg -c "init" -c "targets" -c "shutdown"</code></td><td>验链路:应列出 zynq.cpu0 / zynq.cpu1 两个目标</td></tr>
+    <tr><td>主机</td><td><code>openocd -f openocd-z7nano.cfg -c "init" -c "targets zynq.cpu0" -c "halt" -c "reg pc" -c "resume" -c "shutdown"</code></td><td>三板斧:暂停 → 问"你在哪"(读 PC)→ 放行;隔几秒再来一次,两次 PC 一样=卡死,不一样=还在跑</td></tr>
+    <tr><td>主机</td><td><code>openocd -f openocd-z7nano.cfg -c "init" -c "halt" -c "mdw 0xF800025C" -c "resume" -c "shutdown"</code></td><td>读 BOOT_MODE 寄存器:<strong>读回 5 = 跳线在 SD 档</strong>(附A.2)</td></tr>
+  </table>
+
+  <h3 id="firstaid">C.6 急救区:看门狗口诀</h3>
+  <div class="box box-warn">
+    <div class="box-title">口诀:出问题,先问两句——"能不能重启?重启的代价是什么?"</div>
+    <p>任何卡死、任何玄学,先把问题分成"重启能救的"和"重启要付代价的",再动手。代价从小到大:重烧 PL(半分钟,program.tcl)&lt; 重新装载(一条 echo)&lt; 整板重启(Debian 起来要几十秒,且 <strong>PL 配置必丢</strong>——启动链里没有比特流,重启后要重新烧/装载)。板上 <code>reboot</code>、按 RST、断电,都属于最后一档。</p>
+  </div>
+  <table>
+    <tr><th>症状</th><th>第一反应</th><th>为什么 / 详见</th></tr>
+    <tr><td>板上现象突然消失(LED 灭、排针无输出)</td><td><strong>是不是按错键了?</strong>RST = 整芯复位</td><td>RST 一按:Debian 重启 + PL 配置清空,两样都要恢复;<a href="appendix-board.html">附A.6</a></td></tr>
+    <tr><td>connect_hw_server 卡住 / OpenOCD 报 adapter 打不开</td><td><code>pkill -x</code> 杀掉对方</td><td>FT232H 独占,两个 JTAG 服务器互杀;<a href="appendix-board.html">附A.7</a></td></tr>
+    <tr><td>串口完全静默(连乱码都没有)</td><td>查跳线是否 SD 档;再 <code>mdw 0xF800025C</code>(5 才对)</td><td>不在 SD 档时 BootROM 空等,全静默最像"板子坏了";<a href="appendix-board.html">附A.2</a></td></tr>
+    <tr><td>电脑显示"已连接",板子 ping 不通</td><td>网线换到 PS ETH 口</td><td>单边有链路 = 插到 PL ETH 了(它没驱动);<a href="appendix-board.html">附A.2</a></td></tr>
+    <tr><td>装载比特流后 ssh 卡死、板子冻住</td><td>别慌着重启,先翻 ch09 战地日记</td><td>FIQ 风暴的当前状态与验收门写在 ch09(GIC 修复待断电验证);<a href="ch09-merge.html">ch09</a></td></tr>
+    <tr><td>JTAG 烧完,发现之前 FPGA Manager 装的电路没了(或反过来)</td><td>正常,重装一遍要的那个</td><td>两路装载互斥,"谁后到谁生效";<a href="ch09-merge.html">ch09</a></td></tr>
+    <tr><td>综合/实现报时序错误,WNS 是负数</td><td>先查 XDC:<code>create_clock</code> 在不在、周期 20ns 对不对</td><td>没约束时钟时时序报告没有意义(全绿也是假象);<a href="ch04-vivado.html">ch04</a></td></tr>
+    <tr><td>怀疑板子热坏了</td><td>XADC 量体温,和基准 55°C 比</td><td>公式与三行命令在 <a href="appendix-board.html">附A.8</a>;显著高于基准且爬升才需要查</td></tr>
+  </table>
+
+  <div class="pager">
+    <a href="appendix-glossary.html">← 上一页:附录 B 术语表</a>
+    <a href="index.html">回到封面:课程地图 →</a>
+  </div>
+</main>
+</body>
+</html>

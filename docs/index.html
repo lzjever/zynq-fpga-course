@@ -1,1 +1,137 @@
-构建中,课程设计进行时——先看 docs/ch00-verilog101.html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>课程地图 — Zynq FPGA 从零到实战</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <span class="chip">ZYNQ · FPGA</span>
+    <h1>从零到实战</h1>
+    <p>Verilog · Vivado · Z7-Nano</p>
+  </div>
+  <nav>
+    <a class="active" href="index.html"><span class="num">00</span>封面 · 课程地图</a>
+    <a href="ch00-verilog101.html"><span class="num">01</span>Verilog 101</a>
+    <a href="ch01-sim.html"><span class="num">02</span>仿真入门</a>
+    <a href="ch02-debounce.html"><span class="num">03</span>Lab02 按键消抖</a>
+    <a href="ch03-cdc.html"><span class="num">04</span>亚稳态与 CDC</a>
+    <a href="ch04-vivado.html"><span class="num">05</span>Vivado 幕后</a>
+    <a href="ch05-pwm.html"><span class="num">06</span>PWM 呼吸灯</a>
+    <a href="ch06-uart-tx.html"><span class="num">07</span>UART 发送器</a>
+    <a href="ch07-uart-rx.html"><span class="num">08</span>UART 自环回</a>
+    <a href="ch08-axi.html"><span class="num">09</span>AXI 总线</a>
+    <a href="ch09-merge.html"><span class="num">10</span>PS-PL 会师</a>
+    <a href="ch10-capstone.html"><span class="num">11</span>毕业设计</a>
+    <a href="appendix-board.html"><span class="num">附A</span>板卡手册</a>
+    <a href="appendix-glossary.html"><span class="num">附B</span>术语表</a>
+    <a href="appendix-cheatsheet.html"><span class="num">附C</span>命令速查</a>
+  </nav>
+  <footer>硬件:Z7-Nano R20 · XC7Z020<br>软件:Vivado 2026.1 免费档<br>姊妹篇:主线 Linux 手册</footer>
+</aside>
+<main class="main">
+  <div class="chapter-tag">COURSE MAP</div>
+  <h2 class="title">课程地图:从这里开始</h2>
+  <p class="subtitle">在你亲手移植过 Linux 的那块板子上,从零学会 FPGA——每一步都跑在真硬件上。</p>
+
+  <div class="hero">
+    <h2>写给"命令行高手 + FPGA 小白"的一门课</h2>
+    <p>你已经用这块 Z7-Nano 亲手完成了主线 Linux 移植:内核、U-Boot、Debian、JTAG 调试,全是你的日常。但这颗芯片的另一半——FPGA——对你还是黑盒。这门课把它打开:从"电路不是程序"的心智模型起步,经消抖、PWM、串口状态机,直到你移植的 Debian 装载你自己写的电路、写你自己设计的寄存器。</p>
+    <p><strong>核心承诺:</strong>所有术语首次出现必给全称与中文;所有实验可在本板复现;所有代码逐行注释;先看见现象,再讲道理。</p>
+    <div class="stat-row">
+      <div class="stat"><b>14 页</b>首页 + 11 章 + 附录 ABC</div>
+      <div class="stat"><b>10 个 Lab</b>每个都上板见现象</div>
+      <div class="stat"><b>4 座里程碑</b>每座都有"高光时刻"</div>
+      <div class="stat"><b>约 34 小时</b>每周 2 晚 × 2 小时 ≈ 8-9 周</div>
+    </div>
+  </div>
+
+  <h3>这门课的一句话</h3>
+  <p><strong>学会用电路的方式处理时间。</strong>闪烁是数时间;消抖是量时间(20 毫秒);PWM 是时间的平均;串口是用时间编码信息;总线是两个世界按节拍握手;会师是你的 Debian 的时间与硅片的时间合流。软件里你用 <code>sleep()</code> 和时间戳,电路里只有一样东西:时钟,和数着时钟的计数器。</p>
+
+  <h3>四座里程碑</h3>
+  <div class="box box-know"><div class="box-title">M1 · 第一次看见时间(ch01)</div>
+  <p>上一页留下一个悬案:把 LED 接到计数器第 0 位,它"半亮"——半亮是眼睛对你撒的谎。第 1 章你拿起一台免费的时间显微镜(仿真器),在波形里亲眼看见 25MHz,悬案收案。</p></div>
+  <div class="box box-know"><div class="box-title">M2 · 第一件自产电路(ch02)</div>
+  <p>按键消抖。不再改别人的代码,而是从一张白纸开始:自己写需求、自己写电路、自己写测试、自己验收。身份从"改代码的人"变成"设计电路的人"——这是全课程最大的一次跃迁。</p></div>
+  <div class="box box-know"><div class="box-title">M3 · 让硅片呼吸、开口说话(ch05-07)</div>
+  <p>呼吸灯顺着正弦表渐亮渐灭;然后板子用你 ssh 上 Debian 的那个波特率,亲口"说"出一帧数据——你用自己的眼睛当接收器逐位解码。课程中后段的续航包。</p></div>
+  <div class="box box-know"><div class="box-title">M4 · 会师(ch08-10)</div>
+  <p>你移植的 Debian 用 FPGA Manager 装载你写的电路;<code>devmem</code> 一枪打中的寄存器,是你自己设计的。两条技能树在你手里合流——这一座,是给写过 Linux 的你独家定制的。</p></div>
+
+  <h3>章节总览</h3>
+  <table>
+    <tr><th>#</th><th>标题</th><th>一句话钩子</th><th>Lab</th><th>里程碑</th></tr>
+    <tr><td>ch00</td><td><a href="ch00-verilog101.html">Verilog 101</a></td><td>不是你读不懂 Verilog,是你还在用"运行程序"的方式读它——先换脑子:电路世界只有三种东西。</td><td>Lab01 LED 闪烁(已完成)</td><td>—</td></tr>
+    <tr><td>ch01</td><td><a href="ch01-sim.html">仿真入门:在波形里看见时间</a></td><td>"半亮"是这世界对你撒的第一个谎;波形不会撒谎。顺带解开 Lab02 需求书里那个"testbench"之谜。</td><td>Lab01 加测试台</td><td>M1</td></tr>
+    <tr><td>ch02</td><td><a href="ch02-debounce.html">Lab02 按键消抖:先写后看</a></td><td>你以为按了一下按键?金属片其实弹了 20 毫秒、几十次。软件工程师的第一反应是 sleep——电路里没有 sleep,只有计数。</td><td>Lab02 消抖器</td><td>M2</td></tr>
+    <tr><td>ch03</td><td><a href="ch03-cdc.html">亚稳态:时间的灾难</a></td><td>ch02 结尾埋的那颗雷在这里引爆:你把一根"野信号"直接接进了 50MHz 的世界——它 99.9% 的时候乖得像只猫。</td><td>Lab03 双时钟域</td><td>—</td></tr>
+    <tr><td>ch04</td><td><a href="ch04-vivado.html">Vivado 幕后与一键化</a></td><td>五步舞你跳熟了,但幕后乐队在演奏什么?那 4MB 的 .bit 文件里装的是什么?(故意安排的呼吸谷。)</td><td>Lab01 加烧写脚本</td><td>—</td></tr>
+    <tr><td>ch05</td><td><a href="ch05-pwm.html">PWM 呼吸灯与模块例化</a></td><td>上次"半亮"是意外,这次我们故意造半亮,还要让它顺着正弦表呼吸。第一次把电路装进电路(例化)。</td><td>Lab05 呼吸灯</td><td>M3</td></tr>
+    <tr><td>ch06</td><td><a href="ch06-uart-tx.html">UART 发送器:时间是编码</a></td><td>你 ssh 上 Debian 全靠的那个 115200,今天从发送端亲手造一个——5 秒钟用 LED 给你"打"出一个字符。顺带把逻辑分析仪焊进你的芯片。</td><td>Lab06 发送器</td><td>M3</td></tr>
+    <tr><td>ch07</td><td><a href="ch07-uart-rx.html">UART 接收器:自环回(先写后看)</a></td><td>一根杜邦线,让板子说一句自己听得懂的话。第二个状态机由你来写——这次课程只给需求,不给答案。</td><td>Lab07 自环回</td><td>M3</td></tr>
+    <tr><td>ch08</td><td><a href="ch08-axi.html">AXI 总线:和 ARM 说同一种话</a></td><td>你的电路至今在自说自话。总线的规矩学会了,隔壁那颗 ARM 才敲得开你的门——纯仿真,不上板也能毕业。</td><td>Lab08 最小从机</td><td>M4</td></tr>
+    <tr><td>ch09</td><td><a href="ch09-merge.html">会师:Debian 装载你的电路</a></td><td>Linux 的一条命令,给你在 PL 里的电路接上时钟;再一条命令,写进你自己设计的寄存器。</td><td>Lab09 会师</td><td>M4</td></tr>
+    <tr><td>ch10</td><td><a href="ch10-capstone.html">毕业设计:呼吸灯亮度远控</a></td><td>消抖 + PWM + 总线 + 装载,四件旧兵器一次总装:写寄存器,改呼吸。然后是毕业路线图。</td><td>Lab10 毕设</td><td>M4</td></tr>
+    <tr><td>附A</td><td><a href="appendix-board.html">板卡手册</a></td><td>引脚户口、RST 惨案警示、接口辨认——工具页,用到再查。</td><td>—</td><td>—</td></tr>
+    <tr><td>附B</td><td><a href="appendix-glossary.html">术语表</a></td><td>全书每个缩写的全称、人话解释、首现章节。</td><td>—</td><td>—</td></tr>
+    <tr><td>附C</td><td><a href="appendix-cheatsheet.html">命令速查卡</a></td><td>第一次学在章节里,以后查在卡片里。</td><td>—</td><td>—</td></tr>
+  </table>
+  <div class="box box-know"><div class="box-title">关于表里的缩写</div>
+  <p>PWM、UART、AXI……这些缩写现在只是路牌,不必记。每一条都会在它首次正式登场的章节给出"中文全称(English Full Name, 缩写)"并解释——那是全书术语表(附B)的收录规则。</p></div>
+
+  <h3>怎么用本课</h3>
+  <h4>每章的固定节奏</h4>
+  <p>钩子(一个反直觉的现象或悬案)→ 目标 → 原理(带图)→ 动手(可复制)→ 现象与验证 → 常见坑 → 小结 + 三档自测。自测固定三档:<strong>A 概念</strong>(用人话复述)、<strong>B 预测</strong>(改一处代码,先猜后验)、<strong>C 排错</strong>(一段带 bug 的代码,素材来自本章的坑)。不考名词解释。</p>
+
+  <h4>先写后看:两章特殊,机制预告</h4>
+  <p>ch02(消抖)和 ch07(接收器)不给你参考实现——至少一开始不给。流程是:<strong>自己写 → 过三关检查点 → 实在卡住才逐级展开提示 → 最后对照参考,写 3 行差异笔记</strong>。为什么折磨你?因为"看懂"和"写出"之间隔着一整条鸿沟,而这条鸿沟只能你自己跨。参考实现永远在折叠框里等你,跑不掉。</p>
+  <div class="box box-step"><div class="box-title">45 分钟规则(全书通用,先记住)</div>
+  <p>动手卡壳时,先自己死磕 <strong>45 分钟</strong>:翻回原理节、画框图、读报错。45 分钟仍无进展,才准展开下一级提示。这是心流的"挑战区"配方——既防呆坐一晚,也防秒看答案。看书看懂了不算会,卡过、错过、修过才算。</p></div>
+
+  <h4>进度自勾表</h4>
+  <p>纯 HTML 复选框,勾了就是勾了(存在你浏览器里,诚实面对自己)。</p>
+  <table>
+    <tr><th></th><th>阶段</th><th>完成标志</th></tr>
+    <tr><td><input type="checkbox" checked disabled></td><td>ch00 Verilog 101 + Lab01 闪烁</td><td>能不看书画出 led_blink.v 的电路图;板上 3Hz 心跳</td></tr>
+    <tr><td><input type="checkbox"></td><td>ch01 仿真入门</td><td>跑通 lab01 测试台,游标量出周期,"半亮"结案</td></tr>
+    <tr><td><input type="checkbox"></td><td>ch02 Lab02 消抖</td><td>三关全过 + 3 行差异笔记;板上按 50 次零失误</td></tr>
+    <tr><td><input type="checkbox"></td><td>ch03 亚稳态</td><td>仿真里亲眼看见数值撕裂;Lab02 回炉成 v2</td></tr>
+    <tr><td><input type="checkbox"></td><td>ch04 Vivado 幕后</td><td>一条命令出比特流;读懂时序报告里那行 WNS</td></tr>
+    <tr><td><input type="checkbox"></td><td>ch05 PWM 呼吸灯</td><td>板上平滑呼吸;第一次例化自己的模块</td></tr>
+    <tr><td><input type="checkbox"></td><td>ch06 UART 发送器</td><td>肉眼解码一帧;ILA 波形与仿真对齐</td></tr>
+    <tr><td><input type="checkbox"></td><td>ch07 UART 自环回</td><td>插上杜邦线,板子听懂了自己说的话</td></tr>
+    <tr><td><input type="checkbox"></td><td>ch08 AXI 总线</td><td>测试台假扮 ARM,写你的寄存器改占空比</td></tr>
+    <tr><td><input type="checkbox"></td><td>ch09 会师</td><td>Debian 装载你的比特流;devmem 点亮你的寄存器</td></tr>
+    <tr><td><input type="checkbox"></td><td>ch10 毕业设计</td><td>呼吸速度远控 + 手绘全路径图一张</td></tr>
+  </table>
+
+  <h3>先修说明</h3>
+  <p>这门课<strong>不假设你有任何数字电路基础</strong>,但假设你已完成两件事:</p>
+  <ol>
+    <li><strong>读完毕业篇 ch00(Verilog 101)</strong>并做过 Lab01——你已经建立了"导线/寄存器/时钟"三件套的心智模型,跳过它后面每章都会硌脚。</li>
+    <li><strong>亲手完成主线 Linux 移植</strong>(构建内核、U-Boot、Debian、JTAG 调试)——这是姊妹手册 <a href="https://lzjever.github.io/zynq-z7nano-mainline-linux/" target="_blank" rel="noopener">《Zynq Z7-Nano 主线 Linux 手册》</a>的内容。本课不重复 Linux 侧的知识;到 ch09 会师时,你的移植经验会直接变现:ssh、devmem、FPGA Manager,全是你的老朋友。</li>
+  </ol>
+  <div class="box box-warn"><div class="box-title">提醒 · 板上有一颗会"全清"的按键</div>
+  <p>板上丝印 <strong>RST</strong> 的按键是整芯片硬复位:按一下,PL 里你的电路全没,Debian 跟着重启。我们课程用的按键是丝印 <strong>PL_KEY</strong> 的那颗。现在混个脸熟即可,附录 A 有惨案专页。</p></div>
+
+  <h3>硬件与软件需求</h3>
+  <table>
+    <tr><th>物品</th><th>说明</th><th>何时需要</th></tr>
+    <tr><td>Z7-Nano R20(XC7Z020-2CLG400)</td><td>本课程唯一指定板卡:PL 侧有 50MHz 晶振(N18)、按键 PL_KEY(P14)、LED(R14)、两排 GPIO 排针</td><td>从头到尾</td></tr>
+    <tr><td>杜邦线(母对母)×2</td><td>排针飞线用——"接线即外设",这是排针存在的意义</td><td>ch07 起</td></tr>
+    <tr><td>USB-TTL 模块(可选,约 ¥10)</td><td>3.3V LVCMOS 电平款(别买 RS232 电平版!);不买也能毕业,ch07 的自环回才是主线</td><td>ch07 选做</td></tr>
+    <tr><td>Linux 主机 + Vivado 2026.1 免费档</td><td>"免费档"指安装界面叫 <strong>Vivado ML Standard</strong>、授权页叫 <strong>Basic</strong> 的那一档——同一个东西,本书统一称"免费档"。限制(如仿真 50000 实例、逻辑分析仪 1 核 5 探针)在各章如实交代,本课程所有实验都在限制内</td><td>从头到尾</td></tr>
+    <tr><td>SSH/串口访问板子</td><td>你移植期就配好的:ssh root@192.168.1.10,或 CH340 串口 115200</td><td>ch09 起</td></tr>
+  </table>
+
+  <div class="pager">
+    <a href="index.html">← 封面</a>
+    <a href="ch00-verilog101.html">开始复习:Verilog 101 →</a>
+  </div>
+</main>
+</body>
+</html>

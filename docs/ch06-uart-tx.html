@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 7 章 · UART 发送器:时间是编码 — Zynq FPGA 从零到实战</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+/* 本页专用:插图与代码高亮(与 ch00 同款,零外部依赖) */
+.fig{background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px;margin:20px 0;text-align:center}
+.fig svg{max-width:100%}
+.fig .cap{font-size:13px;color:var(--ink-soft);margin-top:10px}
+.gate{stroke:#b3541e;stroke-width:2;fill:none}
+.gatef{fill:#fdfcfa;stroke:#b3541e;stroke-width:2}
+.wire{stroke:#1d5c8a;stroke-width:2;fill:none}
+.lbl{font:13px "Noto Sans SC";fill:#1a2332}
+.mono{font:12.5px Consolas,monospace;fill:#4a5568}
+.dash{stroke:#b9b2a5;stroke-width:1;stroke-dasharray:4 4}
+.cur{stroke:#c0392b;stroke-width:1.5;stroke-dasharray:5 3}
+details{border:1px solid var(--line);border-radius:8px;padding:10px 16px;margin:12px 0;background:#fff}
+summary{cursor:pointer;font-weight:600;color:var(--accent-deep)}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <span class="chip">ZYNQ · FPGA</span>
+    <h1>从零到实战</h1>
+    <p>Verilog · Vivado · Z7-Nano</p>
+  </div>
+  <nav>
+    <a href="index.html"><span class="num">00</span>封面 · 课程地图</a>
+    <a href="ch00-verilog101.html"><span class="num">01</span>Verilog 101</a>
+    <a href="ch01-sim.html"><span class="num">02</span>仿真入门</a>
+    <a href="ch02-debounce.html"><span class="num">03</span>Lab02 按键消抖</a>
+    <a href="ch03-cdc.html"><span class="num">04</span>亚稳态与 CDC</a>
+    <a href="ch04-vivado.html"><span class="num">05</span>Vivado 幕后</a>
+    <a href="ch05-pwm.html"><span class="num">06</span>PWM 呼吸灯</a>
+    <a class="active" href="ch06-uart-tx.html"><span class="num">07</span>UART 发送器</a>
+    <a href="ch07-uart-rx.html"><span class="num">08</span>UART 自环回</a>
+    <a href="ch08-axi.html"><span class="num">09</span>AXI 总线</a>
+    <a href="ch09-merge.html"><span class="num">10</span>PS-PL 会师</a>
+    <a href="ch10-capstone.html"><span class="num">11</span>毕业设计</a>
+    <a href="appendix-board.html"><span class="num">附A</span>板卡手册</a>
+    <a href="appendix-glossary.html"><span class="num">附B</span>术语表</a>
+    <a href="appendix-cheatsheet.html"><span class="num">附C</span>命令速查</a>
+  </nav>
+  <footer>硬件:Z7-Nano R20 · XC7Z020<br>软件:Vivado 2026.1 免费档<br>姊妹篇:主线 Linux 手册</footer>
+</aside>
+<main class="main">
+  <div class="chapter-tag">CHAPTER 07 · LAB 06</div>
+  <h2 class="title">UART 发送器:时间是编码</h2>
+  <p class="subtitle">把一个字节变成时间轴上的 0 和 1 —— 你的第一个正式状态机,和一次"用眼睛当接收器"的行为艺术。</p>
+
+  <h3 id="hook">0 · 开场:会呼吸,但不会说话</h3>
+  <p>到目前为止,你和这块板子的全部交流方式,本质上是同一种:<strong>看灯</strong>。闪烁是灯,呼吸还是灯——电路一直在"给你表演",但从没"对你说过话"。今天我们让它开口:电路世界最古老、至今没死的社交协议——<strong>通用异步收发传输器(Universal Asynchronous Receiver/Transmitter, UART)</strong>,你调 Debian 用的那根 115200 串口线,每个字节怎么变成 0 和 1 在线上跑,今天从发送端亲手造一个。但有个坏消息必须第三句就摊牌:<strong>板上那颗 CH340(USB 转串口芯片)焊死在 PS 侧,接的是 ARM 的 UART——你在 PL 里造的发送器,这根线物理上到不了电脑终端</strong>。所以"怎么看见自己发的东西"是今天要和"怎么造"一起解决的问题,而解决方案会漂亮得像个恶作剧:把波特率调到每秒 2 个位,用 5 秒钟,在 LED 上用肉眼读出一整个字节。</p>
+
+  <h3 id="goals">1 · 本章目标</h3>
+  <ol>
+    <li>能凭记忆画出 UART 帧格式(1 起始位 + 8 数据位低位先行 + 1 停止位),并算出 115200 波特下一位宽 = 8.68µs = 434 个 50MHz 时钟;</li>
+    <li>能说出状态机解决的到底是"什么问题"(电路需要"记住自己干到哪一步了"),并把状态转移图的每条弧逐条翻译成 Verilog;</li>
+    <li>能在仿真里让测试台当接收器,控制台打印出 <code>Hello PL!</code>,位序/位宽双核对;</li>
+    <li>能在板上完成<strong>参数三级跳</strong>:同一份代码,2 波特肉眼读帧 → 115200 肉眼失效 → ILA 波形窗逐位解出 'H';</li>
+    <li>能用 ILA 游标量出一个位的宽度,验证波特率真的对(这是自环回路查不出来的东西,下一章见分晓)。</li>
+  </ol>
+  <div class="box box-know"><div class="box-title">知识 · 本章投资预算</div>
+  <p>预计 3–4 小时:原理 + 仿真约一半,板上三级跳 + ILA 约一半。方差小——本章是教学式跟做,状态机的"近迁移自写"考验留给下一章。</p></div>
+
+  <h3 id="frame">2 · 原理一:帧——UART 的时间语法</h3>
+  <p>UART 的"异步"两个字是关键词:<strong>两台设备之间没有时钟线</strong>。没有节拍器,接收方怎么知道哪是哪一位?答案是——<strong>靠事先约定的时间</strong>。双方说好"每秒打 115200 个位"(<strong>波特率,Baud Rate</strong>:每秒传输的位个数),然后发送方把每个字节包装成一个<strong>帧(Frame)</strong>:一帧 10 个位,从一次"由高到低"的跳水动作开始,以一段"回到高"的休止符结束。</p>
+
+  <div class="fig">
+  <svg viewBox="0 0 840 230" xmlns="http://www.w3.org/2000/svg">
+    <!-- 位边界虚线 -->
+    <line class="dash" x1="60"  y1="40" x2="60"  y2="130"/>
+    <line class="dash" x1="130" y1="40" x2="130" y2="130"/>
+    <line class="dash" x1="200" y1="40" x2="200" y2="130"/>
+    <line class="dash" x1="270" y1="40" x2="270" y2="130"/>
+    <line class="dash" x1="340" y1="40" x2="340" y2="130"/>
+    <line class="dash" x1="410" y1="40" x2="410" y2="130"/>
+    <line class="dash" x1="480" y1="40" x2="480" y2="130"/>
+    <line class="dash" x1="550" y1="40" x2="550" y2="130"/>
+    <line class="dash" x1="620" y1="40" x2="620" y2="130"/>
+    <line class="dash" x1="690" y1="40" x2="690" y2="130"/>
+    <line class="dash" x1="760" y1="40" x2="760" y2="130"/>
+    <!-- tx 波形:0x48 LSB first → 起始0,d0..d7=0,0,0,1,0,0,1,0,停止1 -->
+    <polyline class="wire" points="20,60 60,60 60,110 340,110 340,60 410,60 410,110 550,110 550,60 620,60 620,110 690,110 690,60 820,60"/>
+    <!-- 位标签 -->
+    <text class="lbl" x="95"  y="32" text-anchor="middle">起始</text>
+    <text class="mono" x="165" y="32" text-anchor="middle">d0</text>
+    <text class="mono" x="235" y="32" text-anchor="middle">d1</text>
+    <text class="mono" x="305" y="32" text-anchor="middle">d2</text>
+    <text class="mono" x="375" y="32" text-anchor="middle">d3</text>
+    <text class="mono" x="445" y="32" text-anchor="middle">d4</text>
+    <text class="mono" x="515" y="32" text-anchor="middle">d5</text>
+    <text class="mono" x="585" y="32" text-anchor="middle">d6</text>
+    <text class="mono" x="655" y="32" text-anchor="middle">d7</text>
+    <text class="lbl" x="725" y="32" text-anchor="middle">停止</text>
+    <!-- 电平值 -->
+    <text class="mono" x="95"  y="150" text-anchor="middle">0</text>
+    <text class="mono" x="165" y="150" text-anchor="middle">0</text>
+    <text class="mono" x="235" y="150" text-anchor="middle">0</text>
+    <text class="mono" x="305" y="150" text-anchor="middle">0</text>
+    <text class="mono" x="375" y="150" text-anchor="middle">1</text>
+    <text class="mono" x="445" y="150" text-anchor="middle">0</text>
+    <text class="mono" x="515" y="150" text-anchor="middle">0</text>
+    <text class="mono" x="585" y="150" text-anchor="middle">1</text>
+    <text class="mono" x="655" y="150" text-anchor="middle">0</text>
+    <text class="mono" x="725" y="150" text-anchor="middle">1</text>
+    <!-- 电平语义 -->
+    <text class="lbl" x="20" y="64" fill="#4a5568">空闲=1</text>
+    <text class="lbl" x="765" y="54" fill="#4a5568">回空闲=1</text>
+    <!-- 位宽标注 -->
+    <line class="gate" x1="60" y1="172" x2="130" y2="172"/>
+    <line class="gate" x1="60" y1="166" x2="60" y2="178"/><line class="gate" x1="130" y1="166" x2="130" y2="178"/>
+    <text class="lbl" x="95" y="196" text-anchor="middle">一个位 = 1 ÷ 波特率 秒</text>
+    <text class="mono" x="95" y="214" text-anchor="middle">@115200 → 8.68µs = 434 clk</text>
+    <!-- LSB 方向说明 -->
+    <text class="mono" x="440" y="175" text-anchor="middle">'H' = 0x48 = 01001000b,低位(d0)先发 → 线上序列 00010010</text>
+  </svg>
+  <div class="cap">图 1 · 一帧 'H'(0x48)。起点是那个醒目的高→低跳水(起始位),接收方就靠它对表;8 个数据位<strong>低位先行</strong>;停止位拉高回到空闲。本图坐标即下一节 FSM 要逐位复现的时间表。</div>
+  </div>
+
+  <p>三个规矩值得逐条咬死,因为每一个都会在板上变成现象:</p>
+  <ul>
+    <li><strong>起始位(Start Bit)</strong>:线空闲时恒为 1。发送方拉低一个位时间 = "预备——"。接收方什么同步信号都没有,全靠盯住这记<strong>下降沿</strong>对表——所以它必须足够醒目,而且之前线路必须干净地保持 1。</li>
+    <li><strong>最低有效位先行(Least Significant Bit First, LSB First)</strong>:8 个数据位从 byte 的第 0 位(最低位)开始发。这是历史习惯,不是道理,但双方必须一致——反着发,同样的波形会解出完全不同的字节('H' 会变成 0x12)。</li>
+    <li><strong>停止位(Stop Bit)</strong>:拉高至少一个位时间 = "完"。它同时把线路还原成空闲态 1,好让下一帧的起始沿干干净净。</li>
+  </ul>
+  <p>合起来写成黑话叫 <strong>8N1</strong>:8 数据位、无校验(No parity)、1 停止位——串口世界的"你好"。加上波特率(如 115200-8N1),就是一份完整的通信合同。<strong>波特率本质:它不是一个时钟,是一句约定的话</strong>——"我们每 8.68µs 换一位"。谁守约谁就能被听懂,这一点等会儿会被我们恶意利用。</p>
+
+  <h3 id="fsm">3 · 原理二:FSM——电路的"进度感"</h3>
+  <p>发一帧要按顺序干四件事:拉低、逐位发、拉高、回空闲。<strong>顺序!</strong>这对软件是本能,对电路是个新问题——你至今写过的所有电路(计数器、消抖器、PWM)都是"每拍干一模一样的事",不需要知道"自己是第几步"。而发送器必须记住"我发到第几位了"。<strong>有限状态机(Finite State Machine, FSM)</strong>就是干这个的:<strong>一组触发器存"现在第几步"(状态),一段组合逻辑算"下一步去哪"(转移),输出由当前状态决定</strong>。它不是新零件,只是把"寄存器 + 逻辑"按一种特别有用的方式组织起来——从此它将承包你后面见到的所有协议(UART 接收、AXI 握手、全是它)。</p>
+
+  <p>本课的状态机取<strong>三态</strong>,对应帧的三段:</p>
+
+  <div class="fig">
+  <svg viewBox="0 0 840 260" xmlns="http://www.w3.org/2000/svg">
+    <!-- IDLE -->
+    <circle class="gatef" cx="150" cy="110" r="52"/>
+    <text class="lbl" x="150" y="105" text-anchor="middle" font-weight="bold">IDLE</text>
+    <text class="mono" x="150" y="125" text-anchor="middle">tx=1 空闲</text>
+    <!-- SEND -->
+    <circle class="gatef" cx="430" cy="110" r="52"/>
+    <text class="lbl" x="430" y="105" text-anchor="middle" font-weight="bold">SEND</text>
+    <text class="mono" x="430" y="125" text-anchor="middle">起始+8数据位</text>
+    <!-- STOP -->
+    <circle class="gatef" cx="710" cy="110" r="52"/>
+    <text class="lbl" x="710" y="105" text-anchor="middle" font-weight="bold">STOP</text>
+    <text class="mono" x="710" y="125" text-anchor="middle">tx=1 一个位</text>
+    <!-- IDLE -> SEND -->
+    <line class="gate" x1="204" y1="110" x2="374" y2="110"/>
+    <polygon points="374,110 362,104 362,116" fill="#b3541e"/>
+    <text class="lbl" x="289" y="98" text-anchor="middle">start 脉冲来</text>
+    <text class="mono" x="289" y="78" text-anchor="middle">装字节入移位寄存器,tx 拉低</text>
+    <!-- SEND self loop -->
+    <path class="gate" d="M 430 58 C 470 18 530 18 555 62"/>
+    <polygon points="555,62 557,49 545,54" fill="#b3541e"/>
+    <text class="mono" x="500" y="14" text-anchor="middle">位时间未满 / bit_cnt&lt;8:继续数</text>
+    <!-- SEND -> STOP -->
+    <line class="gate" x1="484" y1="110" x2="654" y2="110"/>
+    <polygon points="654,110 642,104 642,116" fill="#b3541e"/>
+    <text class="lbl" x="569" y="98" text-anchor="middle">bit_cnt==8 且位时间满</text>
+    <text class="mono" x="569" y="78" text-anchor="middle">tx 拉高(就是停止位)</text>
+    <!-- STOP self loop -->
+    <path class="gate" d="M 710 162 C 750 202 800 190 762 162"/>
+    <polygon points="762,162 772,170 774,157" fill="#b3541e"/>
+    <text class="mono" x="762" y="222" text-anchor="middle">位时间未满:继续数</text>
+    <!-- STOP -> IDLE -->
+    <path class="gate" d="M 662 146 C 560 224 250 224 158 164"/>
+    <polygon points="158,164 166,174 170,162" fill="#b3541e"/>
+    <text class="lbl" x="410" y="248" text-anchor="middle">停止位打满 → 回 IDLE(tx 保持 1)</text>
+    <!-- busy 注 -->
+    <text class="mono" x="150" y="196" text-anchor="middle">busy = (state != IDLE)</text>
+  </svg>
+  <div class="cap">图 2 · 发送状态机:三个圈 = 帧的三段;每条弧 = 一个跳转条件。<strong>把这张图和代码逐弧对照</strong>,是本课最重要的练习——ch00 铁律三"画不出来就别写"在此正式回收:先有图,再有代码。</div>
+  </div>
+
+  <div class="box box-know"><div class="box-title">知识 · 状态机的两段式写法(全书模板)</div>
+  <p>状态机代码固定两段:<strong>时序段</strong>——一排触发器,每拍把 <code>next_state</code> 存进 <code>state</code>,顺带做各状态的数据动作(移位、计数、驱动 tx);<strong>组合段</strong>——一段纯逻辑,按"当前状态 + 输入"算 <code>next_state</code>。状态用 <code>localparam</code> 编号(S_IDLE=0…),不写魔数。这个骨架你将写很多遍,直到不用想。</p></div>
+
+  <h3 id="code">4 · 动手一:发送器代码(逐弧映射)</h3>
+  <p>完整文件在 <code>labs/lab06-uart-tx/uart_tx.v</code>(逐行注释版),外加 <code>key_pulse.v</code>——就是 Lab02 消抖器 + Lab03 打两拍的老组合,把 P14 变成一个"发射按钮":按一次,出一帧。两块旧知识第一次原样复用,这就是课程的复利。核心骨架如下(节选):</p>
+<pre><code><span class="c">// ---- 位内节拍:数满 BAUD_DIV 个时钟 = 一个位时间 ----</span>
+<span class="k">if</span> (baud_cnt == BAUD_DIV-<span class="k">1</span>) baud_cnt &lt;= <span class="k">0</span>;
+<span class="k">else</span>               baud_cnt &lt;= baud_cnt + <span class="k">1</span>'d1;
+
+<span class="k">case</span> (state_r)
+  S_IDLE: <span class="k">begin</span>
+      tx &lt;= <span class="k">1</span>'b1;                       <span class="c">// 空闲电平(协议规定)</span>
+      <span class="k">if</span> (start) <span class="k">begin</span>
+          shifter &lt;= data;  bit_cnt_r &lt;= <span class="k">0</span>;  <span class="c">// 装弹:字节进移位寄存器</span>
+          tx &lt;= <span class="k">1</span>'b0;                       <span class="c">// ← 起始位:拉低!对应图2第一条弧</span>
+      <span class="k">end</span>
+  <span class="k">end</span>
+  S_SEND: <span class="k">if</span> (baud_cnt == BAUD_DIV-<span class="k">1</span>) <span class="k">begin</span>
+      <span class="k">if</span> (bit_cnt_r == <span class="k">8</span>)  tx &lt;= <span class="k">1</span>'b1;   <span class="c">// 数据发完 → 停止位,对应图2第二条弧</span>
+      <span class="k">else</span> <span class="k">begin</span>
+          shifter &lt;= {<span class="k">1</span>'b0, shifter[<span class="k">7</span>:<span class="k">1</span>]};      <span class="c">// 右移:下一位挪到最低位</span>
+          tx &lt;= shifter[<span class="k">0</span>];                  <span class="c">// LSB 先行,先发最低位</span>
+          bit_cnt_r &lt;= bit_cnt_r + <span class="k">1</span>'d1;
+      <span class="k">end</span>
+  <span class="k">end</span>                                   <span class="c">// 位没数满:不赋值,tx 自动保持(图2的自环弧)</span>
+  S_STOP: tx &lt;= <span class="k">1</span>'b1;                           <span class="c">// 停止位保持高,数满回 IDLE</span>
+<span class="k">endcase</span>
+
+<span class="c">// ---- 组合段:次态逻辑,图2的每条弧各占一行 ----</span>
+<span class="k">S_IDLE</span>: next_state = start ? S_SEND : S_IDLE;
+<span class="k">S_SEND</span>: next_state = (baud_cnt==BAUD_DIV-<span class="k">1</span> &amp;&amp; bit_cnt_r==<span class="k">8</span>) ? S_STOP : S_SEND;
+<span class="k">S_STOP</span>: next_state = (baud_cnt==BAUD_DIV-<span class="k">1</span>) ? S_IDLE : S_STOP;</code></pre>
+  <p>对照着看:<strong>状态图上每条弧,在组合段里恰好一个条件表达式;每个圈里"持续做的事",在时序段里恰好一个分支</strong>。这层机械对应就是状态机的全部——没有玄学。<code>shifter</code> 是<strong>移位寄存器(Shift Register)</strong>:并行进、串行出,把并排放着的 8 个位一位一位挤到线上,它是所有串行协议的心脏。</p>
+  <div class="box box-know"><div class="box-title">知识 · BAUD_DIV 的算术,与 $clog2 的小聪明</div>
+  <p>一个位 = 波特率分之一秒 = <code>50_000_000 ÷ 波特率</code> 个时钟:115200 → 434(实际误差 +0.006%,协议容忍 ±2%,宽裕);9600 → 5208;<strong>2 波特 → 25_000_000</strong>(一个位整整半秒)。计数器位宽用 <code>$clog2(BAUD_DIV)</code> 自动算——434 要 9 位,25_000_000 要 25 位,参数一改位宽自己长,这就是三级跳不用改行的原因。</p></div>
+
+  <h3 id="sim">5 · 动手二:仿真先行——让 TB 当接收器</h3>
+  <p>上板之前先仿真,这次 TB 的角色特别讲究:<strong>它自己就是一个用软件写的 UART 接收器</strong>——等下降沿、按位宽走到每个位的正中间采样、按 LSB 拼回字节。跑起来:</p>
+<pre><code><span class="c"># labs/lab06-uart-tx/ 下</span>
+vivado -mode batch -source sim.tcl</code></pre>
+  <p>控制台最后应该滚出:</p>
+<pre><code>Hello PL!
+--- PASS (10/10 字节,位序/位宽/起停全对) ---</code></pre>
+  <p>硬件在发,软件在收,两边各写各的——这一刻你完成了一次真正的通信,虽然双方都在同一台电脑上。<strong>注意一个刻意的细节</strong>:TB 的位宽是它自己声明的常数,并不引用 DUT 的 <code>BAUD_DIV</code>。发送器波特率写错了,TB 会采错位置、打出乱码,bug 当场现形——<strong>验证方不能和被验方共用同一份假设</strong>,这是比本课代码更值钱的习惯。</p>
+
+  <h3 id="board">6 · 板上现象:肉眼 UART 与参数三级跳</h3>
+  <p>现在解决开场埋的问题:PL 的 TX 到不了电脑,那谁当接收器?<strong>你的眼睛</strong>。顶层 <code>lab06_top.v</code> 干了一件恶作剧的事:把 tx 线直接接到 R14 LED 上。然后利用波特率"只是一句约定"的本质,恶意违约——把约改成<strong>每秒 2 个位</strong>:</p>
+<pre><code><span class="c"># 肉眼版:2 波特(一个位 0.5 秒)</span>
+vivado -mode batch -source build.tcl -tclargs eye
+vivado -mode batch -source program.tcl   <span class="c"># 烧写前先 pkill -f openocd</span></code></pre>
+  <p>烧完先别按键——LED 常亮?对,tx 空闲态 = 1,协议规定。<strong>按一下 PL_KEY,然后盯着 LED 数五秒</strong>,对照下表(按行读,每行 0.5 秒):</p>
+  <table>
+    <tr><th>时间</th><th>0–2.0s</th><th>2.0–2.5</th><th>2.5–3.5</th><th>3.5–4.0</th><th>4.0–4.5</th><th>4.5s 起</th></tr>
+    <tr><td>位</td><td>起始+d0+d1+d2</td><td>d3</td><td>d4+d5</td><td>d6</td><td>d7</td><td>停止→空闲</td></tr>
+    <tr><td>LED</td><td>灭</td><td>亮</td><td>灭</td><td>亮</td><td>灭</td><td>亮起后常亮</td></tr>
+    <tr><td>位值</td><td>0 0 0 0</td><td>1</td><td>0 0</td><td>1</td><td>0</td><td>1</td></tr>
+  </table>
+  <p>读出来的数据位序列(LSB 起):0001 0010 → 倒着拼 = <strong>0100 1000 = 0x48 = 'H'</strong>。你的视网膜刚刚扮演了一台 2 波特的串口终端。<strong>同一个人眼,同一个代码,现在换合同</strong>:</p>
+  <table>
+    <tr><th>模式</th><th>BAUD_DIV</th><th>一个位</th><th>一帧</th><th>按一次键,LED?</th><th>谁在当接收器</th></tr>
+    <tr><td>eye</td><td>25_000_000</td><td>0.5 s</td><td>5 s</td><td>上表的 5 秒演出</td><td>你的眼睛(2 波特终端)</td></tr>
+    <tr><td>real</td><td>434</td><td>8.68 µs</td><td>86.8 µs</td><td>几乎无感——事件太快,肉眼带宽只有几十赫兹</td><td>肉眼失效 → 需要下一节</td></tr>
+  </table>
+  <div class="box box-win"><div class="box-title">成果 · parameter 的三级跳(全书主题第 2 跳)</div>
+  <p>第 1 跳在 ch01:仿真跑不动 1600 万周期,把计数器参数改小,<strong>压缩时间</strong>;第 2 跳是今天:把波特率参数改大,<strong>放大时间</strong>到肉眼可读;第 3 跳在 ch09:换主频参数,电路从 N18 时钟搬到 ARM 送来的 FCLK——<strong>同一份代码,时间尺度随意伸缩</strong>。parameter 不是语法糖,是你对"时间"的定价权。</p></div>
+
+  <h3 id="ila">7 · ILA 主验证:抓一帧真的 115200</h3>
+  <p>real 模式下肉眼缴械,但电路每秒能打 115200 个位——我们给它配一台显微镜。<strong>集成逻辑分析仪(Integrated Logic Analyzer, ILA)</strong>:一个由 Vivado 生成的 IP 核,综合后住进你的芯片里,盯着你指定的内部信号,按系统时钟不停记录、循环覆盖;条件满足(<strong>触发,Trigger</strong>)时冻结一小段历史,通过 JTAG 上传到波形窗。仿真看的是"理论世界",ILA 看的是<strong>你这块硅片上真实发生的事</strong>——综合、布局、布线之后的真波形。</p>
+  <p>ila 模式一条龙(触发按钮还是 PL_KEY,只是这次按完去电脑上看,而不是盯 LED):</p>
+<pre><code>vivado -mode batch -source build.tcl -tclargs ila
+vivado -mode batch -source program.tcl
+<span class="c"># 然后开 GUI:Hardware Manager → Open Target → Add ILA core</span></code></pre>
+  <div class="box box-warn"><div class="box-title">警告 · ILA 当天必撞的坑:JTAG 互杀</div>
+  <p>ILA 走 JTAG,而 JTAG 上那颗 FT232H 是<strong>独占</strong>的——你调 Debian 时开过的 OpenOCD 还在后台的话,hw_server 起不来,Hardware Manager 会"找不到目标"。开 Vivado 硬件管理器之前,先执行 <code>pkill -f openocd</code>;反过来要用 OpenOCD 时杀 hw_server。口诀进附录 C,今天先肌肉记忆一次。</p></div>
+  <p><strong>抓帧五步</strong>:① 触发条件设 <code>tx == 0</code>(线空闲恒 1,拉低即起始位,条件干脆);② 点 Run Trigger(武装);③ 按一下 PL_KEY;④ 波形冻结,tx 线上就是那 86.8µs 的一帧;⑤ 放大读位,配合 <code>bit_cnt/state</code> 两根总线看状态机脚步。然后做本课的保留节目:</p>
+  <div class="box box-step"><div class="box-title">练习 · 游标量位宽(自环的盲区,只有它能救)</div>
+  <p>波形窗里放两根游标,卡在 tx 相邻两次电平变化的沿上,读出时间差。应为 <strong>8680ns ± 20ns</strong>(434 × 20ns,容 1 个时钟的量化误差)。这就是"用测量验证波特率"——记住这个动作,下一章自环实验有个隐蔽盲区:<strong>TX 和 RX 用同一个 BAUD_DIV,错也错得整整齐齐,回环永远自洽</strong>,波特率错了它查不出来。到时候,唯一说真话的就是这两根游标。</p></div>
+  <div class="box box-know"><div class="box-title">知识 · 免费档的 ILA 限额,如实交代</div>
+  <p>免费档(安装界面名 Vivado ML Standard,授权页称 Basic)<strong>限 1 个 ILA 核、每核 5 个探针(Probe,被测信号;多位总线算 1 个)</strong>。本设计探针 5 个用满:tx、busy、tick、bit_cnt[3:0]、state[1:0]——其中解一帧其实只要 tx/busy/bit_cnt/state 四个,第 5 个名额给了 tick(按键脉冲),它是个好触发词:按一次抓一次。采样深度(Sample Depth)按 8192 配:115200 一帧 = 4340 点,8192 能装下一帧半,够用。<strong>待实测注记</strong>:免费档深度上限以 2026.1 实机为准;万一 8192 不可用,方向是<strong>升波特率</strong>(921600 → 一帧仅 542 点)而不是降——采样率固定 50MHz,波特率越低一帧点数越多,降波特率只会更装不下。</p></div>
+
+  <h3 id="pitfalls">8 · 常见坑</h3>
+  <table>
+    <tr><th>症状</th><th>真相</th><th>药</th></tr>
+    <tr><td>烧完 LED 常亮,"坏了?"</td><td>tx 空闲态 = 1,这是协议</td><td>按一下 PL_KEY 看演出;想确认没坏,回 eye 模式</td></tr>
+    <tr><td>Hardware Manager 找不到目标</td><td>OpenOCD 占着 FT232H(JTAG 互杀)</td><td><code>pkill -f openocd</code> 再重连;数据线确认插的是 JTAG 口不是串口口</td></tr>
+    <tr><td>ILA 武装后立刻触发/永远不触发</td><td>触发电平写成 1:空闲就是 1</td><td>触发条件用 <code>tx==0</code>(起始沿语义),或直接用 tick 当触发词</td></tr>
+    <tr><td>现象突然全没了(LED 灭、ILA 断连)</td><td>手滑按到板上 RST 键 = 整芯片硬复位,PL 配置被清 + Debian 重启</td><td>重新烧写;认清丝印——PL_KEY 才是我们的键</td></tr>
+    <tr><td>create_ip 报"找不到 ila 定义"</td><td>IP 版本号随版本变(脚本按 6.2 写)</td><td><code>get_ipdefs *ila*</code> 查实号改一行(已列"待实测")</td></tr>
+    <tr><td>real 模式连按两下,只发了一帧</td><td>第二拍 start 落在 SEND 里,状态机不看它(丢帧保护)</td><td>本课够用;要排队就得加缓冲,那是下一课你自己写 RX 之后再想的事</td></tr>
+  </table>
+
+  <h3 id="summary">9 · 小结</h3>
+  <ul>
+    <li>UART 异步的本质:<strong>没有时钟线,时间本身就是编码</strong>;波特率是一句双方共享的约定话。</li>
+    <li>一帧 = 起始(0)+ 8 数据(LSB 先行)+ 停止(1);空闲恒 1;下降沿是接收方唯一的时间基准。</li>
+    <li>FSM = "会记进度的电路":状态寄存器 + 次态组合逻辑;状态图每条弧 ↔ 代码每行条件,<strong>图先于代码</strong>。</li>
+    <li>parameter 三级跳第 2 跳:BAUD_DIV 一改,2 波特给眼睛、115200 给 ILA,代码零改动。</li>
+    <li>ILA = 住进芯片的显微镜;免费档 5 探针恰好够;游标量位宽是验证波特率的唯一板上手段。</li>
+  </ul>
+  <div class="box box-know"><div class="box-title">知识 · 本章新词卡(已登记附录 B)</div>
+  <p>UART(通用异步收发传输器)· 波特率 Baud Rate · 帧 Frame · 起始位 Start Bit · 停止位 Stop Bit · 最低有效位先行 LSB First · 8N1 · 有限状态机 FSM · 状态转移图 State Transition Diagram · 移位寄存器 Shift Register · 集成逻辑分析仪 ILA · 触发 Trigger · 探针 Probe · 采样深度 Sample Depth</p></div>
+
+  <h3 id="quiz">10 · 三档自测</h3>
+  <ol>
+    <li><strong>A · 概念复述</strong>:不用"时钟"两个字,向同事解释 UART 的"异步"是什么意思,以及接收方靠什么对表。</li>
+    <li><strong>B · 预测题</strong>:把 CHAR 改成 <code>8'h55</code>(01010101)。eye 模式下 LED 的节奏变成什么样子?先在纸上画出 10 个位再烧板验证。再预测:real 模式下 ILA 抓到的波形和 'H' 的区别?(提示:0x55 是最"闪"的字节)</li>
+    <li><strong>C · 排错题</strong>:同学的状态机把 S_SEND 的跳转条件写成 <code>bit_cnt_r==8</code>(漏了 <code>baud_cnt==BAUD_DIV-1</code>)。仿真会看到什么?板上 eye 模式会看到什么?(提示:位还没打完就跳走了,baud_cnt 会被 IDLE 清零逻辑重置)</li>
+    <li><strong>D · 埋雷</strong>:发送器发得这么漂亮,可整块板子上没人听——接收是另一台状态机,而验证它的手段(杜邦线)你还没摸过。下一章,先写后看。</li>
+  </ol>
+
+  <div class="pager">
+    <a href="ch05-pwm.html">← 上一章:PWM 呼吸灯</a>
+    <a href="ch07-uart-rx.html">下一章:UART 接收器:自环回 →</a>
+  </div>
+</main>
+</body>
+</html>

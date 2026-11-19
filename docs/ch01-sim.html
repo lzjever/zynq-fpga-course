@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 1 章 · 仿真入门:在波形里看见时间 — Zynq FPGA 从零到实战</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <span class="chip">ZYNQ · FPGA</span>
+    <h1>从零到实战</h1>
+    <p>Verilog · Vivado · Z7-Nano</p>
+  </div>
+  <nav>
+    <a href="index.html"><span class="num">00</span>封面 · 课程地图</a>
+    <a href="ch00-verilog101.html"><span class="num">01</span>Verilog 101</a>
+    <a class="active" href="ch01-sim.html"><span class="num">02</span>仿真入门</a>
+    <a href="ch02-debounce.html"><span class="num">03</span>Lab02 按键消抖</a>
+    <a href="ch03-cdc.html"><span class="num">04</span>亚稳态与 CDC</a>
+    <a href="ch04-vivado.html"><span class="num">05</span>Vivado 幕后</a>
+    <a href="ch05-pwm.html"><span class="num">06</span>PWM 呼吸灯</a>
+    <a href="ch06-uart-tx.html"><span class="num">07</span>UART 发送器</a>
+    <a href="ch07-uart-rx.html"><span class="num">08</span>UART 自环回</a>
+    <a href="ch08-axi.html"><span class="num">09</span>AXI 总线</a>
+    <a href="ch09-merge.html"><span class="num">10</span>PS-PL 会师</a>
+    <a href="ch10-capstone.html"><span class="num">11</span>毕业设计</a>
+    <a href="appendix-board.html"><span class="num">附A</span>板卡手册</a>
+    <a href="appendix-glossary.html"><span class="num">附B</span>术语表</a>
+    <a href="appendix-cheatsheet.html"><span class="num">附C</span>命令速查</a>
+  </nav>
+  <footer>硬件:Z7-Nano R20 · XC7Z020<br>软件:Vivado 2026.1 免费档<br>姊妹篇:主线 Linux 手册</footer>
+</aside>
+<main class="main">
+  <div class="chapter-tag">CHAPTER 01</div>
+  <h2 class="title">仿真入门:在波形里看见时间</h2>
+  <p class="subtitle">半亮是这世界对你撒的第一个谎,波形不会撒谎——今天领你的免费时间显微镜。</p>
+
+  <h3>钩子:两桩悬案,一台显微镜</h3>
+  <p>上一章(ch00)留下了两桩悬案:</p>
+  <ol>
+    <li><strong>"半亮"之谜</strong>:把 LED 接到 <code>cnt[0]</code>,LED"半亮"。可数字电路只有 0 和 1,哪来的"一半亮"?我们说是 25MHz 闪太快——<strong>谁看见了?</strong>你手边没有示波器。</li>
+    <li><strong>"testbench"之谜</strong>:Lab02 的需求书里赫然写着"testbench 骨架"五个字。它是什么?为什么你的第一份从零作业会需要它?</li>
+  </ol>
+  <p>两桩案子,同一台破案工具:<strong>仿真器(Simulator)</strong>——一块不要钱、不要烙铁、不要示波器的"时间显微镜"。它在你电脑内存里按你的描述把电路"演"出来,把每根导线在每一纳秒的值画成图。这一章我们用它解剖你已经完全理解的 <code>led_blink.v</code>(解剖熟悉的电路,零风险),顺便把写测试台的手艺学会——Lab02 马上要用。</p>
+  <div class="box box-know"><div class="box-title">知识 · 看电路的三种方式</div>
+  <p><strong>算</strong>(ch00 的公式:第 N 位方波频率 = 时钟 ÷ 2<sup>N+1</sup>)、<strong>仿真</strong>(今天:在软件里演电路)、<strong>上板</strong>(以后:真实硬件 + 在线逻辑分析仪)。工程师三者都用,先用最便宜的那个。仿真一次几分钱电费,烧板一次几分钟工夫——先仿真,后上板,是全课程的固定节拍。</p></div>
+
+  <h3>目标:读完这章你能</h3>
+  <ol>
+    <li>说清测试台与被测电路的本质区别,并举出两个"只在测试台里合法"的语法;</li>
+    <li>把 lab01 的测试台跑起来,在波形窗口里加信号、放游标、量周期;</li>
+    <li>用游标量出 <code>cnt[0]</code> 的周期是 40ns(= 25MHz),亲手给"半亮"结案,并用三句话说清眼睛为什么被骗;</li>
+    <li>解释为什么"看见 <code>cnt[23]</code> 翻一个整周期"在仿真里不划算,以及公式如何替你跑完剩下的一千六百万拍;</li>
+    <li>用命令行三步舞(<code>xvlog → xelab → xsim</code>)跑仿真——给命令行高手的顺手兵器。</li>
+  </ol>
+
+  <h3>原理:测试台是什么</h3>
+  <p>测试台(Testbench, TB)是<strong>写给仿真器的软件</strong>,不是电路。它像一台实验台:被测电路摆在台子中央,测试台负责拨开关(造激励)、喂信号(造时钟)、然后盯着每根线的电压随时间变化(看波形)。它永远不会被做成硬件。</p>
+  <div class="fig" style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px;margin:20px 0;">
+  <svg viewBox="0 0 860 260" xmlns="http://www.w3.org/2000/svg">
+    <rect x="20" y="20" width="820" height="200" rx="12" fill="#f4f1ec" stroke="#4a5568" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <text x="36" y="46" font-size="14" font-weight="bold" fill="#4a5568">tb_led_blink(测试台 = 实验台,只活在仿真器里)</text>
+    <rect x="50" y="80" width="180" height="52" rx="6" fill="#f3eff9" stroke="#5b3e96" stroke-width="2"/>
+    <text x="66" y="102" font-size="13.5" fill="#3d2a66">① 造时钟</text>
+    <text x="66" y="121" font-size="12.5" fill="#3d2a66" font-family="Consolas,monospace">always #10 clk = ~clk;</text>
+    <rect x="50" y="160" width="180" height="52" rx="6" fill="#f3eff9" stroke="#5b3e96" stroke-width="2"/>
+    <text x="66" y="182" font-size="13.5" fill="#3d2a66">② 造激励 + ③ 说停</text>
+    <text x="66" y="201" font-size="12.5" fill="#3d2a66" font-family="Consolas,monospace">rst_n=0 → 1; $finish;</text>
+    <rect x="330" y="100" width="220" height="90" rx="6" fill="#fdfcfa" stroke="#b3541e" stroke-width="2"/>
+    <text x="384" y="128" font-size="14" font-weight="bold" fill="#7c3a12">被测电路 DUT</text>
+    <text x="398" y="150" font-size="13" fill="#7c3a12" font-family="Consolas,monospace">led_blink.v</text>
+    <text x="410" y="170" font-size="11.5" fill="#4a5568">(它是真电路,以后上板)</text>
+    <line x1="230" y1="106" x2="330" y2="120" stroke="#1d5c8a" stroke-width="2"/>
+    <line x1="230" y1="186" x2="330" y2="168" stroke="#1d5c8a" stroke-width="2"/>
+    <text x="252" y="98" font-size="12" fill="#1d5c8a">clk 进</text>
+    <text x="252" y="204" font-size="12" fill="#1d5c8a">rst_n 进</text>
+    <line x1="550" y1="145" x2="650" y2="145" stroke="#1d5c8a" stroke-width="2"/>
+    <text x="560" y="136" font-size="12" fill="#1d5c8a">led 出</text>
+    <rect x="650" y="100" width="170" height="90" rx="6" fill="#eef6ee" stroke="#2e7d32" stroke-width="2"/>
+    <text x="672" y="130" font-size="13.5" fill="#2e7d32">波形窗口</text>
+    <text x="668" y="152" font-size="12" fill="#2e7d32">(你的眼睛看这里:</text>
+    <text x="668" y="170" font-size="12" fill="#2e7d32"> 时间轴 + 信号 + 游标)</text>
+  </svg>
+  <div style="font-size:13px;color:#4a5568;margin-top:10px;">图 1 · 测试台包住被测电路:造时钟、造激励、说停;被测电路的每根线都被"录像"</div>
+  </div>
+  <p>被测电路行话叫 <strong>DUT(Device Under Test,被测器件)</strong>。注意一个甜头:仿真器能看到 DUT <strong>内部的每一根线</strong>——<code>cnt</code> 的每一位、每根导线的中间值,统统可看。软件里你打个断点才能看变量,仿真里默认全程录像。这个特权后面每一章都在用。</p>
+
+  <h4>测试台三要素:造时钟、造激励、说停</h4>
+  <p>任何测试台,剥到骨头就三件事:</p>
+  <table>
+    <tr><th>要素</th><th>干什么</th><th>典型写法</th></tr>
+    <tr><td>① 造时钟</td><td>给 DUT 一颗"假晶振"——周期与板上 N18 一致(20ns)</td><td><code>always #10 clk = ~clk;</code></td></tr>
+    <tr><td>② 造激励</td><td>扮演外部世界:按下/松开按键、送数据、复位……</td><td><code>initial begin … end</code> 里按时间顺序拨信号</td></tr>
+    <tr><td>③ 说停</td><td>告诉仿真器"演到这儿收工"(否则它永远演下去)</td><td><code>$finish;</code></td></tr>
+  </table>
+
+  <h4>两种方言:可综合的,和只给仿真器看的</h4>
+  <p>ch00 说过,Verilog 是"电路的描述文案"。但那只是半张地图——Verilog 还有另一半:<strong>写给仿真器的软件方言</strong>。前者叫<strong>可综合子集(Synthesizable Subset)</strong>:只有它能被综合(Synthesis,把描述翻译成真电路的步骤)接受;后者永远活不到上板那天,却是测试台的日常用语。两页语法,一种语言:</p>
+  <table>
+    <tr><th>写法</th><th>方言</th><th>意思</th></tr>
+    <tr><td><code>always @(posedge clk)</code> / <code>assign</code></td><td>可综合 ✅</td><td>造电路(ch00 全篇讲的就是它)</td></tr>
+    <tr><td><code>#10</code></td><td>仅仿真 ⚠️</td><td>"过 10 个时间单位再往下走"——真实电路里不存在"等待"</td></tr>
+    <tr><td><code>initial begin … end</code></td><td>仅仿真为主 ⚠️</td><td>"开机时按顺序执行一遍"——顺序执行的"软件句子"</td></tr>
+    <tr><td><code>$display</code> / <code>$finish</code></td><td>仅仿真 ⚠️</td><td>系统任务(System Task):打印/收工,长得像函数调用,因为它们本来就是给"软件"用的</td></tr>
+    <tr><td><code>repeat (20) @(posedge clk)</code></td><td>仅仿真 ⚠️</td><td>"等 20 个时钟上升沿"——测试台的循环等待</td></tr>
+  </table>
+  <div class="box box-know"><div class="box-title">知识 · "终于有一段 Verilog 像软件了——因为它本来就是软件"</div>
+  <p>测试台里可以用顺序、循环、打印、随机数,你写 C 的手感全回来了。这不是巧合:测试台的本职就是一段"扮演外部世界"的程序。规则只有一条:<strong>这些写法永远别混进被测电路(.v)里</strong>——综合器遇到 <code>#</code> 或 <code>$finish</code> 会直接报错(它没法给"等待"造一块硬件)。怎么避免混错位置,见本章"常见坑"第一条。</p></div>
+
+  <h4>仿真时间 ≠ 物理时间</h4>
+  <p>波形横轴是<strong>仿真时间(Simulation Time)</strong>:一个纯粹的数字,单位由文件开头的<strong>时间标度(Time Scale)</strong>决定:</p>
+  <pre><code><span class="s">`timescale</span> 1ns/1ps   <span class="c">// 时间单位 = 1ns,#10 就是 10ns;最小刻度(精度 Precision)= 1ps</span></code></pre>
+  <p>一句话记法:<strong>斜杠前是"一块钱多大",斜杠后是"最小分币多小"</strong>。我们的板子时钟周期 20ns,所以 1ns 作单位正舒服。注意两件事:第一,仿真时间走得多快取决于电脑性能,与电路真实速度无关——仿真 0.336 秒的电路行为,电脑可能要真跑几十秒;第二,<strong>忘了写这行,或单位写错,所有 <code>#</code> 延时全部错位</strong>(下一章有个"20ms 变 20ns"的经典假通过,先在这里打预防针)。仿真器每推进一次最小刻度,算一遍所有电路的值——这个最小节拍叫<strong>时间步(Time Step)</strong>。</p>
+
+  <h3>动手:五分钟跑通第一个测试台</h3>
+  <h4>第 0 步:拿到文件</h4>
+  <p>课程已为 lab01 配好测试台 <code>labs/lab01-blink/tb_led_blink.v</code> 和一键脚本 <code>sim.tcl</code>(文末有逐行讲解)。整个文件不到 20 行:</p>
+  <pre><code><span class="s">`timescale</span> 1ns/1ps          <span class="c">// 时间单位 1ns,最小刻度 1ps(#10 = 10ns)</span>
+
+<span class="k">module</span> tb_led_blink;        <span class="c">// 测试台没有端口——它包住被测电路,不对外伸引脚</span>
+
+    <span class="k">reg</span>  clk   = 1'b0;      <span class="c">// 造时钟用的拨动开关(reg 在测试台里就是我们熟悉的"变量")</span>
+    <span class="k">reg</span>  rst_n = 1'b0;      <span class="c">// 按键:先按住(0=按下),等电路清零完再松手</span>
+    <span class="k">wire</span> led;               <span class="c">// 接被测电路的输出:一根"观察用导线"</span>
+
+    <span class="c">// ---------- 被测电路(DUT)----------</span>
+    led_blink dut (
+        .clk   (clk),
+        .rst_n (rst_n),
+        .led   (led)
+    );
+
+    <span class="c">// ---------- 要素 ①:造时钟(10ns 翻一次 = 周期 20ns = 50MHz,与 N18 同款)----------</span>
+    <span class="k">always</span> #10 clk = ~clk;
+
+    <span class="c">// ---------- 要素 ②:造激励 + 要素 ③:说停 ----------</span>
+    <span class="k">initial</span> <span class="k">begin</span>
+        <span class="k">repeat</span> (20) @(posedge clk);   <span class="c">// 按住复位 20 拍,让计数器从 0 起步</span>
+        rst_n = 1'b1;                 <span class="c">// 松开按键,电路开始自由跑</span>
+        <span class="k">repeat</span> (200) @(posedge clk);  <span class="c">// 再跑 200 拍:足够看清 cnt 低位的翻转规律</span>
+        $finish;                      <span class="c">// 收工:告诉仿真器"到此为止"</span>
+    <span class="k">end</span>
+<span class="k">endmodule</span></code></pre>
+  <p>三要素各就各位。注意两个细节:<strong>测试台自己就是顶层</strong>(它包着 DUT,没人包它);<strong>DUT 的接法</strong> <code>led_blink dut (...)</code> 是"模块例化"——把一块已知电路摆进更大的图里,第 5 章正式教,今天照着抄即可。</p>
+
+  <h4>第 1 步(GUI 路):把测试台放进对的筐</h4>
+  <div class="box box-step"><div class="box-title">步骤 · Vivado 2026.1(先开着你熟悉的 lab01 工程)</div>
+  <ol>
+    <li>菜单 <strong>Add Sources</strong> → 选 <strong>Add or Create Simulation Sources</strong>(注意:不是 Design Sources!)→ Add File → 选 <code>tb_led_blink.v</code> → Finish。</li>
+    <li>看一眼 Sources 窗口:多出一个 <strong>Simulation Sources → sim_1</strong> 文件夹,<code>tb_led_blink</code> 躺在里面(它是仿真的顶层,自动识别)。</li>
+    <li>Flow Navigator 左侧 <strong>SIMULATION</strong> → <strong>Run Simulation</strong> → <strong>Run Behavioral Simulation</strong>。等十几秒,Vivado 切到仿真工作区,弹出波形窗口。</li>
+    <li>波形窗口默认只演 1000ns(约 50 拍)——不够。点工具栏 <strong>Run All</strong>(快捷键 F3),让仿真一路跑到我们的 <code>$finish</code>(约 4.4µs)。</li>
+  </ol></div>
+
+  <h4>第 2 步:把信号请进波形,学会读它</h4>
+  <p>波形窗口 = 时间的照片。三个零件:</p>
+  <ul>
+    <li><strong>横轴 = 仿真时间</strong>(单位 ns,取决于 timescale);</li>
+    <li><strong>每行 = 一根信号线</strong>:斜坡是翻转,平线是保持;多位信号(如 <code>cnt</code>)默认显示十六进制值,点名字前的 + 号可展开成 <code>cnt[0]</code>、<code>cnt[1]</code>……每一位;</li>
+    <li><strong>游标(Cursor)= 一把卡尺</strong>:在波形上点一下,游标会<strong>自动吸附到最近的翻转沿</strong>,顶部显示绝对时刻。量周期:把游标吸在某个上升沿记下 t1,再吸到下一个上升沿记下 t2,周期 = t2 − t1。</li>
+  </ul>
+  <p>操作:左侧 Scopes 面板选中 <code>dut</code> → 右侧 Objects 面板找到 <code>cnt</code>(或直接在波形里右键信号 → Add to Wave Window 都行)→ 把 <code>cnt[0]</code>、<code>cnt[1]</code> 拖进波形。然后你将看到本章的"物证":</p>
+
+  <h3>现象与验证:两桩悬案,一次了结</h3>
+  <div class="fig" style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px;margin:20px 0;">
+  <svg viewBox="0 0 860 250" xmlns="http://www.w3.org/2000/svg">
+    <text x="16" y="38" font-size="12.5" font-family="Consolas,monospace" fill="#1a2332">clk</text>
+    <text x="16" y="98" font-size="12.5" font-family="Consolas,monospace" fill="#1a2332">cnt[0]</text>
+    <text x="16" y="158" font-size="12.5" font-family="Consolas,monospace" fill="#1a2332">cnt[1]</text>
+    <!-- clk: period 20ns=40px, x=40+2t -->
+    <polyline points="40,50 60,50 60,30 80,30 80,50 100,50 100,30 120,30 120,50 140,50 140,30 160,30 160,50 180,50 180,30 200,30 200,50 220,50 220,30 240,30 240,50 260,50 260,30 280,30 280,50 300,50 300,30 320,30 320,50 340,50 340,30 360,30 360,50 380,50 380,30 400,30 400,50 420,50 420,30 440,30 440,50 460,50 460,30 480,30 480,50 500,50 500,30 520,30 520,50 540,50 540,30 560,30 560,50 580,50 580,30 600,30 600,50 620,50 620,30 640,30 640,50 660,50 660,30 680,30 680,50 700,50 700,30 720,30 720,50 740,50 740,30 760,30" fill="none" stroke="#b3541e" stroke-width="2"/>
+    <!-- cnt[0]: period 40ns, rising at t=10,50,90... high=90 low=110 -->
+    <polyline points="40,110 60,110 60,90 100,90 100,110 140,110 140,90 180,90 180,110 220,110 220,90 260,90 260,110 300,110 300,90 340,90 340,110 380,110 380,90 420,90 420,110 460,110 460,90 500,90 500,110 540,110 540,90 580,90 580,110 620,110 620,90 660,90 660,110 700,110 700,90 740,90 740,110 760,110" fill="none" stroke="#1d5c8a" stroke-width="2"/>
+    <!-- cnt[1]: period 80ns, rising at t=30, high=150 low=170 -->
+    <polyline points="40,170 100,170 100,150 180,150 180,170 260,170 260,150 340,150 340,170 420,170 420,150 500,150 500,170 580,170 580,150 660,150 660,170 740,170 740,150 760,150" fill="none" stroke="#2e7d32" stroke-width="2"/>
+    <!-- cursors at t=50 (x=140) and t=90 (x=220) -->
+    <line x1="140" y1="16" x2="140" y2="205" stroke="#5b3e96" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <line x1="220" y1="16" x2="220" y2="205" stroke="#5b3e96" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <line x1="140" y1="12" x2="220" y2="12" stroke="#5b3e96" stroke-width="1.5"/>
+    <text x="150" y="10" font-size="12" fill="#5b3e96">Δ = 40ns = 25MHz</text>
+    <text x="128" y="220" font-size="11.5" fill="#5b3e96">游标A t=50ns</text>
+    <text x="208" y="220" font-size="11.5" fill="#5b3e96">游标B t=90ns</text>
+    <!-- axis -->
+    <line x1="40" y1="200" x2="760" y2="200" stroke="#4a5568" stroke-width="1.5"/>
+    <line x1="40" y1="197" x2="40" y2="203" stroke="#4a5568" stroke-width="1.5"/><text x="36" y="238" font-size="11" fill="#4a5568">0</text>
+    <line x1="120" y1="197" x2="120" y2="203" stroke="#4a5568" stroke-width="1.5"/><text x="108" y="238" font-size="11" fill="#4a5568">40ns</text>
+    <line x1="200" y1="197" x2="200" y2="203" stroke="#4a5568" stroke-width="1.5"/><text x="194" y="238" font-size="11" fill="#4a5568">80</text>
+    <line x1="280" y1="197" x2="280" y2="203" stroke="#4a5568" stroke-width="1.5"/><text x="274" y="238" font-size="11" fill="#4a5568">120</text>
+    <line x1="360" y1="197" x2="360" y2="203" stroke="#4a5568" stroke-width="1.5"/><text x="354" y="238" font-size="11" fill="#4a5568">160</text>
+    <line x1="440" y1="197" x2="440" y2="203" stroke="#4a5568" stroke-width="1.5"/><text x="434" y="238" font-size="11" fill="#4a5568">200</text>
+    <line x1="520" y1="197" x2="520" y2="203" stroke="#4a5568" stroke-width="1.5"/><text x="514" y="238" font-size="11" fill="#4a5568">240</text>
+    <line x1="600" y1="197" x2="600" y2="203" stroke="#4a5568" stroke-width="1.5"/><text x="594" y="238" font-size="11" fill="#4a5568">280</text>
+    <line x1="680" y1="197" x2="680" y2="203" stroke="#4a5568" stroke-width="1.5"/><text x="674" y="238" font-size="11" fill="#4a5568">320</text>
+    <line x1="760" y1="197" x2="760" y2="203" stroke="#4a5568" stroke-width="1.5"/><text x="754" y="238" font-size="11" fill="#4a5568">360</text>
+    <text x="620" y="238" font-size="11.5" fill="#4a5568">仿真时间 →</text>
+  </svg>
+  <div style="font-size:13px;color:#4a5568;margin-top:10px;">图 2 · 波形阅读法(复位松开后的稳态,示意):每行一根信号,游标吸附在 <code>cnt[0]</code> 的两个相邻上升沿上,Δ = 40ns</div>
+  </div>
+
+  <h4>悬案一收案:"半亮"的真相</h4>
+  <p>在波形里量 <code>cnt[0]</code>:它每个时钟上升沿翻转一次,游标读数 <strong>Δ = 40ns,即 25MHz</strong>——和 ch00 的预测分毫不差。现在用三句话说清"半亮":</p>
+  <ol>
+    <li>LED 确实在一秒内亮灭两千五百万次,占空比一半一半;<strong>数字电路上没有"半亮",只有高速翻转</strong>。</li>
+    <li>人眼对每秒超过几十次的闪烁就会"融合",感受到的只是<strong>时间平均值</strong>:50% 的时间亮 → 感觉"半亮"。</li>
+    <li>所以"半亮"不是电路的行为,是<strong>你的眼睛在低通滤波</strong>——眼睛替你把 25MHz 平均掉了。波形显微镜不会平均,所以它看得见真相。</li>
+  </ol>
+  <div class="box box-win"><div class="box-title">里程碑 M1 · 第一次看见时间</div>
+  <p>你在波形里亲手量出了 25MHz,悬案结案。记住这个手感:以后每次电路行为和直觉不符,第一反应就是"扔进仿真里看一眼"。顺便剧透:第 5 章我们会<strong>故意</strong>利用"眼睛会平均"这同一个原理,造出真正可调的半亮——敌人变工具。</p></div>
+
+  <h4>悬案二收案:testbench 就是你刚跑的东西</h4>
+  <p>Lab02 需求书里的"testbench 骨架"不再神秘:造时钟、造激励、说停。区别只在激励——Lab02 的测试台要扮演一颗<strong>会抖动的按键</strong>(按一次,信号在 20ms 里弹跳几十次),还要自动判分打 PASS/FAIL。下一章手把手。</p>
+
+  <h4>练习:量三个位,验证一条定律</h4>
+  <p>别停下,趁热做一份数学验证(ch00 的公式值得亲手复查一遍,别忘了这门课的座右铭):</p>
+  <ol>
+    <li>游标量 <code>cnt[0]</code> 周期 → 应为 40ns;再量 <code>cnt[1]</code> → 应为 80ns;再量 <code>cnt[2]</code> → 应为 160ns。<strong>位号每加 1,周期翻倍。</strong></li>
+    <li>由此外推:<code>cnt[23]</code> 周期 = 20ns × 2<sup>24</sup> ≈ <strong>0.336 秒</strong>(LED 约 3Hz 闪烁,与你板子上看到的心跳一致)。</li>
+    <li>那为什么不直接在仿真里看 <code>cnt[23]</code> 翻一个整周期?算一笔账:那要仿 <strong>1600 多万个时钟周期</strong>。电脑每秒能仿大约百万拍上下,意味着几十秒到几分钟的等待,换来一个公式已经告诉你的答案。工程师的选择:低位量三次,定律成立,公式推高位。<strong>仿真很便宜,但不是免费的——这是第一次也不会是最后一次做这笔账。</strong>(下一章还有更聪明的省钱法:把电路参数改小,小电路验证大逻辑。)</li>
+  </ol>
+
+  <h4>命令行路:三步舞 + 一键脚本</h4>
+  <p>GUI 三步(加文件、跑仿真、看波形)对应的其实是三条命令——Vivado 的仿真器叫 <strong>XSIM(Xilinx Simulator)</strong>,它有自己的命令行三步舞:</p>
+  <pre><code><span class="c"># ① 编译:xvlog 把 .v 翻译成仿真器格式(被测电路 + 测试台一起)</span>
+<span class="k">xvlog</span> led_blink.v tb_led_blink.v
+
+<span class="c"># ② 装配:xelab 把测试台连成一个可运行的"仿真快照(Snapshot)"</span>
+<span class="c">#    -debug typical 让波形里能看到电路内部信号(不加就只有顶层端口!)</span>
+<span class="k">xelab</span> -debug typical tb_led_blink -s tb_led_blink_sim
+
+<span class="c"># ③ 运行:xsim 跑快照。-R = 一路跑到 $finish 自动退出(终端打印模式)</span>
+<span class="k">xsim</span> tb_led_blink_sim -R
+<span class="c">#    想开波形窗口:去掉 -R 换成 --gui</span></code></pre>
+  <p>课程把它包成了 <code>labs/lab01-blink/sim.tcl</code>,一条命令:</p>
+  <pre><code><span class="k">vivado</span> -mode batch -source sim.tcl    <span class="c"># 在 labs/lab01-blink/ 目录下</span></code></pre>
+  <p>下一章 Lab02 的测试台会自动打印 <code>PASS</code>/<code>FAIL</code>——那才是三步舞的主场:改一行、跑一条、看终端,快得像跑单元测试。</p>
+
+  <h3>常见坑</h3>
+  <div class="box box-warn"><div class="box-title">坑 1 · 测试台放错筐(今天最常见的坑)</div>
+  <p>把 <code>tb_led_blink.v</code> 当 <strong>Design Sources</strong>(设计源)加进去,综合就会试图把测试台造成电路——它撞上 <code>#10</code>、<code>$finish</code> 这些"软件方言"直接报错(类似"unsupported system task"),或者被两个"顶层模块"搞混问你谁是 top。自救:Sources 里右键该文件 → Remove File from Project,再按第 1 步重新加进 <strong>Simulation Sources</strong>。记住口诀:<strong>Design Sources 筐放电路,Simulation Sources 筐放测试台</strong>——两个筐,两种命运。</p></div>
+  <div class="box box-warn"><div class="box-title">坑 2 · 波形停在 1000ns,以为电路死了</div>
+  <p>Run Behavioral Simulation 默认只演 1000ns(约 50 拍)。我们的测试台要跑 220 拍——不是电路错了,是没演完。点 <strong>Run All</strong>(F3)跑到 <code>$finish</code>,或在 Tcl 控制台敲 <code>run -all</code>。凡是"波形结尾突然全变平/全变X",先怀疑是"演完了"而不是"坏了"。</p></div>
+  <div class="box box-warn"><div class="box-title">坑 3 · 忘了 $finish(或忘了它只是测试台的)</div>
+  <p>测试台没有 <code>$finish</code>:Run All 会一直演下去,电脑风扇起飞——仿真时间是无限的,电路自己不会喊停。反过来,把 <code>$finish</code> 写进被测电路 <code>.v</code> 里,则会在上板前的综合时报错(见坑 1 的原理)。</p></div>
+  <div class="box box-warn"><div class="box-title">坑 4 · 命令行跑完波形里没信号</div>
+  <p><code>xelab</code> 不加 <code>-debug typical</code>,快照里只留顶层端口,<code>cnt</code> 这些内部信号在波形里根本不存在。GUI(Run Behavioral Simulation)自动带调试信息,命令行要自己记得加——这也是 sim.tcl 替你写死它的原因。</p></div>
+  <div class="box box-know"><div class="box-title">如实交代 · XSIM 免费档的限制</div>
+  <p>免费档(安装界面名 Vivado ML Standard,授权页称 Basic)的 XSIM 限制:一次仿真最多约 <strong>50000 个设计实例</strong>(触发器/门级单元的计数)。lab01 总共 24 个触发器加一点逻辑,离限额差三个数量级;后面最大的设计(第 8 章总线从机)也到不了零头。这个限制真正影响的是"仿真整颗 SoC"那种规模的活——到时候你会换工具,而不是换钱包。</p></div>
+
+  <h3>小结</h3>
+  <div class="box box-win"><div class="box-title">本章一句话</div>
+  <p><strong>测试台是写给仿真器的软件:造时钟、造激励、说停;波形是时间的照片:横轴时间、每行信号、游标量距。</strong>半亮悬案结案——眼睛会平均,波形不会。你已经会用 GUI 和命令行两条路跑仿真,并且知道仿真便宜但不是免费。</p></div>
+  <div class="box box-know"><div class="box-title">本章新词卡(已登记附B 术语表)</div>
+  <ul>
+    <li>仿真(Simulation)/ 仿真器(Simulator)/ XSIM(Xilinx Simulator)</li>
+    <li>测试台(Testbench, TB)/ 被测器件(Device Under Test, DUT)</li>
+    <li>激励(Stimulus)/ 系统任务(System Task)</li>
+    <li>波形(Waveform)/ 游标(Cursor)</li>
+    <li>仿真时间(Simulation Time)/ 时间标度(Time Scale)/ 时间步(Time Step)/ 快照(Snapshot)</li>
+    <li>可综合子集(Synthesizable Subset)</li>
+  </ul></div>
+
+  <h3>三档自测</h3>
+  <h4>A · 概念(用人话说,禁止背定义)</h4>
+  <p>1. 测试台和被测电路,一个像软件一个像硬件——用你自己的话说,区别的<strong>本质</strong>是什么?各举一个只有对方能用的语法。</p>
+  <p>2. 为什么 <code>led_blink.v</code> 里绝对不能写 <code>#10</code>?</p>
+  <details><summary>看答案(先自己说一遍)</summary>
+  <p>1. 被测电路是"电路的描述",会被综合成真硬件,活在上板之后;测试台是"扮演外部世界的程序",只活在仿真器里,永远不上板。只有测试台能用 <code>#延时</code>、<code>$display</code>;只有被测电路里的 <code>assign</code>/<code>always @(posedge clk)</code> 有"造硬件"的含义(测试台里写它们通常只是摆设或造时钟)。<br>
+  2. <code>#10</code> 的意思是"等 10ns 再继续"——真实电路里没有"等待"这个元件,综合器无法为它造硬件,直接报错。等待是软件世界的概念,电路里只有"时钟继续走"。</p></details>
+
+  <h4>B · 预测(先猜,再跑)</h4>
+  <p>把测试台的时钟从 <code>#10</code> 改成 <code>#5</code>(周期 10ns = 100MHz),被测电路一行不动。重跑仿真,<code>cnt[0]</code> 的周期读数变成多少?<strong>板子上的 LED 会不会因此变快?</strong></p>
+  <details><summary>看答案(先写下你的预测)</summary>
+  <p>波形里 <code>cnt[0]</code> 周期变为 20ns(翻转间隔 10ns)——仿真时间轴上的读数跟着假晶振走了。<strong>但板子毫无变化</strong>:真电路焊死在 N18 的 50MHz 上,而 N18 是焊在板子上的真晶振,不受测试台摆布。这就是"仿真时间 ≠ 物理时间"的另一面:测试台的时钟是<strong>假设</strong>。反过来,如果你真想改板子上的速度,要改的是被测电路(比如 ch00 实验里换 <code>cnt</code> 的位),而不是测试台。</p></details>
+
+  <h4>C · 排错(找出 bug,说清现象)</h4>
+  <p>同学把测试台写成这样,仿真也跑起来了,波形却从头到尾全平:<code>cnt</code> 恒为 0,<code>led</code> 恒为 0。哪里错了?</p>
+  <pre><code><span class="k">reg</span> rst_n = 1'b0;
+<span class="k">initial</span> <span class="k">begin</span>
+    <span class="k">repeat</span> (200) @(posedge clk);
+    $finish;
+<span class="k">end</span></code></pre>
+  <details><summary>看答案(先自己指认)</summary>
+  <p>复位从未释放:<code>rst_n</code> 初始化为 0(按下)之后,激励里<strong>忘了写 <code>rst_n = 1'b1;</code></strong>,按键被"按住"了整个仿真。电路一直在执行清零计划,没有任何报错——这是仿真最阴的一类坑:<strong>不报错,只是安静地什么也不做</strong>。排错思路:波形全平/全 0,先查复位和使能类的激励,再怀疑电路。</p></details>
+
+  <div class="box box-know"><div class="box-title">下一课预告 · 埋一颗雷</div>
+  <p>显微镜就位,你的 Lab02 手术可以开工了:按键消抖——全课程第一次从零设计,需求书已在手,课程只给检查点和提示阶梯,参考实现锁在折叠框里。先透一个现象:第一版"裸按键"电路烧上板,<strong>按一次,LED 乱翻,而且每次翻的次数都不一样</strong>。下一章,从指尖上的混乱开始。</p></div>
+
+  <div class="pager">
+    <a href="ch00-verilog101.html">← 上一章:Verilog 101</a>
+    <a href="ch02-debounce.html">下一章:Lab02 按键消抖 →</a>
+  </div>
+</main>
+</body>
+</html>

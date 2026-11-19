@@ -143,7 +143,7 @@
         $finish;                      <span class="c">// 收工:告诉仿真器"到此为止"</span>
     <span class="k">end</span>
 <span class="k">endmodule</span></code></pre>
-  <p>三要素各就各位。注意两个细节:<strong>测试台自己就是顶层</strong>(它包着 DUT,没人包它);<strong>DUT 的接法</strong> <code>led_blink dut (...)</code> 是"模块例化"——把一块已知电路摆进更大的图里,第 5 章正式教,今天照着抄即可。</p>
+  <p>三要素各就各位。注意两个细节:<strong>测试台自己就是顶层</strong>(它包着 DUT,没人包它);<strong>DUT 的接法</strong> <code>led_blink dut (...)</code> 是"模块例化"——把一块已知电路摆进更大的图里,ch05(PWM 呼吸灯)正式教,今天照着抄即可。</p>
 
   <h4>第 1 步(GUI 路):把测试台放进对的筐</h4>
   <div class="box box-step"><div class="box-title">步骤 · Vivado 2026.1(先开着你熟悉的 lab01 工程)</div>
@@ -207,7 +207,7 @@
     <li>所以"半亮"不是电路的行为,是<strong>你的眼睛在低通滤波</strong>——眼睛替你把 25MHz 平均掉了。波形显微镜不会平均,所以它看得见真相。</li>
   </ol>
   <div class="box box-win"><div class="box-title">里程碑 M1 · 第一次看见时间</div>
-  <p>你在波形里亲手量出了 25MHz,悬案结案。记住这个手感:以后每次电路行为和直觉不符,第一反应就是"扔进仿真里看一眼"。顺便剧透:第 5 章我们会<strong>故意</strong>利用"眼睛会平均"这同一个原理,造出真正可调的半亮——敌人变工具。</p></div>
+  <p>你在波形里亲手量出了 25MHz,悬案结案。记住这个手感:以后每次电路行为和直觉不符,第一反应就是"扔进仿真里看一眼"。顺便剧透:ch05(PWM 呼吸灯)我们会<strong>故意</strong>利用"眼睛会平均"这同一个原理,造出真正可调的半亮——敌人变工具。</p></div>
 
   <h4>悬案二收案:testbench 就是你刚跑的东西</h4>
   <p>Lab02 需求书里的"testbench 骨架"不再神秘:造时钟、造激励、说停。区别只在激励——Lab02 的测试台要扮演一颗<strong>会抖动的按键</strong>(按一次,信号在 20ms 里弹跳几十次),还要自动判分打 PASS/FAIL。下一章手把手。</p>
@@ -246,7 +246,7 @@
   <div class="box box-warn"><div class="box-title">坑 4 · 命令行跑完波形里没信号</div>
   <p><code>xelab</code> 不加 <code>-debug typical</code>,快照里只留顶层端口,<code>cnt</code> 这些内部信号在波形里根本不存在。GUI(Run Behavioral Simulation)自动带调试信息,命令行要自己记得加——这也是 sim.tcl 替你写死它的原因。</p></div>
   <div class="box box-know"><div class="box-title">如实交代 · XSIM 免费档的限制</div>
-  <p>免费档(安装界面名 Vivado ML Standard,授权页称 Basic)的 XSIM 限制:一次仿真最多约 <strong>50000 个设计实例</strong>(触发器/门级单元的计数)。lab01 总共 24 个触发器加一点逻辑,离限额差三个数量级;后面最大的设计(第 8 章总线从机)也到不了零头。这个限制真正影响的是"仿真整颗 SoC"那种规模的活——到时候你会换工具,而不是换钱包。</p></div>
+  <p>免费档(安装界面名 Vivado ML Standard,授权页称 Basic)的 XSIM 限制:一次仿真最多约 <strong>50000 个设计实例</strong>(触发器/门级单元的计数)。lab01 总共 24 个触发器加一点逻辑,离限额差三个数量级;后面最大的设计(ch08 的总线从机)也到不了零头。这个限制真正影响的是"仿真整颗 SoC"那种规模的活——到时候你会换工具,而不是换钱包。</p></div>
 
   <h3>小结</h3>
   <div class="box box-win"><div class="box-title">本章一句话</div>

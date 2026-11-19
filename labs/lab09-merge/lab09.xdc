@@ -12,4 +12,5 @@ set_property IOSTANDARD LVCMOS33 [get_ports led]
 # 直例化 PS7 没有 Block Design 替你生成约束,FCLK0 网络上没有任何
 # create_clock,Vivado 就不会做时序分析——时序报告"全绿"是假象!
 # (周期 20ns = 50MHz,与 SLCR 里配的 FCLK0 频率一致;改频率记得同步改这里)
-create_clock -period 20.000 -name fclk0 [get_pins PS7_i/FCLKCLK0]
+# 花括号必写:Tcl 会把裸写的 FCLKCLK[0] 当下标展开报错,{} 原样传给 get_pins
+create_clock -period 20.000 -name fclk0 [get_pins {PS7_i/FCLKCLK[0]}]

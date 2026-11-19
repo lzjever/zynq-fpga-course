@@ -23,7 +23,8 @@ module axi_capstone_top (
     // ===================================================================
 
     // ---------- 以下是管道:PS7 直例化(抄自 lab09,不用改) ----------
-    wire fclk0;
+    wire [3:0] fclk_bus;            // FCLKCLK 是 4 位总线(FCLK0~FCLK3)
+    wire fclk0 = fclk_bus[0];       // 只用 FCLK0
     wire aresetn = 1'b1;
 
     wire [31:0] gp0_awaddr;
@@ -39,29 +40,29 @@ module axi_capstone_top (
     wire [1:0]  gp0_rresp;
 
     PS7 PS7_i (
-        .FCLKCLK0        (fclk0),
-        .M_AXI_GP0_ACLK  (fclk0),
-        .M_AXI_GP0_AWADDR (gp0_awaddr),
-        .M_AXI_GP0_AWVALID(gp0_awvalid),
-        .M_AXI_GP0_AWREADY(gp0_awready),
-        .M_AXI_GP0_AWPROT (),
-        .M_AXI_GP0_WDATA  (gp0_wdata),
-        .M_AXI_GP0_WVALID (gp0_wvalid),
-        .M_AXI_GP0_WREADY (gp0_wready),
-        .M_AXI_GP0_WSTRB  (),
-        .M_AXI_GP0_BVALID (gp0_bvalid),
-        .M_AXI_GP0_BREADY (gp0_bready),
-        .M_AXI_GP0_BRESP  (gp0_bresp),
-        .M_AXI_GP0_AWID   (), .M_AXI_GP0_WID (), .M_AXI_GP0_WLAST (), .M_AXI_GP0_BID (),
-        .M_AXI_GP0_ARADDR (gp0_araddr),
-        .M_AXI_GP0_ARVALID(gp0_arvalid),
-        .M_AXI_GP0_ARREADY(gp0_arready),
-        .M_AXI_GP0_ARPROT (),
-        .M_AXI_GP0_RVALID (gp0_rvalid),
-        .M_AXI_GP0_RREADY (gp0_rready),
-        .M_AXI_GP0_RDATA  (gp0_rdata),
-        .M_AXI_GP0_RRESP  (gp0_rresp),
-        .M_AXI_GP0_ARID   (), .M_AXI_GP0_RID (), .M_AXI_GP0_RLAST ()
+        .FCLKCLK         (fclk_bus),
+        .MAXIGP0ACLK     (fclk0),
+        .MAXIGP0AWADDR (gp0_awaddr),
+        .MAXIGP0AWVALID(gp0_awvalid),
+        .MAXIGP0AWREADY(gp0_awready),
+        .MAXIGP0AWPROT (),
+        .MAXIGP0WDATA  (gp0_wdata),
+        .MAXIGP0WVALID (gp0_wvalid),
+        .MAXIGP0WREADY (gp0_wready),
+        .MAXIGP0WSTRB  (),
+        .MAXIGP0BVALID (gp0_bvalid),
+        .MAXIGP0BREADY (gp0_bready),
+        .MAXIGP0BRESP  (gp0_bresp),
+        .MAXIGP0AWID   (), .MAXIGP0WID (), .MAXIGP0WLAST (), .MAXIGP0BID (),
+        .MAXIGP0ARADDR (gp0_araddr),
+        .MAXIGP0ARVALID(gp0_arvalid),
+        .MAXIGP0ARREADY(gp0_arready),
+        .MAXIGP0ARPROT (),
+        .MAXIGP0RVALID (gp0_rvalid),
+        .MAXIGP0RREADY (gp0_rready),
+        .MAXIGP0RDATA  (gp0_rdata),
+        .MAXIGP0RRESP  (gp0_rresp),
+        .MAXIGP0ARID   (), .MAXIGP0RID (), .MAXIGP0RLAST ()
     );
 
     // ---------- 以下是器官:全部是你的 TODO ----------

@@ -71,9 +71,9 @@
   <p>Zynq 是一块硅、两个世界:处理系统(Processing System, PS,ARM 那半边)和可编程逻辑(Programmable Logic, PL,FPGA 这半边)。课程至今你只活了 PL;PS 早已被你的 FSBL/U-Boot/Debian 武装到牙齿。两个世界之间有几根固定的"脐带":<strong>GP0 总线</strong>(上一章的 AXI 门)和 <strong>FCLK 时钟</strong>(PS 送给 PL 的节拍)。</p>
   <p>行业常规做法是在 Block Design 里拖一个 PS 模块、勾选项、自动连线。我们走一条对你更诚实的路——<strong>直接在 Verilog 里例化 PS7 原语</strong>,像例化 tick 分频器一样:</p>
   <pre><code><span class="k">PS7</span> PS7_i (
-    .FCLKCLK0        (fclk0),     <span class="c">// PS 送给 PL 的时钟 0:整个设计的唯一节拍</span>
-    .M_AXI_GP0_ACLK  (fclk0),     <span class="c">// GP0 总线时钟同源——同域,无 CDC</span>
-    .M_AXI_GP0_AWADDR(gp0_awaddr), .M_AXI_GP0_AWVALID(gp0_awvalid), .M_AXI_GP0_AWREADY(gp0_awready),
+    .FCLKCLK         (fclk_bus),  <span class="c">// PS 送给 PL 的时钟:4 位总线(FCLK0~3),接 [3:0] 线网、取 fclk_bus[0] 当 FCLK0</span>
+    .MAXIGP0ACLK     (fclk0),     <span class="c">// GP0 总线时钟同源——同域,无 CDC(原语端口无下划线)</span>
+    .MAXIGP0AWADDR(gp0_awaddr), .MAXIGP0AWVALID(gp0_awvalid), .MAXIGP0AWREADY(gp0_awready),
     <span class="c">// …… W/B/AR/R 通道同理;AXI3 独有信号(ID/突发类)挂空 = 置之不理(ch08 方案甲)</span>
     <span class="c">// 其余几百个端口(DDR/MIO/中断…)未列出 = 挂空,PS 侧自有人管</span>
 );</code></pre>
@@ -139,7 +139,7 @@
   <div class="box box-warn"><div class="box-title">本课最大的暗坑:全绿是假象</div>
   <p>以前用 Block Design 时,Vivado 会替你在 FCLK 网络上自动生成时钟约束。<strong>直例化 PS7 没有这层服务</strong>——如果你忘了写,FCLK0 网络上没有任何 <code>create_clock</code>,静态时序分析器<strong>不知道该按什么周期检查你的电路</strong>,于是它干脆什么都不查,报告里 WNS 一片"绿"。看起来时序全过,其实是<strong>根本没分析</strong>。这种"成功的假象"比红色报错危险十倍。</p>
   <p>解药一行,写进 lab09.xdc:</p>
-  <pre><code><span class="k">create_clock</span> -period <span class="s">20.000</span> -name fclk0 [get_pins PS7_i/FCLKCLK0]</code></pre>
+  <pre><code><span class="k">create_clock</span> -period <span class="s">20.000</span> -name fclk0 [get_pins {PS7_i/FCLKCLK[0]}]</code></pre>
   <p>(20ns = 50MHz,与 SLCR 里配的频率一致;哪天改了 FCLK0 频率,这行必须同步改,否则 WNS 又是错账。)</p></div>
 
   <h3>6 · 动手:L0 点灯(两条路,你走一条)</h3>

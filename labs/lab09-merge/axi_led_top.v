@@ -10,7 +10,9 @@
 //
 // PS7 直例化说明:
 //   - PS7 是库原语,像例化普通模块一样用,**不进 Block Design**;
-//   - 原语端口名与 BD/IP 封装版略有差别(原语 FCLKCLK0,封装 FCLK_CLK0),
+//   - 原语端口名与 BD/IP 封装版不同(已对 2026.1 原语库核实):
+//     FCLK 时钟脚叫 FCLKCLK(4 位总线,这里取 [0]),GP0 总线脚全无下划线
+//     (MAXIGP0ACLK/MAXIGP0AWADDR/…;封装版才写作 FCLK_CLK0/M_AXI_GP0_*);
 //     拿不准就综合一遍,Vivado 会直接点名未定义的端口名;
 //   - PS7 有几百个端口(DDR/MIO/中断……),没列出的自动挂空——
 //     PS 那半边早已被 FSBL/u-boot 配置好并在跑 Debian,轮不到比特流操心。
@@ -25,7 +27,8 @@ module axi_led_top (
     wire aresetn = 1'b1;
 
     // ============ ② PS7 原语:从 ARM 那半边引出 FCLK0 和 GP0 ============
-    wire fclk0;    // PS 送给 PL 的时钟(频率由 SLCR 寄存器定,默认配 50MHz)
+    wire [3:0] fclk_bus;               // FCLKCLK 是 4 位总线(FCLK0~FCLK3),全接回来
+    wire fclk0 = fclk_bus[0];          // 只用 FCLK0:整个设计的唯一节拍(频率由 SLCR 寄存器定,默认配 50MHz)
 
     // GP0 总线(lab08 的 S_AXI_* 线,这里接上真 ARM)
     wire [31:0] gp0_awaddr;
@@ -41,33 +44,33 @@ module axi_led_top (
     wire [1:0]  gp0_rresp;
 
     PS7 PS7_i (
-        .FCLKCLK0        (fclk0),     // 时钟输出:整个设计的唯一节拍
-        .M_AXI_GP0_ACLK  (fclk0),     // GP0 总线时钟同源 —— 同域,无 CDC
+        .FCLKCLK         (fclk_bus),  // 时钟输出:4 位总线,只取 [0] 当 FCLK0(见上方 fclk0 声明)
+        .MAXIGP0ACLK     (fclk0),     // GP0 总线时钟同源 —— 同域,无 CDC
         // ---- 写通道(AXI3 主侧 ↔ 我们的 AXI4-Lite)----
-        .M_AXI_GP0_AWADDR (gp0_awaddr),
-        .M_AXI_GP0_AWVALID(gp0_awvalid),
-        .M_AXI_GP0_AWREADY(gp0_awready),
-        .M_AXI_GP0_AWPROT (),
-        .M_AXI_GP0_WDATA  (gp0_wdata),
-        .M_AXI_GP0_WVALID (gp0_wvalid),
-        .M_AXI_GP0_WREADY (gp0_wready),
-        .M_AXI_GP0_WSTRB  (),
-        .M_AXI_GP0_BVALID (gp0_bvalid),
-        .M_AXI_GP0_BREADY (gp0_bready),
-        .M_AXI_GP0_BRESP  (gp0_bresp),
+        .MAXIGP0AWADDR (gp0_awaddr),
+        .MAXIGP0AWVALID(gp0_awvalid),
+        .MAXIGP0AWREADY(gp0_awready),
+        .MAXIGP0AWPROT (),
+        .MAXIGP0WDATA  (gp0_wdata),
+        .MAXIGP0WVALID (gp0_wvalid),
+        .MAXIGP0WREADY (gp0_wready),
+        .MAXIGP0WSTRB  (),
+        .MAXIGP0BVALID (gp0_bvalid),
+        .MAXIGP0BREADY (gp0_bready),
+        .MAXIGP0BRESP  (gp0_bresp),
         // ---- AXI3 独有信号,挂空 = 置之不理(ch08 方案甲)----
-        .M_AXI_GP0_AWID   (), .M_AXI_GP0_WID (), .M_AXI_GP0_WLAST (),
-        .M_AXI_GP0_BID    (),
+        .MAXIGP0AWID   (), .MAXIGP0WID (), .MAXIGP0WLAST (),
+        .MAXIGP0BID    (),
         // ---- 读通道 ----
-        .M_AXI_GP0_ARADDR (gp0_araddr),
-        .M_AXI_GP0_ARVALID(gp0_arvalid),
-        .M_AXI_GP0_ARREADY(gp0_arready),
-        .M_AXI_GP0_ARPROT (),
-        .M_AXI_GP0_RVALID (gp0_rvalid),
-        .M_AXI_GP0_RREADY (gp0_rready),
-        .M_AXI_GP0_RDATA  (gp0_rdata),
-        .M_AXI_GP0_RRESP  (gp0_rresp),
-        .M_AXI_GP0_ARID   (), .M_AXI_GP0_RID (), .M_AXI_GP0_RLAST ()
+        .MAXIGP0ARADDR (gp0_araddr),
+        .MAXIGP0ARVALID(gp0_arvalid),
+        .MAXIGP0ARREADY(gp0_arready),
+        .MAXIGP0ARPROT (),
+        .MAXIGP0RVALID (gp0_rvalid),
+        .MAXIGP0RREADY (gp0_rready),
+        .MAXIGP0RDATA  (gp0_rdata),
+        .MAXIGP0RRESP  (gp0_rresp),
+        .MAXIGP0ARID   (), .MAXIGP0RID (), .MAXIGP0RLAST ()
         // 其余几百个端口(DDR/MIO/中断/EMIO…)未列出 = 挂空,PS 侧自有人管
     );
 

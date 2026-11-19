@@ -1,10 +1,9 @@
-.*
-
-# --- XSIM/Vivado 会话产物(ch04 §7 工程卫生:可再生成物不进 git)---
 xsim.dir/
 *.wdb
 *.jou
 *.log
-xelab.log
-xvlog.log
-backup.jou
+xelab.*
+xvlog.*
+*.pb
+*.bit
+!.gitignore

@@ -1,0 +1,27 @@
+# ===== Vivado 工程卫生模板(ch04)=====
+# 原则:git 只收藏你亲手写的东西(源码 .v / 约束 .xdc / 脚本 .tcl);
+#       Vivado 生成的一切,都能用一条命令重新生成,不配进 git。
+
+# --- 脚本流(build.tcl)生成的工程目录 ---
+lab01/
+
+# --- GUI 工程库(.xpr)的内部目录,若用 GUI 建工程则命中 ---
+*.runs/
+*.cache/
+*.hw/
+*.ip_user_files/
+*.sim/
+*.gen/
+
+# --- Vivado 每次会话的日志与回放 ---
+*.jou
+*.log
+*.str
+.Xil/
+*.bak
+
+# --- 比特流默认不进 git(想存档放 release/tag)---
+*.bit
+# lab01.bin 是教学教具(4MB 的 .bin,给 ch09 的 FPGA Manager 用的),
+# 故意保留在仓库里;若你的仓库不需要,删掉本行下面的例外即可:
+!lab01.bin

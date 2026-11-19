@@ -25,7 +25,8 @@ wait_on_run impl_1
 launch_runs impl_1 -to_step write_bitstream -jobs 8
 wait_on_run impl_1
 
-# 收个尾:打印关键结果
+# 收个尾:打印关键结果(报告类命令都要先"打开"实现结果才能查,否则报错)
+open_run impl_1
 set wns [get_property SLACK [get_timing_paths]]
 puts "=============================="
 puts " 时序余量 WNS: ${wns} ns (≥0 即达标)"

@@ -50,11 +50,11 @@ wait_on_run impl_1
 launch_runs impl_1 -to_step write_bitstream -jobs 8
 wait_on_run impl_1
 
+open_run impl_1                    ;# 报告类命令都要先"打开"实现结果才能查
 set wns [get_property SLACK [get_timing_paths]]
 puts "=============================="
 puts " 时序余量 WNS:${wns} ns(≥0 即达标)"
 puts " 比特流:[glob ./$proj/*.runs/impl_1/*.bit]"
-open_run impl_1
 report_utilization -file util_$mode.rpt
 puts " 资源报告:util_$mode.rpt(记进 README 账本)"
 puts "=============================="

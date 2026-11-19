@@ -7,7 +7,7 @@
 
 ## 这是什么
 
-一套**为"命令行高手 + FPGA 小白"定制**的入门课程:已完成的先修成就——主线 Linux 移植(见[姊妹手册](https://github.com/lzjever/zynq-fpga-course/blob/main/README.md)),从 Verilog 101 心智模型起步,经按键消抖、PWM、UART 状态机,直到 PS(Debian)与 PL(FPGA 逻辑)会师。
+一套**为"命令行高手 + FPGA 小白"定制**的入门课程:已完成的先修成就——主线 Linux 移植(见[姊妹手册](https://github.com/lzjever/zynq-z7nano-mainline-linux)),从 Verilog 101 心智模型起步,经按键消抖、PWM、UART 状态机,直到 PS(Debian)与 PL(FPGA 逻辑)会师。
 
 **核心承诺**:所有术语首次出现必给全称与中文释义;所有实验可在本板复现;所有代码逐行注释。
 

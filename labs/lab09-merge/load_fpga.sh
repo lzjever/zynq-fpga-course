@@ -5,7 +5,7 @@ set -e
 cd "$(dirname "$0")"
 
 # ① 比特流 → PCAP 格式 .bin(字节序交换原理见 labs/bit2bin.py 注释/ch04)
-python3 ../bit2bin.py lab09.runs/impl_1/axi_led_top.bit lab09.bin
+python3 ../bit2bin.py lab09/lab09.runs/impl_1/axi_led_top.bit lab09.bin
 
 # ② 送去板上固件目录(FPGA Manager 只认 /lib/firmware 里的文件名)
 scp lab09.bin root@192.168.1.10:/lib/firmware/

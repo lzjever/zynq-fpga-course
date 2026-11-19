@@ -52,7 +52,7 @@ LED            亮   亮  亮  亮  灭  亮  亮  灭  亮  灭→常灭
 
 自查:亮位记 0,读出 0001 0010(LSB 起)→ 倒着拼 = 0100_1000 = 0x48 = 'H'。
 
-## ILA 抓帧步骤(ch06 §6 的页内版,5 步)
+## ILA 抓帧步骤(ch06 §7 的页内版,5 步)
 
 1. `pkill -x openocd`(JTAG 互杀口诀,ILA 当天必撞的坑)
 2. `vivado -mode batch -source build.tcl -tclargs ila && vivado -mode batch -source program.tcl`
@@ -65,7 +65,7 @@ LED            亮   亮  亮  亮  灭  亮  亮  灭  亮  灭→常灭
 
 | Lab | LUT | FF | 备注 |
 |---|---|---|---|
-| lab01 blink | ~10 | 24 | 基线 |
+| lab01 blink | 2 | 24 | 基线 |
 | lab06 eye/real | 待填 | 待填 | FSM 3 状态 + 25 位波特计数器 |
 | lab06 ila | 待填 | 待填 | ILA 核另吃约百级 LUT/FF —— 账本要含它 |
 

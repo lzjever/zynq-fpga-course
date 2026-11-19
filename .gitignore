@@ -23,3 +23,5 @@ labs/*/util_*.rpt
 labs/*/*_utilization.rpt
 # 仿真波形转储
 *.vcd
+
+labs/lab09-merge/lab09.bin

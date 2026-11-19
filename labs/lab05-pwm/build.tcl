@@ -4,7 +4,7 @@
 set proj  lab05
 set part  xc7z020clg400-2        ;# 我们板上的芯片(注意 -2 速度等级)
 
-# ① 建工程(在内存中,不落盘一堆中间文件)
+# ① 建工程(在 ./lab05/ 下落盘一堆中间文件)
 create_project $proj ./$proj -part $part -force
 
 # ② 加入源码(两个模块!tick_gen 是被例化的零件)和约束

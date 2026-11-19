@@ -58,5 +58,5 @@ vivado -mode batch -source sim.tcl
 
 - [ ] 板上验收:约 3Hz 心跳 + 按住 PL_KEY 灯亮(两个现象都拍到/记下)
 - [ ] ch00 的三个改数实验(cnt[22] / cnt[0] / 4 位计数器):每个先写预测,再烧板验证
-- [ ] (ch01 后)sim.tcl 跑通,终端出现测试台的 PASS 判词
+- [ ] (ch01 后)sim.tcl 跑通,终端出现波形输出(观察台,无判分;PASS 判分从 lab02 开始)
 - [ ] 资源账本 lab01 行与你自己 build 打印的 WNS/LUT/FF 对得上

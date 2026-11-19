@@ -47,7 +47,7 @@
   </ol></div>
 
   <div class="box box-warn"><div class="box-title">前置验收门 · FIQ 修复三绿(未过不堵车,走 Variant B)</div>
-  <p>主路(FPGA Manager 装载)要求先用 <strong>lab01 的 blink.bin</strong> 验收 FIQ 修复:</p>
+  <p>主路(FPGA Manager 装载)要求先用 <strong>lab01 的 lab01.bin</strong> 验收 FIQ 修复:</p>
   <p>① 装载后 LED 亮;② ssh 仍活着(系统没冻);③ <code>cat /sys/class/fpga_manager/fpga0/state</code> 输出 <code>operating</code>。</p>
   <p>三绿 → 走主路。未绿 → 全章走 <strong>Variant B</strong>(Vivado JTAG 烧写 + devmem),除装载动作外一切相同,<strong>课程照常毕业</strong>。</p></div>
 
@@ -147,7 +147,7 @@
   <table>
     <tr><th></th><th>主路 A · FPGA Manager(FIQ 门内)</th><th>Variant B · JTAG + devmem(保底)</th></tr>
     <tr><td>谁装载</td><td>Debian:<code>./load_fpga.sh</code>(bit2bin → scp → echo 固件名)</td><td>PC:<code>vivado -mode batch -source program.tcl</code></td></tr>
-    <tr><td>前置</td><td>blink.bin 三绿验收已过</td><td>无;但开 Vivado 前先 <code>pkill -x openocd</code>(JTAG 互杀,附录 A)</td></tr>
+    <tr><td>前置</td><td>lab01.bin 三绿验收已过</td><td>无;但开 Vivado 前先 <code>pkill -x openocd</code>(JTAG 互杀,附录 A)</td></tr>
     <tr><td>装载后</td><td>已在运行态</td><td>设计还冻着——FCLK0 没使能</td></tr>
   </table>
   <p>两条路<strong>互斥,谁后到谁生效</strong>(后装的流顶掉先装的)。Variant B 装完的第一件事,就是"接电源"仪式:</p>
@@ -220,7 +220,7 @@ devmem 0x40000004                  <span class="c"># 读回:应回显 0x5FB(读 
   <details><summary>展开答案(先自己答,再对)</summary>
   <p><strong>A</strong>:用户态进程摸不到物理地址;devmem 通过 /dev/mem(内核开的物理内存窗口)替你读写。这也是 mmap 一类工具的共同原理——你移植期早就会,此题是给信心。</p>
   <p><strong>B</strong>:约束改严一倍,Vivado 按 100MHz 检查同一条电路,WNS 大约减半(可能仍为正,因为这个设计很轻)。但<strong>板上什么都不会变</strong>——约束只影响工具的分析口径,不改电路;真实节拍由 FCLK0 决定。约束写错 ≠ 电路跑错,但要记住:约束是你对工具的承诺,承诺错账就全错。</p>
-  <p><strong>C</strong>:① SPEED 寄存器非 0——挡位 mux 在呼吸挡,CTRL bit0 不通到 LED(写 0x40000004 清零即验);② LED 写的是 0x40000000 吗——写串到未映射偏移(本从机未映射也回 OKAY,见 lab09 思考题);③ R14 引脚/LED 硬件本身(JTAG 烧个 lab01 blink.bin 隔离验证)。读回正确证明的总线与寄存器半区是好的,排查应向"寄存器之后"走。</p>
+  <p><strong>C</strong>:① SPEED 寄存器非 0——挡位 mux 在呼吸挡,CTRL bit0 不通到 LED(写 0x40000004 清零即验);② LED 写的是 0x40000000 吗——写串到未映射偏移(本从机未映射也回 OKAY,见 lab09 思考题);③ R14 引脚/LED 硬件本身(JTAG 烧个 lab01 lab01.bin 隔离验证)。读回正确证明的总线与寄存器半区是好的,排查应向"寄存器之后"走。</p>
   </details>
 
   <h3>12 · 下一课预告</h3>

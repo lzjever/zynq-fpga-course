@@ -5,7 +5,7 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  ⚠ 前置验收门:FIQ 修复                                       │
-│  用 lab01 的 blink.bin 先过三绿,再装本设计:                    │
+│  用 lab01 的 lab01.bin 先过三绿,再装本设计:                    │
 │    ① insmod / echo 装载后 LED 亮                              │
 │    ② ssh 仍活着(系统没冻)                                    │
 │    ③ /sys/class/fpga_manager/fpga0/state = operating         │

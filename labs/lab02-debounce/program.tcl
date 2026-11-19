@@ -15,10 +15,10 @@ if {[info exists argv]} {
     set bitfile [lindex $argv 0]
 }
 if {$bitfile eq ""} {
-    set bitfile [glob -nocomplain ./lab02_reference.runs/impl_1/*.bit]
+    set bitfile [glob -nocomplain ./lab02_reference/lab02_reference.runs/impl_1/*.bit]
 }
 if {[llength $bitfile] == 0} {
-    set bitfile [glob ./lab02_bare.runs/impl_1/*.bit]
+    set bitfile [glob ./lab02_bare/lab02_bare.runs/impl_1/*.bit]
 }
 
 set device [get_hw_devices xc7z020*]

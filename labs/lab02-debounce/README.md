@@ -22,7 +22,7 @@
 cd labs/lab02-debounce && vivado -mode batch -source sim.tcl
 #   自己写版:先改 sim.tcl 第 8 行,把 reference/debounce.v 换成你的文件
 
-# 构建(烧哪版?先改 build.tcl 第 6 行 set variant bare/reference)
+# 构建(烧哪版?先改 build.tcl 第 5 行 set variant bare/reference)
 vivado -mode batch -source build.tcl
 
 # 烧写(JTAG;若在跑 OpenOCD 先 pkill -x openocd)
@@ -70,7 +70,7 @@ vivado -mode batch -source program.tcl
 
 | Lab | 顶层 | LUT | FF | 来源 |
 |---|---|---|---|---|
-| lab01 | led_blink | ~30(量级,以实测为准) | 24 | 24 位计数器,回头补测 |
+| lab01 | led_blink | 2(实测) | 24 | 24 位计数器,实测 Vivado 2026.1 |
 | lab02 裸版 | key_toggle_raw | | | lab02_bare/utilization.rpt |
 | lab02 消抖版 | key_toggle | | | lab02_reference/utilization.rpt |
 

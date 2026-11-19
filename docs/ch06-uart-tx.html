@@ -225,7 +225,7 @@ vivado -mode batch -source sim.tcl</code></pre>
   <p>现在解决开场埋的问题:PL 的 TX 到不了电脑,那谁当接收器?<strong>你的眼睛</strong>。顶层 <code>lab06_top.v</code> 干了一件恶作剧的事:把 tx 线直接接到 R14 LED 上。然后利用波特率"只是一句约定"的本质,恶意违约——把约改成<strong>每秒 2 个位</strong>:</p>
 <pre><code><span class="c"># 肉眼版:2 波特(一个位 0.5 秒)</span>
 vivado -mode batch -source build.tcl -tclargs eye
-vivado -mode batch -source program.tcl   <span class="c"># 烧写前先 pkill -f openocd</span></code></pre>
+vivado -mode batch -source program.tcl   <span class="c"># 烧写前先 pkill -x openocd</span></code></pre>
   <p>烧完先别按键——LED 常亮?对,tx 空闲态 = 1,协议规定。<strong>按一下 PL_KEY,然后盯着 LED 数五秒</strong>,对照下表(按行读,每行 0.5 秒):</p>
   <table>
     <tr><th>时间</th><th>0–2.0s</th><th>2.0–2.5</th><th>2.5–3.5</th><th>3.5–4.0</th><th>4.0–4.5</th><th>4.5s 起</th></tr>
@@ -251,7 +251,7 @@ vivado -mode batch -source program.tcl   <span class="c"># 烧写前先 pkill -f
 vivado -mode batch -source program.tcl
 <span class="c"># 然后开 GUI:Hardware Manager → Open Target → Add ILA core</span></code></pre>
   <div class="box box-warn"><div class="box-title">警告 · ILA 当天必撞的坑:JTAG 互杀</div>
-  <p>ILA 走 JTAG,而 JTAG 上那颗 FT232H 是<strong>独占</strong>的——你调 Debian 时开过的 OpenOCD 还在后台的话,hw_server 起不来,Hardware Manager 会"找不到目标"。开 Vivado 硬件管理器之前,先执行 <code>pkill -f openocd</code>;反过来要用 OpenOCD 时杀 hw_server。口诀进附录 C,今天先肌肉记忆一次。</p></div>
+  <p>ILA 走 JTAG,而 JTAG 上那颗 FT232H 是<strong>独占</strong>的——你调 Debian 时开过的 OpenOCD 还在后台的话,hw_server 起不来,Hardware Manager 会"找不到目标"。开 Vivado 硬件管理器之前,先执行 <code>pkill -x openocd</code>;反过来要用 OpenOCD 时杀 hw_server。口诀进附录 C,今天先肌肉记忆一次。</p></div>
   <p><strong>抓帧五步</strong>:① 触发条件设 <code>tx == 0</code>(线空闲恒 1,拉低即起始位,条件干脆);② 点 Run Trigger(武装);③ 按一下 PL_KEY;④ 波形冻结,tx 线上就是那 86.8µs 的一帧;⑤ 放大读位,配合 <code>bit_cnt/state</code> 两根总线看状态机脚步。然后做本课的保留节目:</p>
   <div class="box box-step"><div class="box-title">练习 · 游标量位宽(自环的盲区,只有它能救)</div>
   <p>波形窗里放两根游标,卡在 tx 相邻两次电平变化的沿上,读出时间差。应为 <strong>8680ns ± 20ns</strong>(434 × 20ns,容 1 个时钟的量化误差)。这就是"用测量验证波特率"——记住这个动作,下一章自环实验有个隐蔽盲区:<strong>TX 和 RX 用同一个 BAUD_DIV,错也错得整整齐齐,回环永远自洽</strong>,波特率错了它查不出来。到时候,唯一说真话的就是这两根游标。</p></div>
@@ -262,7 +262,7 @@ vivado -mode batch -source program.tcl
   <table>
     <tr><th>症状</th><th>真相</th><th>药</th></tr>
     <tr><td>烧完 LED 常亮,"坏了?"</td><td>tx 空闲态 = 1,这是协议</td><td>按一下 PL_KEY 看演出;想确认没坏,回 eye 模式</td></tr>
-    <tr><td>Hardware Manager 找不到目标</td><td>OpenOCD 占着 FT232H(JTAG 互杀)</td><td><code>pkill -f openocd</code> 再重连;数据线确认插的是 JTAG 口不是串口口</td></tr>
+    <tr><td>Hardware Manager 找不到目标</td><td>OpenOCD 占着 FT232H(JTAG 互杀)</td><td><code>pkill -x openocd</code> 再重连;数据线确认插的是 JTAG 口不是串口口</td></tr>
     <tr><td>ILA 武装后立刻触发/永远不触发</td><td>触发电平写成 1:空闲就是 1</td><td>触发条件用 <code>tx==0</code>(起始沿语义),或直接用 tick 当触发词</td></tr>
     <tr><td>现象突然全没了(LED 灭、ILA 断连)</td><td>手滑按到板上 RST 键 = 整芯片硬复位,PL 配置被清 + Debian 重启(<strong>已实测确认:RST 后 PL 比特流确实消失,Debian 起来后 PL 空白</strong>)</td><td>重新烧写;认清丝印——PL_KEY 才是我们的键</td></tr>
     <tr><td>create_ip 报"找不到 ila 定义"</td><td>IP 版本号随版本变(脚本按 6.2 写)</td><td><code>get_ipdefs *ila*</code> 查实号改一行(已列"待实测")</td></tr>

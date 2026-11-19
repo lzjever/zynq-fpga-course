@@ -1,4 +1,4 @@
-# Lab 09 JTAG 烧写三连(Variant B 用;先 pkill -f openocd,防互杀)
+# Lab 09 JTAG 烧写三连(Variant B 用;先 pkill -x openocd,防互杀)
 # 用法:vivado -mode batch -source program.tcl
 open_hw_manager
 connect_hw_server

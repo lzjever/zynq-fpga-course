@@ -147,7 +147,7 @@
   <table>
     <tr><th></th><th>主路 A · FPGA Manager(FIQ 门内)</th><th>Variant B · JTAG + devmem(保底)</th></tr>
     <tr><td>谁装载</td><td>Debian:<code>./load_fpga.sh</code>(bit2bin → scp → echo 固件名)</td><td>PC:<code>vivado -mode batch -source program.tcl</code></td></tr>
-    <tr><td>前置</td><td>blink.bin 三绿验收已过</td><td>无;但开 Vivado 前先 <code>pkill -f openocd</code>(JTAG 互杀,附录 A)</td></tr>
+    <tr><td>前置</td><td>blink.bin 三绿验收已过</td><td>无;但开 Vivado 前先 <code>pkill -x openocd</code>(JTAG 互杀,附录 A)</td></tr>
     <tr><td>装载后</td><td>已在运行态</td><td>设计还冻着——FCLK0 没使能</td></tr>
   </table>
   <p>两条路<strong>互斥,谁后到谁生效</strong>(后装的流顶掉先装的)。Variant B 装完的第一件事,就是"接电源"仪式:</p>
@@ -187,7 +187,7 @@ devmem 0x40000004                  <span class="c"># 读回:应回显 0x5FB(读 
 
   <h3>9 · 常见坑</h3>
   <div class="box box-warn"><div class="box-title">坑 1 · JTAG 互杀(hw_server vs OpenOCD)</div>
-  <p>你跑过 OpenOCD,它和 Vivado 的 hw_server 抢同一个 FT232H。开 Vivado 烧写/ILA 前 <code>pkill -f openocd</code>;反过来用 OpenOCD 前杀 hw_server。互杀口诀在附录 A/C。</p></div>
+  <p>你跑过 OpenOCD,它和 Vivado 的 hw_server 抢同一个 FT232H。开 Vivado 烧写/ILA 前 <code>pkill -x openocd</code>;反过来用 OpenOCD 前杀 hw_server。互杀口诀在附录 A/C。</p></div>
   <div class="box box-warn"><div class="box-title">坑 2 · 两种装载互斥,谁后到谁生效</div>
   <p>JTAG 烧完再 echo 固件名,流被顶掉;反过来亦然。现象是"刚才明明亮着怎么灭了"——先想装载顺序,再想代码 bug。</p></div>
   <div class="box box-warn"><div class="box-title">坑 3 · .bit 直接 echo 给 FPGA Manager</div>

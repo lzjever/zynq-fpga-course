@@ -34,7 +34,7 @@ xvlog axi_lite_slave.v tb_axi_slave.v
 xelab -debug typical tb_axi_slave -s tb_sim
 xsim tb_sim -R
 
-# 想开波形 GUI 就去掉 -R(先 pkill -f openocd / hw_server,防 JTAG 互杀)
+# 想开波形 GUI 就去掉 -R(先 pkill -x openocd / hw_server,防 JTAG 互杀)
 # 综合体检
 vivado -mode batch -source build.tcl
 ```

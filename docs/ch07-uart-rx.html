@@ -194,7 +194,7 @@ rx_shift &lt;= { rx_s, rx_shift[7:1] };</pre>
   <p>今天这根线<strong>不用接地</strong>——TX 和 RX 在同一块板上,地就是板子本身,天然共地。但请把这句话带走:一旦接<strong>外部</strong>设备(USB-TTL 转串口、另一块板),<strong>GND 必须先接</strong>。电压是相对参考点的差,没有共同的地,双方的"0V"不是同一个 0V,"0 和 1"就都没有了定义——悬浮地能吃掉你一个晚上。另有一个本板事实要记牢(附录 A 有完整警告):<strong>JP1/JP2 排针上没有 GND 脚</strong>——40 根里 11/12 是 VCC_5V、29/30 是 VCC_3V3,其余全是信号脚。所以选做 USB-TTL 观测时,共地方案是接板上 GND 测试点或 USB 外壳,不是"接排针 GND"(那根脚不存在)。</p></div>
   <div class="box box-warn"><div class="box-title">警告 · 排针上有电源脚,插线前先对表</div>
   <p>正因为排针混着电源脚(JP1/JP2 的 11/12=5V、29/30=3.3V),杜邦线插错的代价不是"没现象"而是<strong>短路顶牛</strong>。第一次插线请按这个顺序:对照附录 A 排针表找到目标脚的物理位置 → 确认左右邻居不是 VCC → 再下针。慢十秒,省一晚上。</p></div>
-<pre><code><span class="c"># 烧写前老规矩:pkill -f openocd(JTAG 互杀,上一章的肌肉记忆)</span>
+<pre><code><span class="c"># 烧写前老规矩:pkill -x openocd(JTAG 互杀,上一章的肌肉记忆)</span>
 vivado -mode batch -source build.tcl
 vivado -mode batch -source program.tcl</code></pre>
 

@@ -20,7 +20,7 @@
 # 仿真(TB 里那根 assign rx_pad = tx_pad 就是杜邦线)
 vivado -mode batch -source sim.tcl        # 期望:自环 10/10,浸泡 256/256,PASS
 
-# 上板(烧写前 pkill -f openocd)
+# 上板(烧写前 pkill -x openocd)
 vivado -mode batch -source build.tcl
 vivado -mode batch -source program.tcl
 

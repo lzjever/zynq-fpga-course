@@ -1,7 +1,7 @@
 # Lab 02 JTAG 烧写三连:连接 → 探测 → 下载(约 15 行)
 # 用法: vivado -mode batch -source program.tcl
 # 前提:① 只插 JTAG 那个 type-C(串口那个是 CH340,不认 JTAG);
-#       ② 如果你在跑 OpenOCD,先 pkill -f openocd——两者抢同一个 JTAG 口(附录 A)
+#       ② 如果你在跑 OpenOCD,先 pkill -x openocd——两者抢同一个 JTAG 口(附录 A)
 
 open_hw_manager                       ;# 打开硬件管理器
 connect_hw_server                     ;# 连本机 hw_server

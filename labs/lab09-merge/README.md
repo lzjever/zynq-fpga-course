@@ -85,7 +85,7 @@ devmem 0x40000004
 
 | | 主路 A:FPGA Manager(FIQ 门内) | Variant B:JTAG + devmem(门外的保底路) |
 |---|---|---|
-| 谁装载 | Debian(`load_fpga.sh`:bit2bin → scp → echo 固件名) | PC(`program.tcl`,先 `pkill -f openocd`) |
+| 谁装载 | Debian(`load_fpga.sh`:bit2bin → scp → echo 固件名) | PC(`program.tcl`,先 `pkill -x openocd`) |
 | 前置 | 三绿验收门已过 | 无(FIQ 修复不依赖) |
 | 装载后 | 已是运行态,直接跑命令卡 ③ | 先跑命令卡 ①②(FCLK0 使能 = 接电源仪式) |
 | 注意 | .bit 必须先过 bit2bin.py | JTAG 装的流会顶掉 Manager 装的流,反之亦然 |

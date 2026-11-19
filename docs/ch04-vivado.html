@@ -128,7 +128,7 @@ set_property PROGRAM.FILE [glob ./lab01.runs/impl_1/*.bit] $dev
 program_hw_devices $dev        <span class="c">;# 烧!</span></code></pre>
   <pre><code>用法:cd labs/lab01-blink &amp;&amp; vivado -mode batch -source program.tcl</code></pre>
   <div class="box box-warn"><div class="box-title">警告 · JTAG 是"易失"装载,而且主人只有一个</div>
-  <p>① JTAG 烧写断电即失(比特流只写在配置存储里,不进 Flash),按 RST 也会清掉——正常,不是坏了。② 如果烧写连不上/卡住:你跑过 OpenOCD,它和 Vivado 的 hw_server 抢同一个 JTAG 口,先 <code>pkill -f openocd</code>(两个 JTAG 主人的互杀问题,附录 A 有专条)。</p></div>
+  <p>① JTAG 烧写断电即失(比特流只写在配置存储里,不进 Flash),按 RST 也会清掉——正常,不是坏了。② 如果烧写连不上/卡住:你跑过 OpenOCD,它和 Vivado 的 hw_server 抢同一个 JTAG 口,先 <code>pkill -x openocd</code>(两个 JTAG 主人的互杀问题,附录 A 有专条)。</p></div>
   <div class="box box-know"><div class="box-title">知识 · 顺手包个 Makefile(CLI 党自取,GUI 党可跳)</div>
   <pre><code>build:
 	vivado -mode batch -source build.tcl
@@ -196,7 +196,7 @@ lab01/
     <tr><td>只提交 .xpr 工程文件</td><td>别人(或换了目录的你)打不开——.xpr 引用绝对路径</td><td>工程用 build.tcl 现建,源文件才是本体</td></tr>
     <tr><td>.bit 进 git</td><td>每次构建一个 4MB 二进制,diff 全是噪音</td><td>忽略;要存档发 release</td></tr>
     <tr><td>脚本里没 wait_on_run 就去取 .bit</td><td>拿到旧文件或报"找不到"</td><td>build.tcl 已示范:launch 后必 wait</td></tr>
-    <tr><td>烧写连不上</td><td>connect/open_hw_target 卡住或报错</td><td><code>pkill -f openocd</code>(JTAG 互杀,附录 A);确认板卡上电</td></tr>
+    <tr><td>烧写连不上</td><td>connect/open_hw_target 卡住或报错</td><td><code>pkill -x openocd</code>(JTAG 互杀,附录 A);确认板卡上电</td></tr>
     <tr><td>断电后电路没了,以为烧坏</td><td>重新上电 LED 不闪</td><td>JTAG 装载本就易失;重新 program 即可(驻留要写 Flash,本课程走 ch09 的 Linux 装载)</td></tr>
   </table>
 

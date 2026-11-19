@@ -2,7 +2,7 @@
 # 用法: vivado -mode batch -source program.tcl
 #      (或在 Vivado Tcl Console 里敲: source program.tcl)
 # 注意:如果 connect/open 卡住或报错,先确认没有 openocd 占着 JTAG:
-#       pkill -f openocd   (两个 JTAG 主人会互杀,详见附录 A)
+#       pkill -x openocd   (两个 JTAG 主人会互杀,详见附录 A)
 
 open_hw_manager
 connect_hw_server              ;# 启动/连接本机 hw_server(默认 localhost:3121)

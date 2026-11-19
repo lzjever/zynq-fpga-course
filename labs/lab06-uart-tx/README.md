@@ -23,7 +23,7 @@ vivado -mode batch -source sim.tcl
 
 # 肉眼 UART:2 波特,LED 5 秒打出 'H' 帧 —— 先烧这个!
 vivado -mode batch -source build.tcl -tclargs eye
-vivado -mode batch -source program.tcl     # 烧写前 pkill -f openocd
+vivado -mode batch -source program.tcl     # 烧写前 pkill -x openocd
 
 # 三级跳(同一份代码,零改动):
 vivado -mode batch -source build.tcl -tclargs eye    # 2 波特,逐位可读
@@ -52,7 +52,7 @@ LED            灭   灭  灭  灭  亮  灭  灭  亮  灭  亮→常亮
 
 ## ILA 抓帧步骤(ch06 §6 的页内版,5 步)
 
-1. `pkill -f openocd`(JTAG 互杀口诀,ILA 当天必撞的坑)
+1. `pkill -x openocd`(JTAG 互杀口诀,ILA 当天必撞的坑)
 2. `vivado -mode batch -source build.tcl -tclargs ila && vivado -mode batch -source program.tcl`
 3. 打开 Vivado GUI → Hardware Manager → Open Target(自动)→ 应看到 `ila_uart(x_xx)` 出现在设备树下
 4. 触发条件设 **tx(probe0)== 0**(tx 空闲恒 1,拉低 = 起始位开始),Run Trigger Arm

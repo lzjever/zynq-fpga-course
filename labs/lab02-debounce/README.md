@@ -25,7 +25,7 @@ cd labs/lab02-debounce && vivado -mode batch -source sim.tcl
 # 构建(烧哪版?先改 build.tcl 第 6 行 set variant bare/reference)
 vivado -mode batch -source build.tcl
 
-# 烧写(JTAG;若在跑 OpenOCD 先 pkill -f openocd)
+# 烧写(JTAG;若在跑 OpenOCD 先 pkill -x openocd)
 vivado -mode batch -source program.tcl
 ```
 

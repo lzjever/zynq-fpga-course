@@ -3,133 +3,132 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verilog 101 — 给软件工程师的电路思维速成</title>
+<title>ch00 · Verilog 101:给软件工程师的电路思维速成 — Zynq FPGA 从零到实战</title>
+<link rel="stylesheet" href="assets/style.css">
 <style>
-:root{
-  --ink:#1a2332;--ink2:#4a5568;--paper:#fdfcfa;--panel:#f4f1ec;--line:#e2ddd4;
-  --accent:#b3541e;--deep:#7c3a12;--code-bg:#1e2430;--code-ink:#dce3ee;
-  --ok:#2e7d32;--warn:#b3541e;--know:#1d5c8a;--step:#5b3e96;
-}
-*{box-sizing:border-box}
-body{margin:0;font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:var(--paper);line-height:1.85;font-size:16px}
-.page{max-width:900px;margin:0 auto;padding:40px 28px 90px}
-header.hero{background:linear-gradient(135deg,#20262f,#2c3542);color:#fff;border-radius:14px;padding:36px 40px;margin-bottom:34px}
-header.hero h1{margin:0 0 8px;font-size:30px;color:#fff}
-header.hero p{color:#c3cbd6;margin:6px 0;max-width:700px}
-.chip{display:inline-block;font-size:12px;letter-spacing:2px;color:var(--accent);border:1px solid var(--accent);padding:2px 10px;border-radius:4px;margin-bottom:10px}
-h2{font-size:24px;margin:48px 0 12px;padding-top:20px;border-top:2px solid var(--line)}
-h3{font-size:18px;margin:28px 0 8px;color:var(--deep)}
-a{color:var(--deep)}
-pre{background:var(--code-bg);color:var(--code-ink);padding:18px 20px;border-radius:8px;overflow-x:auto;font-size:13.5px;line-height:1.7;font-family:"JetBrains Mono","Fira Code",Consolas,monospace}
-pre .c{color:#7a8794}pre .k{color:#e8a06b}pre .s{color:#a8c98a}pre .hl{background:#3a4557;border-radius:3px}
-code{background:#ece7df;color:#93370f;padding:1px 6px;border-radius:4px;font-size:.9em;font-family:Consolas,monospace}
-.box{border-radius:8px;padding:16px 20px;margin:18px 0;border-left:4px solid;background:var(--panel)}
-.box .t{font-weight:700;font-size:14px;letter-spacing:1px;margin-bottom:6px}
-.box p:last-child,.box ul:last-child{margin-bottom:0}
-.b-know{border-color:var(--know)}.b-know .t{color:var(--know)}
-.b-warn{border-color:var(--warn);background:#faf1e8}.b-warn .t{color:var(--warn)}
-.b-step{border-color:var(--step);background:#f3eff9}.b-step .t{color:var(--step)}
-.b-win{border-color:var(--ok);background:#eef6ee}.b-win .t{color:var(--ok)}
-table{border-collapse:collapse;width:100%;margin:16px 0 22px;font-size:14.5px}
-th{background:var(--panel);text-align:left}th,td{border:1px solid var(--line);padding:9px 13px;vertical-align:top}
-tr:nth-child(even) td{background:#faf8f4}
+/* 本页专用:插图与折叠框(零外部依赖) */
 .fig{background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px;margin:20px 0;text-align:center}
 .fig svg{max-width:100%}
-.fig .cap{font-size:13px;color:var(--ink2);margin-top:10px}
+.fig .cap{font-size:13px;color:var(--ink-soft);margin-top:10px}
 .gate{stroke:#b3541e;stroke-width:2;fill:none}
 .gatef{fill:#fdfcfa;stroke:#b3541e;stroke-width:2}
 .wire{stroke:#1d5c8a;stroke-width:2;fill:none}
 .lbl{font:13px "Noto Sans SC";fill:#1a2332}
 .mono{font:12.5px Consolas,monospace;fill:#4a5568}
-footer{margin-top:60px;padding-top:20px;border-top:2px solid var(--line);font-size:13.5px;color:var(--ink2)}
-.toc{background:var(--panel);border-radius:10px;padding:18px 26px;columns:2;font-size:15px}
-@media(max-width:700px){.toc{columns:1}header.hero{padding:26px}}
+.toc{background:var(--panel);border-radius:10px;padding:18px 26px}
+details{border:1px solid var(--line);border-radius:8px;padding:10px 16px;margin:12px 0;background:#fff}
+summary{cursor:pointer;font-weight:600;color:var(--accent-deep)}
+footer{margin-top:48px;padding-top:18px;border-top:2px solid var(--line);font-size:13.5px;color:var(--ink-soft)}
 </style>
 </head>
 <body>
-<div class="page">
+<aside class="sidebar">
+  <div class="brand">
+    <span class="chip">ZYNQ · FPGA</span>
+    <h1>从零到实战</h1>
+    <p>Verilog · Vivado · Z7-Nano</p>
+  </div>
+  <nav>
+    <a href="index.html"><span class="num">00</span>封面 · 课程地图</a>
+    <a class="active" href="ch00-verilog101.html"><span class="num">01</span>Verilog 101</a>
+    <a href="ch01-sim.html"><span class="num">02</span>仿真入门</a>
+    <a href="ch02-debounce.html"><span class="num">03</span>Lab02 按键消抖</a>
+    <a href="ch03-cdc.html"><span class="num">04</span>亚稳态与 CDC</a>
+    <a href="ch04-vivado.html"><span class="num">05</span>Vivado 幕后</a>
+    <a href="ch05-pwm.html"><span class="num">06</span>PWM 呼吸灯</a>
+    <a href="ch06-uart-tx.html"><span class="num">07</span>UART 发送器</a>
+    <a href="ch07-uart-rx.html"><span class="num">08</span>UART 自环回</a>
+    <a href="ch08-axi.html"><span class="num">09</span>AXI 总线</a>
+    <a href="ch09-merge.html"><span class="num">10</span>PS-PL 会师</a>
+    <a href="ch10-capstone.html"><span class="num">11</span>毕业设计</a>
+    <a href="appendix-board.html"><span class="num">附A</span>板卡手册</a>
+    <a href="appendix-glossary.html"><span class="num">附B</span>术语表</a>
+    <a href="appendix-cheatsheet.html"><span class="num">附C</span>命令速查</a>
+  </nav>
+  <footer>硬件:Z7-Nano R20 · XC7Z020<br>软件:Vivado 2026.1 免费档<br>姊妹篇:主线 Linux 手册</footer>
+</aside>
+<main class="main">
+  <div class="chapter-tag">CHAPTER 00 · 预备篇</div>
+  <h2 class="title">Verilog 101</h2>
+  <p class="subtitle">写给软件工程师的电路思维速成——不背语法,先换脑子。</p>
 
-<header class="hero">
-  <span class="chip">PL · LAB 00</span>
-  <h1>Verilog 101</h1>
-  <p>写给软件工程师的电路思维速成——不背语法,先换脑子。</p>
-  <p>前置条件:会用命令行、写过任意一门编程语言、<strong>完全不需要</strong>数字电路基础。</p>
-</header>
+  <div class="box box-know"><div class="box-title">本课在课程中的位置</div>
+  <p>这是全课程的<strong>预备篇(ch00)</strong>,与 Lab01(LED 闪烁)配套:你已经在板上见过它约 3Hz 的心跳,本页负责把 <code>labs/lab01-blink/led_blink.v</code> 从"能跑"读成"透明"——建立"导线/寄存器/时钟"三件套的心智模型,后面每一章都踩在这三件东西上。<strong>前置条件:</strong>会用命令行、写过任意一门编程语言、<strong>完全不需要</strong>数字电路基础。读完直接进 ch01(仿真入门):给这份代码配一台"时间显微镜"。</p></div>
 
-<nav class="toc">
-  <ol>
-    <li><a href="#why">为什么你一个字都看不懂</a></li>
-    <li><a href="#three">电路世界只有三种东西</a></li>
-    <li><a href="#two">Verilog 只有两类句子</a></li>
-    <li><a href="#dissect">逐行解剖 led_blink.v</a></li>
-    <li><a href="#assign">assign:一根导线的一生</a></li>
-    <li><a href="#always">always:时钟节拍器</a></li>
-    <li><a href="#soft-vs-hw">软件思维 vs 电路思维对照表</a></li>
-    <li><a href="#rules">新手三条铁律</a></li>
-    <li><a href="#exercise">动手:改三个数字做实验</a></li>
-    <li><a href="#next">下一步</a></li>
-  </ol>
-</nav>
+  <nav class="toc">
+    <ol>
+      <li><a href="#why">为什么你一个字都看不懂</a></li>
+      <li><a href="#three">电路世界只有三种东西</a></li>
+      <li><a href="#two">Verilog 只有两类句子</a></li>
+      <li><a href="#dissect">逐行解剖 led_blink.v</a></li>
+      <li><a href="#assign">assign:一根导线的一生</a></li>
+      <li><a href="#always">always:时钟节拍器</a></li>
+      <li><a href="#soft-vs-hw">软件思维 vs 电路思维对照表</a></li>
+      <li><a href="#rules">新手三条铁律</a></li>
+      <li><a href="#exercise">动手:改三个数字做实验</a></li>
+      <li><a href="#next">下一步</a></li>
+    </ol>
+  </nav>
 
-<h2 id="why">1 · 为什么你一个字都看不懂</h2>
-<p>不是你的问题,是<strong>阅读方式</strong>的问题。你在大脑里"运行"这段代码——顺序执行、变量赋值、循环。但 Verilog <strong>不是指令序列,是电路的描述文案</strong>。综合器读完它,制造出一块电路;那块电路没有"第 1 行、第 2 行"的概念,所有部分<strong>同时存在、同时工作、永远在线</strong>。</p>
-<div class="box b-warn"><div class="t">警告 · 最大的误区</div>
-<p>把 Verilog 当 C 读,就像把建筑图纸当小说读——每个字都认识,完全不知道它在说什么。从下一节起,请换一副眼镜:<strong>读到的每一行,都要在脑子里"看见"一块硬件。</strong></p></div>
+  <h3 id="why">1 · 为什么你一个字都看不懂</h3>
+  <p>不是你的问题,是<strong>阅读方式</strong>的问题。你在大脑里"运行"这段代码——顺序执行、变量赋值、循环。但 Verilog <strong>不是指令序列,是电路的描述文案</strong>。综合器读完它,制造出一块电路;那块电路没有"第 1 行、第 2 行"的概念,所有部分<strong>同时存在、同时工作、永远在线</strong>。</p>
+  <div class="box box-warn"><div class="box-title">警告 · 最大的误区</div>
+  <p>把 Verilog 当 C 读,就像把建筑图纸当小说读——每个字都认识,完全不知道它在说什么。从下一节起,请换一副眼镜:<strong>读到的每一行,都要在脑子里"看见"一块硬件。</strong></p></div>
 
-<h2 id="three">2 · 电路世界只有三种东西</h2>
-<p>整个数字电路世界,对你而言只需要三种零件。FPGA 里遍地都是这三种,几万到几十万个:</p>
+  <h3 id="three">2 · 电路世界只有三种东西</h3>
+  <p>整个数字电路世界,对你而言只需要三种零件。FPGA 里遍地都是这三种,几万到几十万个:</p>
 
-<div class="fig">
-<svg viewBox="0 0 820 210" xmlns="http://www.w3.org/2000/svg">
-  <!-- 导线 -->
-  <line class="wire" x1="30" y1="55" x2="230" y2="55"/>
-  <circle cx="30" cy="55" r="4" fill="#1d5c8a"/><circle cx="230" cy="55" r="4" fill="#1d5c8a"/>
-  <text class="lbl" x="30" y="30">导线 wire</text>
-  <text class="mono" x="30" y="90">a ────────────── b</text>
-  <text class="lbl" x="30" y="115" fill="#4a5568">信号瞬间传导,两端永远是同一个值</text>
-  <!-- 寄存器 -->
-  <rect class="gatef" x="330" y="30" width="150" height="55" rx="6"/>
-  <text class="lbl" x="342" y="63">D　Q</text>
-  <line class="wire" x1="305" y1="45" x2="330" y2="45"/>
-  <line class="wire" x1="480" y1="45" x2="505" y2="45"/>
-  <path class="gate" d="M 405 85 l 7 12 l -14 0 z"/>
-  <text class="lbl" x="360" y="30">寄存器 reg</text>
-  <text class="mono" x="330" y="125">in ─▶│ D Q │─▶ out</text>
-  <text class="mono" x="398" y="145">△ clk</text>
-  <text class="lbl" x="330" y="175" fill="#4a5568">只在时钟上升沿"拍照":把 D 的值存进来,</text>
-  <text class="lbl" x="330" y="196" fill="#4a5568">之后 Q 一直保持这个值,直到下个节拍</text>
-  <!-- 时钟 -->
-  <polyline class="gate" points="600,90 620,90 620,35 650,35 650,90 680,90 680,35 710,35 710,90 740,90 740,35 770,35 770,90 800,90"/>
-  <text class="lbl" x="600" y="30">时钟 clk(心跳)</text>
-  <text class="lbl" x="600" y="130" fill="#4a5568">等腰方波。50MHz = 每秒 5000 万个上升沿,</text>
-  <text class="lbl" x="600" y="151" fill="#4a5568">全芯片的寄存器都跟着它齐步走</text>
-</svg>
-<div class="cap">图 1 · 导线(组合传导)、寄存器(节拍存储)、时钟(统一节拍)——就这三种</div>
-</div>
+  <div class="fig">
+  <svg viewBox="0 0 820 210" xmlns="http://www.w3.org/2000/svg">
+    <!-- 导线 -->
+    <line class="wire" x1="30" y1="55" x2="230" y2="55"/>
+    <circle cx="30" cy="55" r="4" fill="#1d5c8a"/><circle cx="230" cy="55" r="4" fill="#1d5c8a"/>
+    <text class="lbl" x="30" y="30">导线 wire</text>
+    <text class="mono" x="30" y="90">a ────────────── b</text>
+    <text class="lbl" x="30" y="115" fill="#4a5568">信号瞬间传导,两端永远是同一个值</text>
+    <!-- 寄存器 -->
+    <rect class="gatef" x="330" y="30" width="150" height="55" rx="6"/>
+    <text class="lbl" x="342" y="63">D　Q</text>
+    <line class="wire" x1="305" y1="45" x2="330" y2="45"/>
+    <line class="wire" x1="480" y1="45" x2="505" y2="45"/>
+    <path class="gate" d="M 405 85 l 7 12 l -14 0 z"/>
+    <text class="lbl" x="360" y="30">寄存器 reg</text>
+    <text class="mono" x="330" y="125">in ─▶│ D Q │─▶ out</text>
+    <text class="mono" x="398" y="145">△ clk</text>
+    <text class="lbl" x="330" y="175" fill="#4a5568">只在时钟上升沿"拍照":把 D 的值存进来,</text>
+    <text class="lbl" x="330" y="196" fill="#4a5568">之后 Q 一直保持这个值,直到下个节拍</text>
+    <!-- 时钟 -->
+    <polyline class="gate" points="600,90 620,90 620,35 650,35 650,90 680,90 680,35 710,35 710,90 740,90 740,35 770,35 770,90 800,90"/>
+    <text class="lbl" x="600" y="30">时钟 clk(心跳)</text>
+    <text class="lbl" x="600" y="130" fill="#4a5568">等腰方波。50MHz = 每秒 5000 万个上升沿,</text>
+    <text class="lbl" x="600" y="151" fill="#4a5568">全芯片的寄存器都跟着它齐步走</text>
+  </svg>
+  <div class="cap">图 1 · 导线(组合传导)、寄存器(节拍存储)、时钟(统一节拍)——就这三种</div>
+  </div>
 
-<div class="box b-know"><div class="t">知识 · 这就是"同步电路"</div>
-<p>所有寄存器听同一个时钟的话,每个上升沿集体更新一次。两次上升沿之间,信号沿着导线稳定传播。整块芯片像一支踢正步的军队——<strong>步调一致,所以不会乱</strong>。这就是 FPGA 设计的第一定律"同步设计"。</p></div>
+  <div class="box box-know"><div class="box-title">知识 · 这就是"同步电路"</div>
+  <p>所有寄存器听同一个时钟的话,每个上升沿集体更新一次。两次上升沿之间,信号沿着导线稳定传播。整块芯片像一支踢正步的军队——<strong>步调一致,所以不会乱</strong>。这就是 FPGA 设计的第一定律"同步设计"。</p></div>
 
-<h2 id="two">3 · Verilog 只有两类句子</h2>
-<p>语法书厚得吓人,但描述电路的核心句子只有两种,分别对应上图的前两种零件:</p>
-<table>
-<tr><th>句子</th><th>造出什么</th><th>语义</th><th>例子</th></tr>
-<tr><td><code>assign a = b &amp; c;</code></td><td><strong>导线</strong>(组合逻辑)</td><td>"a 那头,永久接在 b AND c 的输出上"</td><td>接线,永不改变</td></tr>
-<tr><td><code>always @(posedge clk)</code></td><td><strong>寄存器</strong>(时序逻辑)</td><td>"每个时钟上升沿,做一次更新"</td><td>节拍器驱动的存储</td></tr>
-<tr><td><code>module ... endmodule</code></td><td><strong>元件封装</strong></td><td>一块电路的"外壳+引脚列表"</td><td>类似软件的"类/函数签名"</td></tr>
-</table>
-<p>没了。你昨天看不懂的那段代码,只用了这三个语法点。</p>
+  <h3 id="two">3 · Verilog 只有两类句子</h3>
+  <p>语法书厚得吓人,但描述电路的核心句子只有两种,分别对应上图的前两种零件:</p>
+  <table>
+  <tr><th>句子</th><th>造出什么</th><th>语义</th><th>例子</th></tr>
+  <tr><td><code>assign a = b &amp; c;</code></td><td><strong>导线</strong>(组合逻辑)</td><td>"a 那头,永久接在 b AND c 的输出上"</td><td>接线,永不改变</td></tr>
+  <tr><td><code>always @(posedge clk)</code></td><td><strong>寄存器</strong>(时序逻辑)</td><td>"每个时钟上升沿,做一次更新"</td><td>节拍器驱动的存储</td></tr>
+  <tr><td><code>module ... endmodule</code></td><td><strong>元件封装</strong></td><td>一块电路的"外壳+引脚列表"</td><td>类似软件的"类/函数签名"</td></tr>
+  </table>
+  <p>没了。你此前看不懂的那段代码,只用了这三个语法点。</p>
 
-<h2 id="dissect">4 · 逐行解剖 led_blink.v</h2>
-<p>现在戴上电路眼镜,重读一遍。每一行右侧是它"造成"的硬件:</p>
-<pre><span class="c">// ---------- 元件外壳:这块电路伸出 3 根引脚 ----------</span>
+  <h3 id="dissect">4 · 逐行解剖 led_blink.v</h3>
+  <p>现在戴上电路眼镜,重读一遍。每一行右侧是它"造成"的硬件:</p>
+  <pre><span class="c">// ---------- 元件外壳:这块电路伸出 3 根引脚 ----------</span>
 <span class="k">module</span> led_blink (
     <span class="k">input</span>  <span class="k">wire</span> clk,     <span class="c">// ① 一根进线:接 50MHz 晶振(芯片引脚 N18)</span>
     <span class="k">input</span>  <span class="k">wire</span> rst_n,   <span class="c">// ② 一根进线:接按键(引脚 P14,按下=0V)</span>
     <span class="k">output</span> <span class="k">wire</span> led      <span class="c">// ③ 一根出线:接 LED(引脚 R14)</span>
 );</pre>
 
-<pre><span class="c">// ---------- 一排寄存器:24 个 D 触发器并排 ----------</span>
+  <pre><span class="c">// ---------- 一排寄存器:24 个 D 触发器并排 ----------</span>
 <span class="k">reg</span> [23:0] cnt;                          <span class="c">// "cnt" 是 24 根线的一捆(24 位宽的寄存器组)</span>
 
 <span class="c">// ---------- 节拍器:下面这块电路在每周期的动作 ----------</span>
@@ -147,97 +146,102 @@ footer{margin-top:60px;padding-top:20px;border-top:2px solid var(--line);font-si
                                         <span class="c">// 它是 1 就亮,是 0 就灭,全自动</span>
 <span class="k">endmodule</span></pre>
 
-<div class="fig">
-<svg viewBox="0 0 820 190" xmlns="http://www.w3.org/2000/svg">
-  <polyline class="gate" points="30,60 50,60 50,25 80,25 80,60 110,60 110,25 140,25 140,60 170,60" opacity="0.6"/>
-  <text class="mono" x="30" y="85">clk (N18)</text>
-  <rect class="gatef" x="220" y="35" width="260" height="60" rx="6"/>
-  <text class="lbl" x="245" y="60">24 位计数器</text>
-  <text class="mono" x="245" y="82">cnt ≤ cnt+1 (每节拍)</text>
-  <line class="wire" x1="140" y1="60" x2="220" y2="60"/>
-  <line class="wire" x1="480" y1="45" x2="640" y2="45"/>
-  <text class="mono" x="500" y="35">cnt[23] 最高位</text>
-  <circle cx="380" cy="150" r="12" fill="#e8a06b"/>
-  <circle cx="380" cy="150" r="20" fill="#e8a06b" opacity="0.3"/>
-  <line class="wire" x1="640" y1="45" x2="640" y2="150"/>
-  <line class="wire" x1="640" y1="150" x2="405" y2="150"/>
-  <text class="mono" x="430" y="143">→ LED (R14)</text>
-  <line class="wire" x1="60" y1="150" x2="220" y2="150" opacity="0"/>
-  <text class="mono" x="30" y="175">按键(P14)→ 清零端</text>
-  <line class="wire" x1="150" y1="150" x2="220" y2="95"/>
-  <text class="lbl" x="220" y="135" fill="#4a5568">这张图 = led_blink.v 的全部。代码只是它的文字描述。</text>
-</svg>
-<div class="cap">图 2 · led_blink.v 的真身:计数器芯片 + 一根导线 + LED,按键负责清零</div>
-</div>
+  <div class="fig">
+  <svg viewBox="0 0 820 190" xmlns="http://www.w3.org/2000/svg">
+    <polyline class="gate" points="30,60 50,60 50,25 80,25 80,60 110,60 110,25 140,25 140,60 170,60" opacity="0.6"/>
+    <text class="mono" x="30" y="85">clk (N18)</text>
+    <rect class="gatef" x="220" y="35" width="260" height="60" rx="6"/>
+    <text class="lbl" x="245" y="60">24 位计数器</text>
+    <text class="mono" x="245" y="82">cnt ≤ cnt+1 (每节拍)</text>
+    <line class="wire" x1="140" y1="60" x2="220" y2="60"/>
+    <line class="wire" x1="480" y1="45" x2="640" y2="45"/>
+    <text class="mono" x="500" y="35">cnt[23] 最高位</text>
+    <circle cx="380" cy="150" r="12" fill="#e8a06b"/>
+    <circle cx="380" cy="150" r="20" fill="#e8a06b" opacity="0.3"/>
+    <line class="wire" x1="640" y1="45" x2="640" y2="150"/>
+    <line class="wire" x1="640" y1="150" x2="405" y2="150"/>
+    <text class="mono" x="430" y="143">→ LED (R14)</text>
+    <line class="wire" x1="60" y1="150" x2="220" y2="150" opacity="0"/>
+    <text class="mono" x="30" y="175">按键(P14)→ 清零端</text>
+    <line class="wire" x1="150" y1="150" x2="220" y2="95"/>
+    <text class="lbl" x="220" y="135" fill="#4a5568">这张图 = led_blink.v 的全部。代码只是它的文字描述。</text>
+  </svg>
+  <div class="cap">图 2 · led_blink.v 的真身:计数器芯片 + 一根导线 + LED,按键负责清零</div>
+  </div>
 
-<h2 id="assign">5 · assign:一根导线的一生</h2>
-<p><code>assign led = cnt[23];</code> 这行最容易用软件思维误读:</p>
-<table>
-<tr><th>软件误读 ❌</th><th>电路真相 ✅</th></tr>
-<tr><td>"执行赋值:把 cnt[23] 的当前值抄给 led"<br>(一次性动作,之后 led 与 cnt 无关)</td><td>"制造一根导线,一端焊在 cnt[23],另一端焊在 led"<br>(永久连接,cnt[23] 变,led <strong>同时</strong>变,永远)</td></tr>
-</table>
-<p>同理,<code>assign sum = a + b;</code> 不是"算一次加法",而是<strong>造一个加法器电路</strong>,输出永久跟踪 a+b。<code>assign</code> 造出来的所有东西统称<strong>组合逻辑</strong>——没有记忆,输入一变输出立刻跟着变。</p>
+  <h3 id="assign">5 · assign:一根导线的一生</h3>
+  <p><code>assign led = cnt[23];</code> 这行最容易用软件思维误读:</p>
+  <table>
+  <tr><th>软件误读 ❌</th><th>电路真相 ✅</th></tr>
+  <tr><td>"执行赋值:把 cnt[23] 的当前值抄给 led"<br>(一次性动作,之后 led 与 cnt 无关)</td><td>"制造一根导线,一端焊在 cnt[23],另一端焊在 led"<br>(永久连接,cnt[23] 变,led <strong>同时</strong>变,永远)</td></tr>
+  </table>
+  <p>同理,<code>assign sum = a + b;</code> 不是"算一次加法",而是<strong>造一个加法器电路</strong>,输出永久跟踪 a+b。<code>assign</code> 造出来的所有东西统称<strong>组合逻辑</strong>——没有记忆,输入一变输出立刻跟着变。</p>
 
-<h2 id="always">6 · always:时钟节拍器</h2>
-<p><code>always @(posedge clk)</code> 块里写的不是"循环",而是<strong>每个上升沿要做的一次"拍照计划"</strong>:</p>
-<ul>
-<li>上升沿到来的一瞬间,所有 <code>&lt;=</code> 左边的寄存器<strong>同时</strong>读入右边表达式的值;</li>
-<li>右边的表达式用的全部是<strong>拍照时刻之前</strong>的旧值——整块电路的更新是原子且并行的;</li>
-<li>两次节拍之间,寄存器保持不变,新值沿导线传播、稳定,等下一次节拍。</li>
-</ul>
-<div class="box b-know"><div class="t">知识 · 为什么用 &lt;= 而不是 =(非阻塞 vs 阻塞)</div>
-<p>先记规则不纠结原理:<strong>always @(posedge clk) 块里,一律用 <code>&lt;=</code></strong>(非阻塞赋值)。它保证"全体寄存器读旧值、同步更新",这正是真实触发器的行为。用 <code>=</code> 会让仿真行为和真实电路不一致——这是新手第一大坑,记住规则即可,教程第 7 章会展开。</p></div>
+  <h3 id="always">6 · always:时钟节拍器</h3>
+  <p><code>always @(posedge clk)</code> 块里写的不是"循环",而是<strong>每个上升沿要做的一次"拍照计划"</strong>:</p>
+  <ul>
+  <li>上升沿到来的一瞬间,所有 <code>&lt;=</code> 左边的寄存器<strong>同时</strong>读入右边表达式的值;</li>
+  <li>右边的表达式用的全部是<strong>拍照时刻之前</strong>的旧值——整块电路的更新是原子且并行的;</li>
+  <li>两次节拍之间,寄存器保持不变,新值沿导线传播、稳定,等下一次节拍。</li>
+  </ul>
+  <div class="box box-know"><div class="box-title">知识 · 为什么用 &lt;= 而不是 =(非阻塞 vs 阻塞)</div>
+  <p>先记规则不纠结原理:<strong>always @(posedge clk) 块里,一律用 <code>&lt;=</code></strong>(非阻塞赋值)。它保证"全体寄存器读旧值、同步更新",这正是真实触发器的行为。用 <code>=</code> 会让仿真行为和真实电路不一致——这是新手第一大坑,记住规则即可,ch02(按键消抖)会展开:那里它是生死攸关的主角。</p></div>
 
-<h2 id="soft-vs-hw">7 · 软件思维 vs 电路思维对照表</h2>
-<table>
-<tr><th>软件世界</th><th>电路世界</th><th>差异要点</th></tr>
-<tr><td>变量(内存格子)</td><td>reg(触发器)/ wire(导线)</td><td>wire 没有存储,只是连接</td></tr>
-<tr><td>顺序执行,一行接一行</td><td>所有语句同时生效,并行运行</td><td>代码行数 ≠ 执行顺序,只是"描述清单"</td></tr>
-<tr><td>if/else 分支</td><td>数据选择器(MUX)在两路信号里挑一路</td><td>不是"走哪条路",是"两路都摆在那,挑哪路导通"</td></tr>
-<tr><td>for 循环</td><td><strong>没有循环!</strong> 展开成 N 份并排电路</td><td>for 只是"帮我复制粘贴 N 遍"的语法糖</td></tr>
-<tr><td>函数调用</td><td>模块例化(把子电路摆进大电路)</td><td>"调用"出来的子电路永久存在,不是用完即走</td></tr>
-<tr><td>print 调试</td><td>仿真波形 / ILA 在线抓波形</td><td>时间轴替代日志行,看的是"每根线的电压随时间变化"</td></tr>
-<tr><td>程序启动</td><td>比特流烧写(电路被"捏"成形)</td><td>没有启动,电路从第一纳秒就在工作</td></tr>
-</table>
+  <h3 id="soft-vs-hw">7 · 软件思维 vs 电路思维对照表</h3>
+  <table>
+  <tr><th>软件世界</th><th>电路世界</th><th>差异要点</th></tr>
+  <tr><td>变量(内存格子)</td><td>reg(触发器)/ wire(导线)</td><td>wire 没有存储,只是连接</td></tr>
+  <tr><td>顺序执行,一行接一行</td><td>所有语句同时生效,并行运行</td><td>代码行数 ≠ 执行顺序,只是"描述清单"</td></tr>
+  <tr><td>if/else 分支</td><td>数据选择器(MUX)在两路信号里挑一路</td><td>不是"走哪条路",是"两路都摆在那,挑哪路导通"</td></tr>
+  <tr><td>for 循环</td><td><strong>没有循环!</strong> 展开成 N 份并排电路</td><td>for 只是"帮我复制粘贴 N 遍"的语法糖</td></tr>
+  <tr><td>函数调用</td><td>模块例化(把子电路摆进大电路)</td><td>"调用"出来的子电路永久存在,不是用完即走</td></tr>
+  <tr><td>print 调试</td><td>仿真波形 / ILA 在线抓波形</td><td>时间轴替代日志行,看的是"每根线的电压随时间变化"</td></tr>
+  <tr><td>程序启动</td><td>比特流烧写(电路被"捏"成形)</td><td>没有启动,电路从第一纳秒就在工作</td></tr>
+  </table>
 
-<h2 id="rules">8 · 新手三条铁律</h2>
-<div class="box b-step"><div class="t">铁律一 · 时序块里只用 &lt;=</div><p><code>always @(posedge clk)</code> 内一律非阻塞赋值 <code>&lt;=</code>,组合逻辑(assign)随便。混用是 90% 诡异 bug 的来源。</p></div>
-<div class="box b-step"><div class="t">铁律二 · 一个信号只在一个 always 里赋值</div><p>一根线只能有一个"驱动源"。两块 always 都写同一个寄存器 = 两只手抢一个方向盘,综合器直接报错(这是保护你)。</p></div>
-<div class="box b-step"><div class="t">铁律三 · 画不出来就别写</div><p>写任何一段 Verilog 前,先能在纸上画出"寄存器+导线+门"的草图。画不出来的设计,写出来综合器也造不对。<strong>代码是电路的翻译,不是电路的源头。</strong></p></div>
+  <h3 id="rules">8 · 新手三条铁律</h3>
+  <div class="box box-step"><div class="box-title">铁律一 · 时序块里只用 &lt;=</div><p><code>always @(posedge clk)</code> 内一律非阻塞赋值 <code>&lt;=</code>,组合逻辑(assign)随便。混用是 90% 诡异 bug 的来源。</p></div>
+  <div class="box box-step"><div class="box-title">铁律二 · 一个信号只在一个 always 里赋值</div><p>一根线只能有一个"驱动源"。两块 always 都写同一个寄存器 = 两只手抢一个方向盘,综合器直接报错(这是保护你)。</p></div>
+  <div class="box box-step"><div class="box-title">铁律三 · 画不出来就别写</div><p>写任何一段 Verilog 前,先能在纸上画出"寄存器+导线+门"的草图。画不出来的设计,写出来综合器也造不对。<strong>代码是电路的翻译,不是电路的源头。</strong></p></div>
 
-<h2 id="exercise">9 · 动手:改三个数字做实验</h2>
-<p>改代码看现象,是最快的理解方式。基于 <code>led_blink.v</code> 做三个实验(每次只改一处):</p>
-<table>
-<tr><th>#</th><th>改动</th><th>预测(先想再看答案)</th></tr>
-<tr><td>1</td><td><code>assign led = cnt[22];</code></td><td>闪烁变快一倍(bit22 翻转频率是 bit23 的两倍)</td></tr>
-<tr><td>2</td><td><code>assign led = cnt[0];</code></td><td>LED 以 25MHz 闪烁——肉眼根本看不见,看起来像"半亮"(示波器才能看清真相)</td></tr>
-<tr><td>3</td><td><code>reg [3:0] cnt;</code>(只留 4 位计数器)</td><td>每 0.32 微秒计满回绕,bit3 约 1.5MHz 翻转——又是"半亮",但比实验 2 慢</td></tr>
-</table>
-<div class="box b-win"><div class="t">揭晓 · 昨天的思考题(修正版——原题的"标准答案"本身算错了,正好当教材)</div>
-<p><strong>先把三个容易混淆的量分开:</strong></p>
-<ul>
-<li><strong>翻转事件率</strong>:cnt[23] 每隔 2<sup>23</sup> 个时钟翻转一次 → 50M ÷ 2<sup>23</sup> ≈ <strong>5.96 次/秒</strong></li>
-<li><strong>方波频率</strong>:两次翻转构成一个完整周期(0→1→0)→ 50M ÷ 2<sup>24</sup> ≈ <strong>2.98Hz</strong></li>
-<li><strong>LED 闪烁频率</strong>:LED 通过 assign <strong>直接焊在</strong> cnt[23] 上——LED 的亮灭循环<strong>就是</strong> cnt[23] 的方波周期 → <strong>也是 2.98Hz</strong>(亮 0.168s、灭 0.168s)</li>
-</ul>
-<p>原思考题说"LED 是 1.49Hz"是错的:它把"翻转率÷2"又除了一次 2,重复计算。正确口诀:<strong>第 N 位输出方波频率 = 时钟 ÷ 2<sup>N+1</sup></strong>;bit23 → 50M/2<sup>24</sup> ≈ 3Hz。位号每减 1,频率翻倍——这就是"分频",FPGA 造时基的第一手法。</p>
-<p><strong>彩蛋教训:</strong>这题的标准答案是我(L写教程的家伙)算错的,被自查抓出来的——数字要动手验证,不管谁说的。这本手册的座右铭再次应验。</p></div>
+  <h3 id="exercise">9 · 动手:改三个数字做实验</h3>
+  <p>改代码看现象,是最快的理解方式。基于 <code>led_blink.v</code> 做三个实验(每次只改一处):</p>
+  <table>
+  <tr><th>#</th><th>改动</th><th>预测(先想再看答案)</th></tr>
+  <tr><td>1</td><td><code>assign led = cnt[22];</code></td><td>闪烁变快一倍(bit22 的方波频率是 bit23 的两倍)</td></tr>
+  <tr><td>2</td><td><code>assign led = cnt[0];</code></td><td>LED 以 25MHz 闪烁——肉眼根本看不见,看起来像"半亮"(示波器才能看清真相)</td></tr>
+  <tr><td>3</td><td><code>reg [3:0] cnt;</code>(只留 4 位计数器)</td><td>每 0.32 微秒(16 拍)计满回绕一次,bit3 方波频率 = 50M ÷ 2<sup>4</sup> = <strong>3.125MHz</strong>——又是"半亮",但比实验 2 慢</td></tr>
+  </table>
+  <div class="box box-win"><div class="box-title">课堂练习 · 心跳的 3Hz 从哪来(先自己算,再展开对答案)</div>
+  <p><strong>题目:</strong>led_blink.v 的 LED 焊在 cnt[23] 上,板上心跳约 3Hz——这个数是怎么从 50MHz 里长出来的?提示:先把三个容易混淆的量分开——<strong>翻转事件率、方波频率、LED 闪烁频率</strong>。算完再展开。</p>
+  <details><summary>对答案:三个量,一个口诀</summary>
+  <ul>
+  <li><strong>翻转事件率</strong>:cnt[23] 每隔 2<sup>23</sup> 个时钟翻转一次 → 50M ÷ 2<sup>23</sup> ≈ <strong>5.96 次/秒</strong></li>
+  <li><strong>方波频率</strong>:两次翻转构成一个完整周期(0→1→0)→ 50M ÷ 2<sup>24</sup> ≈ <strong>2.98Hz</strong></li>
+  <li><strong>LED 闪烁频率</strong>:LED 通过 assign <strong>直接焊在</strong> cnt[23] 上——LED 的亮灭循环<strong>就是</strong> cnt[23] 的方波周期 → <strong>也是 2.98Hz</strong>(亮 0.168s、灭 0.168s)</li>
+  </ul>
+  <p>口诀:<strong>第 N 位输出方波频率 = 时钟 ÷ 2<sup>N+1</sup></strong>;bit23 → 50M/2<sup>24</sup> ≈ 3Hz。位号每减 1,频率翻倍——这就是"分频",FPGA 造时基的第一手法。</p>
+  <p><strong>常见翻车:</strong>把"翻转率 ÷ 2"再除一次 2,得到 1.49Hz——那是把一个周期当两次、又除了一遍的重复计算。数字要动手验证,不管谁说的。</p>
+  </details></div>
 
-<h2 id="next">10 · 下一步</h2>
-<ul>
-<li><strong>今天</strong>:把本文重读一遍,然后不看答案,自己画出 led_blink.v 的电路图(对照图 2 检查)</li>
-<li><strong>Vivado 装完后</strong>:跑 build.tcl 生成第一个比特流,烧进板子看约 3Hz 的心跳</li>
-<li><strong>本周</strong>:厂商教程第 3 章(Verilog 语法)——这时你有了电路模型,语法书突然就能看懂了</li>
-<li><strong>下周</strong>:第 6-7 章按键消抖——第一次用"硬件思维"处理时间</li>
-</ul>
-<div class="box b-know"><div class="t">知识 · 本页对应的行业黑话速查</div>
-<p><strong>RTL</strong>(寄存器传输级)= 你刚学的这种"寄存器+导线"描述风格 · <strong>综合</strong>= 描述→门电路的翻译 · <strong>约束 XDC</strong>= 引脚/时序的"接线说明书" · <strong>比特流</strong>= 电路的压缩包 · <strong>LUT</strong>(查找表)= FPGA 里万能的"可编程门" · <strong>FF</strong>(flip-flop)= 触发器,寄存器的物理本体</p></div>
+  <h3 id="next">10 · 下一步</h3>
+  <ul>
+  <li><strong>今天</strong>:把本课重读一遍,然后不看答案,自己画出 led_blink.v 的电路图(对照图 2 检查)</li>
+  <li><strong>Vivado 装完后</strong>:跑 <code>labs/lab01-blink/build.tcl</code> 生成第一个比特流,烧进板子看约 3Hz 的心跳(还没跑过的话,现在就补上)</li>
+  <li><strong>下一步</strong>:ch01 仿真入门——给 led_blink.v 配上测试台,在波形里亲眼看见实验 2 那个 25MHz"半亮"的真相</li>
+  </ul>
+  <div class="box box-know"><div class="box-title">知识 · 本页对应的行业黑话速查</div>
+  <p><strong>RTL</strong>(寄存器传输级)= 你刚学的这种"寄存器+导线"描述风格 · <strong>综合</strong>= 描述→门电路的翻译 · <strong>约束 XDC</strong>= 引脚/时序的"接线说明书" · <strong>比特流</strong>= 电路的压缩包 · <strong>LUT</strong>(查找表)= FPGA 里万能的"可编程门" · <strong>FF</strong>(flip-flop)= 触发器,寄存器的物理本体</p></div>
 
-<footer>
-PL · Lab 00 · Verilog 101 —— 为 Z7-Nano 主线 Linux 项目配套的 PL 学习线首篇。<br>
-读完后回到 <code>lab01-blink/led_blink.v</code>,它应该已经"透明"了。
-</footer>
+  <footer>
+  预备篇 · ch00 · Verilog 101 —— Zynq FPGA 从零到实战的第一课,为 Z7-Nano 主线 Linux 手册的姊妹篇。<br>
+  读完后回到 <code>labs/lab01-blink/led_blink.v</code>,它应该已经"透明"了。
+  </footer>
 
-</div>
+  <div class="pager">
+    <a href="index.html">← 封面:课程地图</a>
+    <a href="ch01-sim.html">下一课:ch01 仿真入门 →</a>
+  </div>
+</main>
 </body>
 </html>

@@ -116,7 +116,7 @@
 
   <h3>动手:五分钟跑通第一个测试台</h3>
   <h4>第 0 步:拿到文件</h4>
-  <p>课程已为 lab01 配好测试台 <code>labs/lab01-blink/tb_led_blink.v</code> 和一键脚本 <code>sim.tcl</code>(文末有逐行讲解)。整个文件不到 20 行:</p>
+  <p>课程已为 lab01 配好测试台 <code>labs/lab01-blink/tb_led_blink.v</code> 和一键脚本 <code>sim.tcl</code>。测试台核心代码不到 20 行,每行都有注释:</p>
   <pre><code><span class="s">`timescale</span> 1ns/1ps          <span class="c">// 时间单位 1ns,最小刻度 1ps(#10 = 10ns)</span>
 
 <span class="k">module</span> tb_led_blink;        <span class="c">// 测试台没有端口——它包住被测电路,不对外伸引脚</span>

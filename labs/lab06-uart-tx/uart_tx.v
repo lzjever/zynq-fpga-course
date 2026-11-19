@@ -37,9 +37,13 @@ module uart_tx #(
 
     // $clog2 = 自动算"装下这个数要几位":BAUD_DIV=434 → 9 位;25_000_000 → 25 位
     // 换波特率参数时位宽自动跟着变,不用手改 —— 三级跳不改一行的秘密
-    reg [$clog2(BAUD_DIV)-1:0] baud_cnt;   // 位内计数器:数满 BAUD_DIV 个时钟 = 一个位结束
-    reg [3:0]                   bit_cnt_r; // 位计数器:0=起始位,1..8=数据位 0..7(LSB 先行)
-    reg [7:0]                   shifter;   // 移位寄存器:把并行字节一位一位"挤"到线上
+    reg [$clog2(BAUD_DIV)-1:0] baud_cnt = 0;   // 位内计数器:数满 BAUD_DIV 个时钟 = 一个位结束
+    reg [3:0]                   bit_cnt_r = 0; // 位计数器:0=起始位,1..8=数据位 0..7(LSB 先行)
+    reg [7:0]                   shifter = 8'd0;   // 移位寄存器:把并行字节一位一位"挤"到线上
+
+    // 上电初始值:Xilinx 触发器支持声明处初值(综合成 INIT,上电即生效),
+    // 也让任何仿真器不靠复位就能直接跑 —— 本设计不接外部复位键,全靠它
+    initial state_r = S_IDLE;
 
     // ---------- 第一段(时序):状态寄存器 + 数据寄存器 ----------
     always @(posedge clk or negedge rst_n) begin

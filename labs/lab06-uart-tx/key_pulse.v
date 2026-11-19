@@ -14,7 +14,7 @@ module key_pulse #(
     output wire tick                       // 单周期脉冲:确认"按下"那一刻输出 1 拍
 );
     // ---------- 第 1 级:打两拍同步器(ch03 的保险,防止亚稳态进 50MHz 世界) ----------
-    reg [1:0] sync;
+    reg [1:0] sync = 2'b11;    // 初值 = 松开(空闲是 1);声明处初值综合成上电值
     always @(posedge clk or negedge rst_n)
         if (!rst_n) sync <= 2'b11;         // 复位 = 松开(按键空闲是 1)
         else       sync <= {sync[0], key}; // 两拍流水,输出永远比输入晚 2 个时钟
@@ -23,8 +23,8 @@ module key_pulse #(
 
     // ---------- 第 2 级:消抖 —— 电平必须稳定 STABLE_CYCLES 个时钟才被承认 ----------
     // 抖动一来计数就清零重数(和 Lab02 一模一样的思想)
-    reg [$clog2(STABLE_CYCLES)-1:0] cnt;
-    reg key_stable;
+    reg [$clog2(STABLE_CYCLES)-1:0] cnt = 0;
+    reg key_stable = 1'b1;
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             cnt        <= 0;
@@ -41,7 +41,7 @@ module key_pulse #(
 
     // ---------- 第 3 级:下降沿检测 → 单周期脉冲 ----------
     // key_stable_q 是 key_stable 的"上一拍照片";旧值 1、新值 0 = 按下沿
-    reg key_stable_q;
+    reg key_stable_q = 1'b1;
     always @(posedge clk or negedge rst_n)
         if (!rst_n) key_stable_q <= 1'b1;
         else        key_stable_q <= key_stable;

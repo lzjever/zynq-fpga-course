@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 4 章 · Vivado 幕后与一键化 — Zynq FPGA 从零到实战</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <span class="chip">ZYNQ · FPGA</span>
+    <h1>从零到实战</h1>
+    <p>Verilog · Vivado · Z7-Nano</p>
+  </div>
+  <nav>
+    <a href="index.html"><span class="num">00</span>封面 · 课程地图</a>
+    <a href="ch00-verilog101.html"><span class="num">01</span>Verilog 101</a>
+    <a href="ch01-sim.html"><span class="num">02</span>仿真入门</a>
+    <a href="ch02-debounce.html"><span class="num">03</span>Lab02 按键消抖</a>
+    <a href="ch03-cdc.html"><span class="num">04</span>亚稳态与 CDC</a>
+    <a href="ch04-vivado.html" class="active"><span class="num">05</span>Vivado 幕后</a>
+    <a href="ch05-pwm.html"><span class="num">06</span>PWM 呼吸灯</a>
+    <a href="ch06-uart-tx.html"><span class="num">07</span>UART 发送器</a>
+    <a href="ch07-uart-rx.html"><span class="num">08</span>UART 自环回</a>
+    <a href="ch08-axi.html"><span class="num">09</span>AXI 总线</a>
+    <a href="ch09-merge.html"><span class="num">10</span>PS-PL 会师</a>
+    <a href="ch10-capstone.html"><span class="num">11</span>毕业设计</a>
+    <a href="appendix-board.html"><span class="num">附A</span>板卡手册</a>
+    <a href="appendix-glossary.html"><span class="num">附B</span>术语表</a>
+    <a href="appendix-cheatsheet.html"><span class="num">附C</span>命令速查</a>
+  </nav>
+  <footer>硬件:Z7-Nano R20 · XC7Z020<br>软件:Vivado 2026.1 免费档<br>姊妹篇:主线 Linux 手册</footer>
+</aside>
+<main class="main">
+  <div class="chapter-tag">CHAPTER 04</div>
+  <h2 class="title">Vivado 幕后与一键化</h2>
+  <p class="subtitle">你已经跳了五遍五步舞——这次我们溜进后台,看乐队在演奏什么。呼吸周,不写新电路。</p>
+
+  <h3>1 · 钩子:三个你答不上来的家常问题</h3>
+  <p>五步舞你能背了,但被问到这三问,大多数人会卡住:</p>
+  <ol>
+    <li>综合器把 <code>cnt &lt;= cnt + 1</code> 变成了<strong>什么东西</strong>?</li>
+    <li>那 4MB 的 <code>lab01.bin</code>(4,045,520 字节,就躺在 <code>labs/lab01-blink/</code> 里)——一个 24 位计数器而已,<strong>凭什么 4MB</strong>?里面装的是什么?</li>
+    <li>ch03 说全芯片每个触发器的建立/保持时间都要满足——<strong>谁在检查?什么时候检查的?</strong></li>
+  </ol>
+  <p>这一章把三个问题全部开箱。顺带三件工程实务:把烧写也脚本化(<code>program.tcl</code>)、教你"GUI 只是 Tcl 的皮"这个全书受用的心智模型、再给你的 git 仓库做个大扫除。<strong>没有新 Lab</strong>——这是安排在最难一章(ch03)后面的呼吸谷,两小时内读完做完。</p>
+
+  <h3>2 · 这一章要学会什么</h3>
+  <ul>
+    <li>能按顺序说出五步舞每步在"造什么",并为每步举一个报告/文件作为证据;</li>
+    <li>能打开利用率报告报出 LUT/FF 用量,并说出它占 7z020 的百分比;</li>
+    <li>能读懂时序摘要里的 WNS,说出负数时的两级自救(各一句话);</li>
+    <li>能用 <code>program.tcl</code> 一条命令烧板;理解 GUI 每次点击都被翻译成 Tcl;</li>
+    <li>能解剖一个 .bit 文件(头部/同步字/配置帧),并用 <code>bit2bin.py</code> 转出 ch09 要用的 .bin;</li>
+    <li>能给工程配好 .gitignore,让仓库里只剩你亲手写的东西。</li>
+  </ul>
+
+  <h3>3 · 五步舞的幕后:每一步在造什么</h3>
+  <p>把 build.tcl 的五步竖着看一遍,每步的"产出物"才是重点:</p>
+  <div class="flow">
+    <div class="node"><b>① 综合 Synthesis</b> —— Verilog(RTL)翻译成 <b>网表(Netlist)</b>:一张"零件+连线"的图纸,零件是 LUT、FF、进位链这些芯片里真实存在的东西</div>
+    <div class="arrow">↓</div>
+    <div class="node"><b>② 映射 Mapping</b> —— 图纸上的零件逐一领到户口:这个加法器拆成 24 个 LUT、那排寄存器落成 24 个 FF……结果记进<b>利用率(Utilization)报告</b></div>
+    <div class="arrow">↓</div>
+    <div class="node"><b>③ 布局 Placement</b> —— 给每个零件挑物理坐标(塞进哪一格 <b>可配置逻辑块(Configurable Logic Block,CLB)</b>)。零件放得好,线就短</div>
+    <div class="arrow">↓</div>
+    <div class="node"><b>④ 布线 Routing</b> —— 把图纸上的每根连线,变成芯片里真实的金属线段:一路闭合可编程开关。这步做完,你的电路在物理上已经"长好"了</div>
+    <div class="arrow">↓</div>
+    <div class="node"><b>⑤ 比特流 Bitstream</b> —— 把几百万个开关的状态打包成一个文件:.bit。烧写 = 把这份"开关总账"灌进芯片</div>
+  </div>
+
+  <div class="box box-know"><div class="box-title">知识 · LUT 到底是怎么"万能"的</div>
+  <p>ch00 说过 LUT(查找表)是"可编程门",现在兑现原理:一个 6 输入 LUT 就是一张<strong>64 格的真值表</strong>——任意 6 输入的逻辑函数,无非是 64 种输入组合各自对应什么输出。把这张表写进 LUT 的配置存储,它就"变成"了你要的任何门。所以综合器不造门,它只是把你的代码翻译成一张张真值表 + 一堆"连线开关"。所谓 FPGA 可编程,编的就是这些表和开关;所谓比特流,装的就是它们的内容。一个 7z020 有 53,200 个 LUT,每个 64 格——这就是 4MB 比特流的主要去处。</p></div>
+
+  <h4>每一步都留了证据:两份必会打开的报告</h4>
+  <p>打开工程里的 <code>impl_1</code>(或直接看 build.tcl 跑完的目录),学会看两份:</p>
+  <table>
+    <tr><th>报告</th><th>在哪看</th><th>看什么</th></tr>
+    <tr><td>利用率报告</td><td>Open Implemented Design → Reports → Utilization(或 Tcl:<code>report_utilization</code>)</td><td>LUT / FF / BRAM 用量和占比——你的电路在芯片里占了多大地方</td></tr>
+    <tr><td>时序摘要</td><td>Open Implemented Design → Reports → Timing Summary(<code>report_timing_summary</code>)</td><td>WNS——下一节专门讲</td></tr>
+  </table>
+
+  <h3>4 · WNS:ch03 那堂课的全芯片回执</h3>
+  <p>ch03 讲了每个触发器都有建立/保持时间要求。同步设计里,任意两个触发器 A→B 之间隔着一段组合逻辑,Vivado 布局布线完<strong>精确知道</strong>这段路径的延迟,然后替全芯片每一对触发器做一遍算术:A 的时钟沿到 B 的时钟沿之间有 20ns 可用,路径实际要耗多少 ns——这就是<strong>静态时序分析(Static Timing Analysis, STA)</strong>:"静态"指它不跑仿真,纯查表算延迟,所以又快又全,一条路径都不漏。</p>
+  <p>每条路径的富余量叫<strong>时序裕量(Slack)</strong>:slack = 可用时间 − 实际需要时间。全芯片最差的那条路径的 slack,就是<strong>最差负裕量(Worst Negative Slack, WNS)</strong>。判据一句话:<strong>WNS ≥ 0,全芯片每条路径的建立时间都被满足;WNS &lt; 0,有路径来不及。</strong>这正是 build.tcl 最后一行打印的那个数——你跳五遍五步舞,Vivado 就替你做了五遍全芯片踩脚检查。</p>
+  <div class="box box-step"><div class="box-title">步骤 · 亲手读一次(5 分钟)</div>
+  <ol>
+    <li>随便打开你哪个工程(lab01/lab02 都行),Flow Navigator → Open Implemented Design;</li>
+    <li>Reports → Timing Summary,摘要表第一行就是 WNS(TNS 是违反路径的总量,为 0 即全过);</li>
+    <li>找到 WNS 那行点开,能看到最差路径从哪个触发器到哪个触发器、各段耗了几 ns——课程里的设计 WNS 大概率是几十 ns 的正数(离极限很远),但你要会读。</li>
+  </ol></div>
+  <div class="box box-know"><div class="box-title">知识 · 万一 WNS 真是负的,两句话自救</div>
+  <p>① <strong>降频</strong>:把 xdc 里 <code>create_clock</code> 的周期改大(可用时间变多)——最常用,课程内永远够用;② <strong>减逻辑级数</strong>:把长链条组合逻辑中间插一排寄存器(流水线),让每拍干的事变少。记住方向即可,真做时序收敛是毕业路线图里的话题。</p></div>
+
+  <h3>5 · GUI 只是 Tcl 的皮(今天最值钱的心智模型)</h3>
+  <p>Vivado 的母语是 <strong>Tcl(Tool Command Language,发音近 "tickle")</strong>——一种 1980 年代诞生的工具胶水语言。你在 GUI 里的每一次点击,Vivado 都把它翻译成一条 Tcl 去执行。不信?当场验证:</p>
+  <div class="box box-step"><div class="box-title">步骤 · 5 分钟对照实验(杀手锏演示)</div>
+  <ol>
+    <li>打开任一工程,把 Tcl Console(Window → Tcl Console)拖到顺手的位置;</li>
+    <li>在 GUI 里做下面表格左列的任何一个动作,眼睛盯着右列——每次点击,Console 实时打印出等价命令。</li>
+  </ol></div>
+  <table>
+    <tr><th>你在 GUI 里点……</th><th>Tcl Console 打印的等价命令</th></tr>
+    <tr><td>Add Sources 加文件</td><td><code>add_files ...</code></td></tr>
+    <tr><td>设顶层模块</td><td><code>set_property top xxx [current_fileset]</code></td></tr>
+    <tr><td>Run Synthesis</td><td><code>launch_runs synth_1</code></td></tr>
+    <tr><td>Open Implemented Design</td><td><code>open_run impl_1</code></td></tr>
+    <tr><td>Generate Bitstream</td><td><code>launch_runs impl_1 -to_step write_bitstream</code></td></tr>
+    <tr><td>打开 Utilization 报告</td><td><code>report_utilization</code></td></tr>
+    <tr><td>Program Device 烧板</td><td><code>program_hw_devices ...</code></td></tr>
+  </table>
+  <p>两个推论,对你这个命令行重度用户是纯爽点:</p>
+  <ul>
+    <li><strong>build.tcl 不是什么黑客手段,它就是 GUI 流程本身</strong>——你只是绕过皮,直接说母语。</li>
+    <li><strong>你的每次点击都有存档</strong>:Vivado 每个会话都把执行过的 Tcl 逐条写进当前目录的 <code>vivado*.jou</code>(日志回放文件,Journal)——想不起"刚才那个操作叫什么",翻 .jou,把它抄进你的脚本。学会读 .jou,等于 GUI 里的一切操作都可复制。</li>
+  </ul>
+
+  <h4>补上最后一块:program.tcl,烧写也一键</h4>
+  <p>五步舞有 build.tcl,但烧板你还在点 GUI。补上(已放进 <code>labs/lab01-blink/program.tcl</code>):</p>
+  <pre><code><span class="c"># Lab 01 一键烧写脚本 —— GUI 里点 Program Device 的全过程,就这七行</span>
+open_hw_manager
+connect_hw_server              <span class="c">;# 连本机 hw_server(默认 localhost:3121)</span>
+open_hw_target                 <span class="c">;# 探测板上的 JTAG 链</span>
+
+set dev [lindex [get_hw_devices xc7z020*] 0]
+set_property PROGRAM.FILE [glob ./lab01.runs/impl_1/*.bit] $dev
+program_hw_devices $dev        <span class="c">;# 烧!</span></code></pre>
+  <pre><code>用法:cd labs/lab01-blink &amp;&amp; vivado -mode batch -source program.tcl</code></pre>
+  <div class="box box-warn"><div class="box-title">警告 · JTAG 是"易失"装载,而且主人只有一个</div>
+  <p>① JTAG 烧写断电即失(比特流只写在配置存储里,不进 Flash),按 RST 也会清掉——正常,不是坏了。② 如果烧写连不上/卡住:你跑过 OpenOCD,它和 Vivado 的 hw_server 抢同一个 JTAG 口,先 <code>pkill -f openocd</code>(两个 JTAG 主人的互杀问题,附录 A 有专条)。</p></div>
+  <div class="box box-know"><div class="box-title">知识 · 顺手包个 Makefile(CLI 党自取,GUI 党可跳)</div>
+  <pre><code>build:
+	vivado -mode batch -source build.tcl
+flash:
+	vivado -mode batch -source program.tcl
+clean:
+	rm -rf lab01 *.jou *.log *.str
+.PHONY: build flash clean</code></pre>
+  <p>从此 <code>make build</code> 出比特流、<code>make flash</code> 上板、<code>make clean</code> 还你干净目录。</p></div>
+
+  <h3>6 · 比特流解剖:4MB 里装的是什么</h3>
+  <p>拿 lab01 开刀。一个 .bit 文件从前往后三段:</p>
+  <table>
+    <tr><th>段</th><th>内容</th><th>怎么亲眼看到</th></tr>
+    <tr><td>① 明文头部</td><td>设计名、器件型号、生成时间等管理信息(ASCII)</td><td><code>xxd lab01.bit | head</code>,右边直接能读出字母</td></tr>
+    <tr><td>② 同步字</td><td><code>FF FF FF AA 99 55 66</code>——配置协议的"开场白",告诉芯片"管理信息到此为止,后面是正片"</td><td><code>xxd</code> 里搜一眼;或跑 bit2bin.py,它会打印偏移</td></tr>
+    <tr><td>③ 配置帧</td><td>一个又一个<strong>配置帧(Configuration Frame)</strong>:固定长度的数据块,每帧负责芯片某一小片区域里所有 LUT 真值表、FF 配置、布线开关的状态。约 4MB 几乎全是它</td><td>就是头两段后面那一大坨</td></tr>
+  </table>
+  <p>那 <code>labs/lab01-blink/lab01.bin</code> 和 .bit 什么关系?——它是给 ch09 的:你移植的 Debian 里,<strong>FPGA Manager</strong> 从 Linux 侧装载 FPGA,走的是 <strong>处理器配置访问端口(Processor Configuration Access Port, PCAP)</strong>,而不是 JTAG;内核的 zynq-fpga 驱动要求喂给它"从同步字开始、每个 32 位字做了字节序交换"的裸数据——也就是 .bin。转换脚本早就写好了(<code>labs/bit2bin.py</code>,20 行,注释里链着内核驱动源码):</p>
+  <pre><code>cd labs/lab01-blink
+python3 ../bit2bin.py lab01.runs/impl_1/lab01.bit lab01.bin
+# 输出: OK: lab01.bin (4045520 字节, 同步字 @文件偏移 0x??)</code></pre>
+  <p>用 xxd 验一眼字节序交换(这是本仓库里 lab01.bin 的真实前 16 字节):</p>
+  <pre><code>$ xxd lab01.bin | head -1
+00000000: ffff ffff 6655 99aa 0000 0020 0120 0230</code></pre>
+  <p>看第 5~8 字节:.bit 里本该是 <code>aa 99 55 66</code>,这里却是 <code>66 55 99 aa</code>——正是"每个 32 位字首尾反转"的效果(前 4 个 FF 不含顺序信息,看不出来)。同时注意 .bin 从同步字开始,<strong>没有</strong> .bit 的明文头部:所以 .bin 比 .bit 小一点点,小的那截就是头部。ch09 装载成功的那天,你会再见到这个文件。</p>
+
+  <h3>7 · 工程卫生:git 只收藏你亲手写的东西</h3>
+  <p>Vivado 的 .runs/.cache 每次构建都变,几万个小文件 + 大日志,jq 进 git 就是灾难(仓库膨胀、diff 噪音、clone 变慢)。原则一句话:<strong>凡是能由命令重新生成的,都不进 git;进 git 的只有"人写的":源码 .v、约束 .xdc、脚本 .tcl、README。</strong>模板已放在 <code>labs/lab01-blink/.gitignore</code>,搬走即用:</p>
+  <pre><code># --- 脚本流(build.tcl)生成的工程目录 ---
+lab01/
+# --- GUI 工程库的内部目录(若用 .xpr 工程)---
+*.runs/
+*.cache/
+*.hw/
+*.ip_user_files/
+*.sim/
+# --- 会话日志与回放 ---
+*.jou
+*.log
+*.str
+.Xil/
+# --- 比特流默认不进 git(存档用 release/tag)---
+*.bit</code></pre>
+  <p>从此 <code>git status</code> 永远干净:改了哪个 .v、动了哪行 tcl,一眼见底。以后每个 Lab 的 README 里都有一行"资源账本"(见下),配合这份干净,任何一台新机器 <code>git clone</code> + <code>make build</code> 就能完整复现你的工程——这才是工程师的仓库。</p>
+
+  <h3>8 · 资源账本:看着你的电路长大</h3>
+  <p>从 Lab01 起,每课跑完 build,顺手把利用率报告里的两个数记进 README——这不是仪式感,是你对"电路尺寸"的手感积累(将来别人说"这设计大概两千 LUT",你要有数感)。全班账本(★=以你机器跑出的报告为准;后几行是预估,跑完填实):</p>
+  <table>
+    <tr><th>Lab</th><th>电路</th><th>LUT</th><th>FF</th><th>占 7z020(53,200 LUT / 106,400 FF)</th></tr>
+    <tr><td>lab01</td><td>24 位计数器闪烁</td><td>≈24 ★</td><td>24 ★</td><td>0.05% / 0.02%</td></tr>
+    <tr><td>lab02</td><td>消抖器(阈值计数+边沿检测)</td><td>≈35 ★</td><td>≈45 ★</td><td>约 0.07% / 0.04%</td></tr>
+    <tr><td>lab03 v2</td><td>+ 两级同步器</td><td>+1 ★</td><td>+2 ★</td><td>保险费,几乎免费</td></tr>
+    <tr><td>lab05</td><td>PWM 呼吸灯(tick+相位+亮度)</td><td>≈55 ★</td><td>≈40 ★</td><td>约 0.1%</td></tr>
+    <tr><td>ch06</td><td>UART 发送器</td><td>≈150(预估)</td><td>≈120(预估)</td><td>约 0.3%</td></tr>
+    <tr><td>ch08</td><td>AXI-Lite 从机</td><td>≈200(预估)</td><td>≈250(预估)</td><td>约 0.4%</td></tr>
+    <tr><td>—</td><td>7z020 全片</td><td>53,200</td><td>106,400</td><td>100%(你目前住了千分之一)</td></tr>
+  </table>
+
+  <h3>9 · 常见坑</h3>
+  <table>
+    <tr><th>坑</th><th>现象</th><th>解法</th></tr>
+    <tr><td>把 .runs/.cache 提交进 git</td><td>仓库迅速膨胀到 GB 级,clone 半小时</td><td>上节 .gitignore;只留 .v/.xdc/.tcl/README</td></tr>
+    <tr><td>只提交 .xpr 工程文件</td><td>别人(或换了目录的你)打不开——.xpr 引用绝对路径</td><td>工程用 build.tcl 现建,源文件才是本体</td></tr>
+    <tr><td>.bit 进 git</td><td>每次构建一个 4MB 二进制,diff 全是噪音</td><td>忽略;要存档发 release</td></tr>
+    <tr><td>脚本里没 wait_on_run 就去取 .bit</td><td>拿到旧文件或报"找不到"</td><td>build.tcl 已示范:launch 后必 wait</td></tr>
+    <tr><td>烧写连不上</td><td>connect/open_hw_target 卡住或报错</td><td><code>pkill -f openocd</code>(JTAG 互杀,附录 A);确认板卡上电</td></tr>
+    <tr><td>断电后电路没了,以为烧坏</td><td>重新上电 LED 不闪</td><td>JTAG 装载本就易失;重新 program 即可(驻留要写 Flash,本课程走 ch09 的 Linux 装载)</td></tr>
+  </table>
+
+  <h3>10 · 小结与自测</h3>
+  <p>一条线:五步舞每步都在"造实物"(网表→资源→坐标→金属线→开关总账),每步都留了报告当证据;GUI 是 Tcl 的皮,.jou 是你的点击存档;比特流=配置帧总账,.bin 是它的"去头+字节反转"版;git 只收藏手写物;账本从 lab01 记起。</p>
+  <div class="box box-know"><div class="box-title">本章新词卡(附录 B 汇总)</div>
+  <p>Tcl(Tool Command Language)· 网表(Netlist)· 映射(Mapping)· 布局(Placement)· 布线(Routing)· 利用率(Utilization)· 可配置逻辑块(Configurable Logic Block, CLB)· 静态时序分析(Static Timing Analysis, STA)· 时序裕量(Slack)· 最差负裕量(Worst Negative Slack, WNS)· 配置帧(Configuration Frame)· 日志回放文件(Journal, .jou)· 联合测试工作组接口(Joint Test Action Group, JTAG)· 处理器配置访问端口(Processor Configuration Access Port, PCAP)</p></div>
+
+  <div class="box box-step"><div class="box-title">自测(三档)</div>
+  <p><strong>A · 概念复述</strong>:不看表格,一口气说出五步舞每步"造什么"、留下什么证据。</p>
+  <p><strong>B · 预测</strong>:lab01 的计数器从 24 位改成 40 位,WNS 会怎么动?方向和数量级?(往差的方向动一点:加法进位链变长、路径变慢——但离 50MHz 的预算仍远,大概率还是几十 ns 的正数。跑一下验证)</p>
+  <p><strong>B2 · 动手</strong>:.bit 和 .bin 差多少字节?差在哪段?(跑一遍 bit2bin.py,对比两个文件大小,再看它打印的"同步字偏移"——差的正是明文头部)</p>
+  <p><strong>C · 排错</strong>:同事把整个工程目录(.runs/.cache 全含)提交进了 git,20 个 commit 后仓库 2GB。哪里错了?以后怎么防?已经肿了的怎么救?</p>
+  <details style="margin:8px 0"><summary style="cursor:pointer;color:var(--ink-soft)">答案(点开前先自己答)</summary>
+  <p><strong>B</strong>:见题面。<strong>B2</strong>:.bin = .bit − 明文头部;同步字偏移就是头部长度(几十字节量级)。<strong>C</strong>:错误=把"可再生成物"当源码提交;预防=.gitignore 只放行手写文件;补救=git filter-repo / BFG 清历史(属 repo 手术,课程外技能,知道关键词即可)。</p>
+  </details></div>
+
+  <h3>11 · 下一课预告:回到灯上</h3>
+  <p>剧场看完了——几十万 LUT 的空旷舞台,你的电路只占了千分之一。该回去干点正事:下一课,让 R14 这盏灯<strong>学会呼吸</strong>。数字世界没有 0.5V,但你的眼睛会替你算平均;ch00 那个"半亮"的悬案,这次我们故意造出来,还要让它顺着你的节奏明暗。顺便解决你憋了三个 Lab 的烦躁:tick,又是 tick——能不能别再抄第三遍?</p>
+
+  <div class="pager">
+    <a href="ch03-cdc.html">← 上一章:亚稳态与 CDC</a>
+    <a href="ch05-pwm.html">下一章:PWM 呼吸灯 →</a>
+  </div>
+</main>
+</body>
+</html>

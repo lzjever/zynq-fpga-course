@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 2 章 · Lab02 按键消抖:先写后看 — Zynq FPGA 从零到实战</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <span class="chip">ZYNQ · FPGA</span>
+    <h1>从零到实战</h1>
+    <p>Verilog · Vivado · Z7-Nano</p>
+  </div>
+  <nav>
+    <a href="index.html"><span class="num">00</span>封面 · 课程地图</a>
+    <a href="ch00-verilog101.html"><span class="num">01</span>Verilog 101</a>
+    <a href="ch01-sim.html"><span class="num">02</span>仿真入门</a>
+    <a class="active" href="ch02-debounce.html"><span class="num">03</span>Lab02 按键消抖</a>
+    <a href="ch03-cdc.html"><span class="num">04</span>亚稳态与 CDC</a>
+    <a href="ch04-vivado.html"><span class="num">05</span>Vivado 幕后</a>
+    <a href="ch05-pwm.html"><span class="num">06</span>PWM 呼吸灯</a>
+    <a href="ch06-uart-tx.html"><span class="num">07</span>UART 发送器</a>
+    <a href="ch07-uart-rx.html"><span class="num">08</span>UART 自环回</a>
+    <a href="ch08-axi.html"><span class="num">09</span>AXI 总线</a>
+    <a href="ch09-merge.html"><span class="num">10</span>PS-PL 会师</a>
+    <a href="ch10-capstone.html"><span class="num">11</span>毕业设计</a>
+    <a href="appendix-board.html"><span class="num">附A</span>板卡手册</a>
+    <a href="appendix-glossary.html"><span class="num">附B</span>术语表</a>
+    <a href="appendix-cheatsheet.html"><span class="num">附C</span>命令速查</a>
+  </nav>
+  <footer>硬件:Z7-Nano R20 · XC7Z020<br>软件:Vivado 2026.1 免费档<br>姊妹篇:主线 Linux 手册</footer>
+</aside>
+<main class="main">
+  <div class="chapter-tag">CHAPTER 02</div>
+  <h2 class="title">Lab02 按键消抖:先写后看</h2>
+  <p class="subtitle">你以为按了一下按键?金属片其实弹了 20 毫秒。这一章,你第一次从零设计一件自己的电路。</p>
+
+  <h3>钩子:金属不会说话,但它会弹</h3>
+  <p>你按下 PL_KEY 的瞬间,按键里的金属簧片撞上触点——<strong>弹开,再撞上,再弹开</strong>,像一颗落地的小球,要蹦跶 5~20 毫秒才安分下来。这叫抖动(Bounce,机械触点的弹跳)。在这几毫秒里,你的电路看到的不是"一次按下",而是几十次快速的按-松-按-松。</p>
+  <p>软件工程师的条件反射是:<code>sleep(20ms)</code> 再读一次。但电路里<strong>没有 sleep</strong>——没有哪块硬件会"暂停世界等你醒来"。电路里表达时间的手段只有一样东西:<strong>数时钟拍</strong>。20 毫秒 = 50MHz × 20ms = <strong>一百万拍</strong>。这就是本章全部的秘密。</p>
+  <p>还有一件事让这一章特别:这是全课程<strong>第一次"从零设计"</strong>。lab01 是改;这次是白纸一张,需求书在手,参考实现锁在折叠框里——先自己写,过三关,再看答案。<strong>身份转变从这一章开始:从"改代码的人"变成"设计电路的人"。</strong></p>
+
+  <h3>目标:读完这章你能</h3>
+  <ol>
+    <li>把"稳定保持 20ms"翻译成电路语言:"数满 100 万拍,中途抖回原电平就清零重数";</li>
+    <li>独立实现"稳定判定 + 边沿→单周期脉冲"两级结构,并用带随机抖动的测试台过三关;</li>
+    <li>用自己的话讲清非阻塞赋值 <code>&lt;=</code> 的语义("全体读旧值,沿后齐更新")——兑现 ch00 埋下的承诺;</li>
+    <li>烧裸版和消抖版上板对比,按一次翻一次,50 次零失误。</li>
+  </ol>
+
+  <h3>第 0 步:裸版对比实验(先烧先看,再谈道理)</h3>
+  <p>课程准备了一个<strong>故意的坏电路</strong>:<code>labs/lab02-debounce/bare/key_toggle_raw.v</code>,约 20 行,检测到按下沿就翻转 LED——<strong>不过滤,全放行</strong>。先把它烧上板,亲眼看它出丑:</p>
+  <pre><code><span class="c">// 裸版核心 3 行(key_toggle_raw.v 全文在 lab 目录)</span>
+<span class="k">reg</span> key_q;
+<span class="k">always</span> @(posedge clk) key_q &lt;= key;      <span class="c">// 给输入拍"上一拍照片"</span>
+<span class="k">wire</span> press = key_q &amp; ~key;              <span class="c">// 上一拍松开、这一拍按下 → 按下沿,一拍脉冲</span>
+<span class="k">always</span> @(posedge clk) <span class="k">if</span> (press) led &lt;= ~led;  <span class="c">// 有脉冲就翻转 LED</span></code></pre>
+  <div class="box box-step"><div class="box-title">动手 · 五分钟看乱翻(build.tcl 第 6 行改 set variant bare)</div>
+  <ol>
+    <li><code>cd labs/lab02-debounce &amp;&amp; vivado -mode batch -source build.tcl</code>(先改 variant 为 bare);</li>
+    <li><code>vivado -mode batch -source program.tcl</code> 烧写;</li>
+    <li><strong>预测先写下来</strong>:按一次,LED 会怎样?然后按 10 次,每次记翻转了几次(README 有现象记录表)。重点试<strong>快速轻按</strong>——最容易复现乱翻;</li>
+    <li>把现象念出声:"按一次,翻零次/一次/两次,每次还不一样。"</li>
+  </ol></div>
+  <p>这一课的"aha"不在代码里,在你的指尖上。现在问:谁干的?</p>
+  <div class="box box-warn"><div class="box-title">归因预告 · 两个凶手,今天只审主犯</div>
+  <p>裸版乱翻有<strong>两个原因</strong>,别混为一谈:<br>
+  <strong>主犯:机械抖动</strong>(毫秒级,人眼时间尺度)——按下瞬间的几十次弹跳,每个弹跳沿都被裸版放行成脉冲。这是今天要修的。<br>
+  <strong>从犯:异步</strong>——P14 这根线不听 50MHz 时钟的号令,信号想什么时候翻就什么时候翻,采样时刻全凭运气。它安静得像只猫,但偶尔会咬人。<strong>今天先不修,下一章开庭重审</strong>(ch03 的开场就是这颗雷引爆)。</p></div>
+
+  <h3>原理:把 20 毫秒变成一串数</h3>
+  <h4>时间滤波器:稳定才算数</h4>
+  <p>思路一句话:<strong>信号想改变"判定电平"?可以,先连续稳定地保持 20ms(100 万拍)给我看。中途抖回原电平哪怕一拍,计时器清零重数。</strong>抖动的单次弹跳只有几微秒到几毫秒,凑不满 100 万拍——全被滤掉。手指真正按稳之后,计时器才能一鼓作气数满,判定才改口。</p>
+  <div class="fig" style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px;margin:20px 0;">
+  <svg viewBox="0 0 860 310" xmlns="http://www.w3.org/2000/svg">
+    <!-- key_n bounce -->
+    <text x="16" y="66" font-size="12.5" font-family="Consolas,monospace" fill="#1a2332">key_n</text>
+    <polyline points="40,80 110,80 110,60 122,60 122,80 134,80 134,60 148,60 148,80 160,80 160,60 174,60 174,80 186,80 186,60 480,60 480,80 492,80 492,60 504,60 504,80 516,80 516,60 528,60 528,80 540,80 540,60 760,60" fill="none" stroke="#b3541e" stroke-width="2"/>
+    <!-- key_stable -->
+    <text x="16" y="146" font-size="12.5" font-family="Consolas,monospace" fill="#1a2332">key_stable</text>
+    <polyline points="40,160 300,160 300,140 660,140 660,160 760,160" fill="none" stroke="#1d5c8a" stroke-width="2.5"/>
+    <!-- tick -->
+    <text x="16" y="216" font-size="12.5" font-family="Consolas,monospace" fill="#1a2332">tick</text>
+    <polyline points="40,230 298,230 298,210 306,210 306,230 760,230" fill="none" stroke="#2e7d32" stroke-width="2.5"/>
+    <text x="316" y="224" font-size="11.5" fill="#2e7d32">恰好一拍</text>
+    <!-- annotations -->
+    <path d="M 110 40 h 76" stroke="#7c3a12" stroke-width="1.5" fill="none"/>
+    <text x="118" y="32" font-size="11.5" fill="#7c3a12">抖动区(弹跳几次~几十次)</text>
+    <line x1="186" y1="40" x2="186" y2="240" stroke="#8b95a3" stroke-width="1" stroke-dasharray="4 4"/>
+    <text x="150" y="258" font-size="11" fill="#8b95a3">弹跳安分 ↓</text>
+    <line x1="300" y1="40" x2="300" y2="240" stroke="#1d5c8a" stroke-width="1" stroke-dasharray="4 4"/>
+    <path d="M 186 108 h 114" stroke="#1d5c8a" stroke-width="1.5"/>
+    <text x="196" y="100" font-size="11.5" fill="#1d5c8a">数满 100 万拍 → 改判</text>
+    <text x="248" y="182" font-size="11.5" fill="#1d5c8a">判定:按下</text>
+    <text x="384" y="130" font-size="11.5" fill="#4a5568">松开同样要消抖(释放也会抖,但按下沿才报 tick)</text>
+    <text x="616" y="152" font-size="11" fill="#4a5568">稳定 → 改判:松开</text>
+  </svg>
+  <div style="font-size:13px;color:#4a5568;margin-top:10px;">图 1 · 消抖 = 时间滤波器(时间轴不成比例:抖动区与稳定窗都做了压缩)</div>
+  </div>
+  <p>注意一件妙事:这个电路<strong>本质是一台只有两个状态的小机器</strong>(判定"松开"↔判定"按下"),转移条件是"稳定满 20ms"。第 7 章会给这种东西正名——<strong>状态机</strong>,并在 UART 里让它挑大梁。今天先不展开,记住这幅两格漫画即可。</p>
+
+  <h4>第二级:从"电平"到"一拍脉冲"</h4>
+  <p>判定电平 <code>key_stable</code> 一旦改口"按下",就会<strong>整整保持按下几十毫秒</strong>(你手指还按着呢)。但需求要的是一个<strong>单周期脉冲(Single-cycle Pulse,宽度恰好一个时钟拍)</strong>——像一次"点名",不是一段"状态"。从电平里抠出脉冲的手法叫<strong>边沿检测(Edge Detection)</strong>,全课程最高频的惯用法,今天诞生:</p>
+  <pre><code><span class="k">reg</span> key_stable_q;                          <span class="c">// key_stable 的"上一拍照片"</span>
+<span class="k">always</span> @(posedge clk) key_stable_q &lt;= key_stable;
+
+<span class="k">assign</span> tick = key_stable_q &amp; ~key_stable;  <span class="c">// 上一拍是 1、这一拍是 0 → 1→0 沿,恰好一拍为高</span></code></pre>
+  <p>这个 <code>上一拍 &amp; ~本拍</code>(读作"刚才还是 1,现在已是 0")的模式,后面每一章都会再见面(松开沿就是反过来 <code>~q &amp; d</code>)。它产出的单周期脉冲有个行话名字:<strong>使能脉冲(Enable Pulse)</strong>,昵称 <strong>tick</strong>——"这一拍允许你动一下"。全课程最重要的惯用法,没有之一。</p>
+  <div class="box box-warn"><div class="box-title">兑现承诺 · 边沿检测为什么必须用 &lt;=(ch00 埋的伏笔)</div>
+  <p>ch00 说过:时序块里一律用 <code>&lt;=</code>,理由"第 7 章展开"。等不到第 7 章了——<strong>这里就是生死攸关的地方</strong>,现在兑现:<br>
+  非阻塞赋值 <code>&lt;=</code> 的语义是"<strong>全体先读旧值,时钟沿之后一起更新</strong>"。所以 <code>key_stable_q &lt;= key_stable</code> 在改判的那个时钟沿,读到的是<strong>改判前的旧值</strong>(还是 1);沿过后 key_stable 变 0 而 key_stable_q 还是 1——这一拍 <code>tick</code> 为高。下一拍照片更新,两个都成 0,tick 落下。<strong>恰好一拍,分毫不差。</strong><br>
+  如果这里用阻塞赋值 <code>=</code>:赋值立刻生效,"照片"瞬间变成新值,旧值永远拍不到——tick 要么出不来,要么仿真和综合行为分家,板上时对时错。ch00 铁律一的"为什么",到此结案。</p></div>
+  <div class="box box-know"><div class="box-title">知识 · 毛刺:组合逻辑的天然抖动</div>
+  <p><code>tick</code> 是 <code>assign</code>(组合逻辑)算出来的线。<strong>毛刺(Glitch)</strong>指组合逻辑在输入翻转的瞬间、输出短暂地乱抖一下——门 delay 不齐造成的,真实电路里无法避免。为什么这里不怕?因为 <code>tick</code> 的两个输入都是触发器输出,只在时钟沿后变化;而它的<strong>下游(T 触发器)只在下一个时钟沿采样</strong>——毛刺活不到被采样的那一刻就稳了。记住设计纪律:<strong>组合逻辑的输出,永远只喂给时钟沿,不当时钟用。</strong></p></div>
+
+  <h3>需求书(正式版)</h3>
+  <table>
+    <tr><th colspan="2">Lab02 · 按键消抖器 需求书</th></tr>
+    <tr><td>模块名</td><td><code>debounce</code>(顶层 <code>key_toggle</code> 可后写,先专注本体)</td></tr>
+    <tr><td>端口</td><td><code>input clk</code>(50MHz)/ <code>input rst_n</code>(低有效,测试台用)/ <code>input key_n</code>(按下=0,与 P14 一致)/ <code>output tick</code>(单周期脉冲)</td></tr>
+    <tr><td>参数</td><td><code>parameter STABLE_CYCLES = 1_000_000</code>(20ms;参数(Parameter)= 模块的"出厂可调旋钮",例化时可拧——第 5 章正式开讲,今天照抄这个写法)</td></tr>
+    <tr><td>R1 稳定判定</td><td>内部维护判定电平 <code>key_stable</code>(1=松开,0=按下)。仅当 <code>key_n</code> 与判定<strong>连续不一致满 STABLE_CYCLES 拍</strong>才改判;中途任何一拍一致即计时清零。<strong>信号名是规定的</strong>——测试台要按名字直接观察它(分层引用,仿真的特权)</td></tr>
+    <tr><td>R2 按下沿脉冲</td><td><code>key_stable</code> 每次 1→0(可靠按下),<code>tick</code> 输出<strong>恰好一个时钟宽</strong>的脉冲;松开沿(0→1)不输出</td></tr>
+    <tr><td>R3 抗抖</td><td>任何短于稳定窗的抖动/毛刺(含"差 20 拍数满"的长毛刺)不得改变判定、不得出 tick</td></tr>
+    <tr><td>R4 参数化</td><td>以上行为对任意 <code>STABLE_CYCLES</code> 成立(三关之关 3 用 50/200/400 验证)</td></tr>
+  </table>
+
+  <h3>动手:先写后看,三关验收</h3>
+  <p>流程:<strong>自己写 debounce.v → 跑课程测试台过三关 → 卡壳按 45 分钟规则展开提示 → 过关后看参考 → 写差异笔记</strong>。测试台 <code>labs/lab02-debounce/tb_debounce.v</code> 已备好:它会扮演一颗<strong>会抖动的按键</strong>(每次按压注入 3~5 次随机弹跳),还会用"差 20 拍数满"的长毛刺刁难你,最后自动判分。判分逻辑别改——它就是裁判。</p>
+  <div class="box box-step"><div class="box-title">跑法(把 sim.tcl 第 8 行的 reference/debounce.v 换成你的文件)</div>
+  <p><code>cd labs/lab02-debounce &amp;&amp; vivado -mode batch -source sim.tcl</code>——终端会滚出 <code>[PASS 关2] 一次按压(含 4 次抖动)→ 恰好 1 个 tick</code> 这样的判词。想看波形:<code>xelab</code> 后用 <code>xsim tb_debounce_sim --gui</code> 开窗口(三步舞见第 1 章)。</p></div>
+  <div class="box box-know"><div class="box-title">三关检查点(全部仿真判定,现象客观)</div>
+  <ul>
+    <li><strong>关 1 · 电平干净</strong>:按压 N 次,<code>key_stable</code> 恰好 N 个干净下沿——抖动零漏网。波形作业:放大抖动区,亲眼看"计时器被抖动按在地上清零重数"的截图(这是消抖心智模型的第二现象)。</li>
+    <li><strong>关 2 · 一按一脉冲</strong>:每次按压恰好 1 个 tick,且脉宽恰好 1 拍(测试台两个断言自动判)。</li>
+    <li><strong>关 3 · 吃参数不吃巧合</strong>:把测试台 <code>STABLE</code> 改成 50 / 400 各重跑一遍,三跑全 PASS。设计对任意窗口成立,才说明你写的是"滤波器",不是"碰巧对的数"。</li>
+  </ul>
+  <p><strong>部分提交规则</strong>:过关 1 就算阶段交付,别硬撑到三关全过才睡觉。</p></div>
+  <div class="box box-step"><div class="box-title">45 分钟规则(回顾)</div>
+  <p>卡壳先自己死磕 45 分钟:翻回原理节、画框图、读报错。仍无进展,才准展开下一级提示。<strong>若两个晚上还没过关 2</strong>:处方是只看提示 1 和 2(框图/骨架),不看提示 3(完整参考)——保住"自己写"的核心体验,参考留到下次。</p></div>
+
+  <h4>提示阶梯(逐级展开,别偷跑)</h4>
+  <details><summary>提示 1(第 45 分钟):框图答案——只有方框和箭头</summary>
+  <div class="flow">
+    <div class="node"><b>key_n</b>(原始按键,会抖)</div>
+    <div class="arrow">↓</div>
+    <div class="node"><b>① 稳定判定</b>:与判定不一致就计时;抖回一致就清零;连续数满 STABLE_CYCLES 拍 → 改判</div>
+    <div class="arrow">↓</div>
+    <div class="node"><b>key_stable</b>(干净电平,不再抖)</div>
+    <div class="arrow">↓</div>
+    <div class="node"><b>② 边沿检测</b>:上一拍照片 &amp; ~本拍 → 1→0 沿,恰好一拍</div>
+    <div class="arrow">↓</div>
+    <div class="node"><b>tick</b>(单周期脉冲)</div>
+  </div>
+  </details>
+  <details><summary>提示 2(第 90 分钟):关键 always 骨架——判断结构在,表达式空着</summary>
+  <pre><code><span class="k">reg</span>        key_stable;   <span class="c">// 判定电平(名字是需求书规定的)</span>
+<span class="k">reg</span> [19:0] cnt;           <span class="c">// 稳定计时器(20 位:装得下 1_000_000)</span>
+
+<span class="k">always</span> @(posedge clk) <span class="k">begin</span>
+    <span class="k">if</span> (!rst_n) <span class="k">begin</span>
+        cnt        &lt;= ____________;   <span class="c">// 复位:判定为"松开",计时归零</span>
+        key_stable &lt;= ____________;
+    <span class="k">end</span>
+    <span class="k">else if</span> (____________ == ____________)   <span class="c">// 信号与判定一致:不用计时</span>
+        cnt &lt;= ____________;
+    <span class="k">else if</span> (cnt == ____________ - 1) <span class="k">begin</span>     <span class="c">// 连续数满稳定窗 → 改判</span>
+        key_stable &lt;= ____________;
+        cnt        &lt;= ____________;
+    <span class="k">end</span>
+    <span class="k">else</span>
+        cnt &lt;= ____________;             <span class="c">// 还没数满:继续数</span>
+<span class="k">end</span>
+
+<span class="c">// ---- 边沿检测(原理节已给全文,抄写并注释)----</span>
+<span class="k">reg</span> key_stable_q;
+<span class="k">always</span> @(posedge clk) key_stable_q &lt;= ____________;
+<span class="k">assign</span> tick = ____________ &amp; ~____________;</code></pre>
+  <p>数轴陷阱预警:<code>cnt == STABLE_CYCLES - 1</code> 那个 <code>-1</code>——从 0 数到 N-1 恰好是 N 拍。差一错误(off-by-one)是计数器电路第一大坑,想清楚再填。</p>
+  </details>
+  <details><summary>提示 3(最后一级):完整参考实现(<code>reference/debounce.v</code>)</summary>
+  <p>展开前自问:三关过了吗?差异笔记是对照用的,不是抄写用的。<code>labs/lab02-debounce/reference/debounce.v</code> 与 <code>reference/key_toggle.v</code> 全文逐行注释,下方"逐行解剖"一节分段讲透。看完必写差异笔记(见下)。</p>
+  </details>
+
+  <h4>交作业(三关截图 + 3 行差异笔记)</h4>
+  <p>三关全 PASS 的终端截图 + "计时器被清零重数"的波形截图,贴进 <code>labs/lab02-debounce/README.md</code> 的记录表。然后写<strong>差异笔记</strong>(模板在 README,至少 3 行):</p>
+  <pre><code>1. 等价:我的 ____ 和参考的 ____ 是同一件事,只是 ____
+2. 我更清晰:____
+3. 我没想到:____</code></pre>
+  <p>"哪里我更清晰"不是自恋题——你的写法真的可能比参考好(参考为了教学,有些地方故意啰嗦)。这一行是写给参考实现作者的课程反馈。</p>
+
+  <h3>参考实现逐行解剖(提示 3 展开后阅读)</h3>
+  <div class="box box-warn"><div class="box-title">闸门 · 没过三关别往下读</div>
+  <p>以下属于提示第 3 级内容。先自己写,过三关,再回来对照——顺序反了,这一章就白买了。</p></div>
+  <h4>第一级:稳定判定(时间滤波器本体)</h4>
+  <pre><code><span class="k">module</span> debounce #(
+    <span class="k">parameter</span> STABLE_CYCLES = 1_000_000      <span class="c">// 20ms × 50MHz</span>
+)(
+    <span class="k">input</span>  <span class="k">wire</span> clk,
+    <span class="k">input</span>  <span class="k">wire</span> rst_n,
+    <span class="k">input</span>  <span class="k">wire</span> key_n,     <span class="c">// 按下 = 0;名字带 _n 提醒"低有效"</span>
+    <span class="k">output</span> <span class="k">wire</span> tick
+);
+    <span class="k">reg</span>        key_stable;  <span class="c">// 判定电平:1=松开,0=按下</span>
+    <span class="k">reg</span> [19:0] cnt;          <span class="c">// 20 位:2^20=1_048_576 &gt; 999_999,装得下</span>
+
+    <span class="k">always</span> @(posedge clk) <span class="k">begin</span>
+        <span class="k">if</span> (!rst_n) <span class="k">begin</span>
+            cnt        &lt;= 20'd0;         <span class="c">// 复位:判"松开",计时归零</span>
+            key_stable &lt;= 1'b1;
+        <span class="k">end</span>
+        <span class="k">else if</span> (key_n == key_stable)
+            cnt &lt;= 20'd0;                <span class="c">// 一致:不用计时。抖回原电平?清零重数!</span>
+        <span class="k">else if</span> (cnt == STABLE_CYCLES - 1) <span class="k">begin</span>
+            key_stable &lt;= key_n;         <span class="c">// 连续唱反调满 100 万拍:改判</span>
+            cnt        &lt;= 20'd0;
+        <span class="k">end</span>
+        <span class="k">else</span>
+            cnt &lt;= cnt + 1'd1;            <span class="c">// 没数满:继续数</span>
+    <span class="k">end</span></code></pre>
+  <p>读法:三条路的优先级从上到下——复位最高;<code>key_n</code> 与判定"一致"就归零待命;"不一致"才进入计时,计满改判。把这个 if 链和图 1 的波形对上:抖动区里 <code>key_n</code> 反复横跳,计时器数两三拍就被清一次零,永远够不着 100 万——<strong>这就是"被按在地上清零重数"</strong>。手指按稳后,100 万拍连续不一致,一鼓作气数满,改判。</p>
+  <p>两个细节值得抠:<strong>(a) 为什么比较 <code>STABLE_CYCLES-1</code></strong>:cnt 从 0 起步,数到 999_999 恰好是第 100 万拍——数轴陷阱;(b) <code>cnt</code> 只在"不一致"期间才数,<strong>计数器本身就是滤波器</strong>,不需要额外的"抖动检测"电路。</p>
+  <h4>第二级:边沿 → 单周期脉冲</h4>
+  <pre><code>    <span class="k">reg</span> key_stable_q;
+    <span class="k">always</span> @(posedge clk) <span class="k">begin</span>
+        <span class="k">if</span> (!rst_n) key_stable_q &lt;= 1'b1;       <span class="c">// 复位:照片也是"松开"</span>
+        <span class="k">else</span>        key_stable_q &lt;= key_stable;  <span class="c">// 每拍拍照片(读旧值!)</span>
+    <span class="k">end</span>
+
+    <span class="k">assign</span> tick = key_stable_q &amp; ~key_stable; <span class="c">// 1→0 沿:恰好一拍为高</span>
+<span class="k">endmodule</span></code></pre>
+  <p>原理节已拆透(<code>&lt;=</code> 读旧值 → 恰好一拍),这里补一句工程习惯:照片寄存器和判定寄存器是<strong>两个 always 块</strong>——一根信号一个驱动源(ch00 铁律二)。想把两件事塞进一个 always 也能写对,但两个块各司其职,以后回炉改造(ch03 就要回炉)时不容易牵一发动全身。</p>
+  <h4>顶层:key_toggle(消抖 + T 触发器)</h4>
+  <pre><code><span class="k">module</span> key_toggle (
+    <span class="k">input</span> <span class="k">wire</span> clk,     <span class="c">// N18</span>
+    <span class="k">input</span> <span class="k">wire</span> key,     <span class="c">// P14(按下=0)——lab01 里它当复位,今天转正</span>
+    <span class="k">output</span> <span class="k">reg</span> led      <span class="c">// R14</span>
+);
+    <span class="k">wire</span> tick;
+    debounce #(.STABLE_CYCLES(1_000_000)) u_debounce (   <span class="c">// 例化 + 拧真值参数</span>
+        .clk(clk), .rst_n(1'b1), .key_n(key), .tick(tick)
+    );
+
+    <span class="k">always</span> @(posedge clk) <span class="k">if</span> (tick) led &lt;= ~led;  <span class="c">// T 触发器</span>
+<span class="k">endmodule</span></code></pre>
+  <p>把 tick 变成"看得见"的东西,用的是<strong>翻转触发器(Toggle Flip-Flop,T 触发器)</strong>:每收到一个脉冲,LED 翻转一次。它就是 tick 的"可见化仪表"——上游每按一次只放行一个脉冲,LED 才能做到按一次翻一次。<strong>消抖器的验收,最终由指尖裁决。</strong></p>
+  <div class="box box-know"><div class="box-title">推演 · rst_n 为什么接常 1?上电会不会乱翻?</div>
+  <p>板上只有一颗 PL 按键,今天它是主角,没有第二颗给电路当复位(唯一的 RST 是整芯片复位,不能当信号用)。所以顶层把 <code>rst_n</code> 接死 1。那上电呢?FPGA 配置完成时所有触发器自动为 0:<code>key_stable=0</code>(判"按下"),而手指没按(物理是松开)——判定与事实不符,计时器开始数,20ms 后 <code>key_stable</code> 改判为 1。注意这是 0→1 的<strong>松开沿</strong>,tick 只报按下沿——<strong>LED 一个都不会误翻</strong>。推演一遍,放心上板(这也是"画不出来就别写"的微观版:想不清楚上电状态,就别让电路离开仿真)。</p></div>
+
+  <h3>上板:对比验收</h3>
+  <div class="box box-step"><div class="box-title">步骤 · 两版都烧,差异长在指尖</div>
+  <ol>
+    <li>build.tcl 的 <code>variant</code> 改回 <code>reference</code>,重新构建 + 烧写(裸版的乱翻现象此刻还记得吧);</li>
+    <li><strong>验收三连</strong>:正常按 50 次,LED 翻 50 次,零失误;快速连按 5 次,恰好翻 5 次;按住不放 3 秒,只翻 1 次;</li>
+    <li>对照记忆:同样的手指,同样的按键,20 行裸版乱翻,消抖版服服帖帖——<strong>差异只隔一层"数满 100 万拍"</strong>;</li>
+    <li>把两版现象记进 README 的现象记录表(交作业的一部分)。</li>
+  </ol></div>
+  <div class="box box-warn"><div class="box-title">警告 · 本课你的手指整天在按键区</div>
+  <p>丝印 <strong>PL_KEY</strong>(P14)才是我们的按键;丝印 <strong>RST</strong> 的那颗是<strong>整芯片硬复位</strong>:按一下,PL 里你的电路全部消失,Debian 跟着重启。消抖实验按错一次 = 现象全没 + 重烧。肌肉记忆从今天练:按之前瞄一眼丝印。(附录 A 有惨案专页。)</p></div>
+  <div class="box box-know"><div class="box-title">选做 · 自由发挥(现象可预测)</div>
+  <p>把 R14 改接到稳定计时器 <code>cnt</code> 的高位(比如 <code>cnt[19]</code>)之类的地方看看?可以,但先写预测:按住按键期间,计时器数到 100 万要 20ms,<code>cnt[19]</code> 在这 20ms 里翻转数次——LED 呈现<strong>极暗的快速闪烁</strong>(又是眼睛在平均!ch01 的知识回来串门)。现象对得上预测才许算"玩过了"。</p></div>
+
+  <h3>常见坑</h3>
+  <div class="box box-warn"><div class="box-title">坑 1 · 裸版"看起来也正常"?</div>
+  <p>抖动是概率现象:有的按键组合恰好在采样沿之间弹完,裸版偶尔也"按一次翻一次"。别被一次正常骗了——多按、快按、轻按。工程结论同理:<strong>"从来没错过"不等于"不会错"</strong>,这句话下一章还会回来(而且是带着公式回来)。</p></div>
+  <div class="box box-warn"><div class="box-title">坑 2 · 测试台的 20ms 变成 20ns(假通过)</div>
+  <p>ch01 预告的坑到了:测试台里写 <code>#20_000_000</code> 想表示 20ms,若 <code>timescale</code> 是 <code>1ns/1ps</code>,它确实等于 20ms——但如果你想仿真"缩小的稳定窗"却忘了同步改 DUT 参数,就会看到假 PASS/假 FAIL。本课测试台<strong>所有时长都用"时钟拍数"写</strong>(<code>repeat (…) @(posedge clk)</code>),换参数换板子都不用改——学走这个习惯。</p></div>
+  <div class="box box-warn"><div class="box-title">坑 3 · tick 报了松开沿:按一次翻两次</div>
+  <p>如果你的边沿检测写成 <code>~key_stable_q &amp; key_stable</code>(0→1,松开沿也报),现象很直白:按一次 LED 翻<strong>两次</strong>(按下翻一次,松开又翻一次)。看到"翻两次"先查极性——需求书 R2 规定只报按下沿。</p></div>
+  <div class="box box-warn"><div class="box-title">坑 4 · "数满就锁存"的误解</div>
+  <p>常见错误实现:计时器只管累加、不管中途一致不一致("累计满 100 万就改判")。抖动期间的碎片时间加起来也能凑满 100 万拍——毛刺被当成稳定按压,<strong>乱翻从正门回来</strong>。滤波器的灵魂是"连续"二字:抖回原电平哪怕一拍,清零重数。这也是自测 A2 的题。</p></div>
+
+  <h3>小结</h3>
+  <div class="box box-win"><div class="box-title">本章一句话</div>
+  <p><strong>时间在硬件里的唯一形态是计数:20ms = 数满 100 万拍;"稳定"= 连续,抖回就清零。边沿检测"上一拍 &amp; ~本拍"靠非阻塞读旧值,产出全课程最重要的惯用法——单周期脉冲 tick。</strong>你的第一件自产电路,三关全过,板上 50 次零失误:身份转变完成。</p></div>
+  <div class="box box-know"><div class="box-title">本章新词卡(已登记附B 术语表)</div>
+  <ul>
+    <li>抖动(Bounce)/ 消抖(Debounce)/ 毛刺(Glitch)</li>
+    <li>单周期脉冲(Single-cycle Pulse)/ 使能脉冲(Enable Pulse,tick)</li>
+    <li>边沿检测(Edge Detection)/ 翻转触发器(Toggle Flip-Flop)</li>
+    <li>参数(Parameter)/ 数轴陷阱(off-by-one,非缩写但值得收录)</li>
+    <li>同步器(Synchronizer)——预告:下一章主角</li>
+  </ul></div>
+
+  <h3>三档自测</h3>
+  <h4>A · 概念(用人话说)</h4>
+  <p>1. "20 毫秒"在电路里是什么?用一句话说给软件工程师听。</p>
+  <p>2. 为什么消抖计时器要"抖回原电平就清零",而不是"累计时间数满就改判"?</p>
+  <details><summary>看答案</summary>
+  <p>1. 50MHz 时钟下的一百万拍——电路不懂毫秒,只懂数拍子。<br>
+  2. 抖动期间信号反复横跳,碎片时间累加也能凑满窗口,毛刺会被误判成"稳定按压"。清零强制要求<strong>连续</strong>稳定,这才是滤波。</p></details>
+
+  <h4>B · 预测(先猜,再跑)</h4>
+  <p>1. 把 <code>STABLE_CYCLES</code> 从 1_000_000 改成 100(= 2µs),烧上板会怎样?</p>
+  <p>2. 按住按键 3 秒不放,tick 出几个?LED 翻几次?</p>
+  <details><summary>看答案</summary>
+  <p>1. 滤波窗口比很多抖动毛刺还短:间隔大于 2µs 的弹跳会被当成"稳定按压"放行——<strong>裸版的乱翻部分回归</strong>(概率性的,快速按最明显)。结论:窗口必须显著大于最长毛刺。<br>
+  2. tick 恰好 <strong>1</strong> 个:改判只发生一次,之后信号与判定一致,计时器归零待命。LED 翻 1 次。(这正是验收三连的第三连。)</p></details>
+
+  <h4>C · 排错(找 bug,说现象)</h4>
+  <p>同学把边沿检测写成了一根"电平线",还振振有词:"按下期间输出 1,不是更直观吗?"</p>
+  <pre><code><span class="k">assign</span> tick = ~key_stable;   <span class="c">// 按下期间,每拍都是 1</span></code></pre>
+  <p>烧上板,按住按键:LED 呈现什么?为什么?</p>
+  <details><summary>看答案</summary>
+  <p>LED <strong>半亮</strong>。因为下游 T 触发器每个时钟沿都看到"脉冲",LED 以 25MHz 翻转——人眼一平均,又是"半亮"!ch01 的悬案知识直接回收:数字电路没有半亮,只有高速翻转。<strong>电平是状态,脉冲是事件;把状态当事件用,下游就会每拍都"响应"。</strong>这就是边沿检测存在的理由。</p></details>
+
+  <div class="box box-know"><div class="box-title">下一课预告 · 埋雷(郑重)</div>
+  <p>你的消抖器把 P14 这根"野信号"直接接进了 50MHz 的世界——它 99.9% 的时候乖得像只猫。<strong>剩下那 0.1% 呢?</strong>下一章:亚稳态——时间对不齐的灾难。你的 Lab02 将被"回炉重审",而且这次原告席上坐着数学。</p></div>
+
+  <div class="pager">
+    <a href="ch01-sim.html">← 上一章:仿真入门</a>
+    <a href="ch03-cdc.html">下一章:亚稳态与 CDC →</a>
+  </div>
+</main>
+</body>
+</html>

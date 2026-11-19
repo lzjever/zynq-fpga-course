@@ -31,13 +31,13 @@ wait_on_run impl_1
 launch_runs impl_1 -to_step write_bitstream -jobs 8
 wait_on_run impl_1
 
-# 收尾:打印时序与资源(资源账本——第 4 章会回头看这条曲线)
+# 收尾:打开实现结果,打印时序与资源(资源账本——第 4 章会回头看这条曲线)
+open_run impl_1                       ;# 报告类命令都要先"打开"实现结果才能查
 set wns [get_property SLACK [get_timing_paths]]
+report_utilization -file ./$proj/utilization.rpt
 puts "=============================="
 puts " 版本   : ${variant}"
 puts " 时序余量 WNS: ${wns} ns (≥0 即达标)"
 puts " 比特流: [glob ./$proj/*.runs/impl_1/*.bit]"
-puts " 资源(记进 README 账本):"
-catch { report_utilization -file ./$proj/utilization.rpt }
-puts "   详见 ${proj}/utilization.rpt"
+puts " 资源(记进 README 账本): 详见 ${proj}/utilization.rpt"
 puts "=============================="

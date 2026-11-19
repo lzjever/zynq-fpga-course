@@ -63,7 +63,7 @@ module axi_lite_slave #(
             aw_seen <= 1'b0;
             w_seen  <= 1'b0;
             reg0    <= 32'd0;
-            bvalid  <= 1'b0;
+            s_axi_bvalid <= 1'b0;
         end else begin
             // 各通道各自记账:成交拍锁存地址/数据
             if (s_axi_awvalid && s_axi_awready) begin
@@ -79,11 +79,11 @@ module axi_lite_slave #(
                 reg0    <= wbuf;          // ← 写 = 存值(单寄存器不译码:任何地址都落到 reg0,
                 aw_seen <= 1'b0;          //    多寄存器版见 lab09 的 case 译码)
                 w_seen  <= 1'b0;
-                bvalid  <= 1'b1;          // 举回执,等主机 bready
+                s_axi_bvalid <= 1'b1;     // 举回执,等主机 bready
             end
             // 回执成交后放下(铁律:bvalid 一旦举起,不得撤销,只能等成交)
-            if (bvalid && s_axi_bready)
-                bvalid <= 1'b0;
+            if (s_axi_bvalid && s_axi_bready)
+                s_axi_bvalid <= 1'b0;
         end
     end
 
@@ -94,14 +94,14 @@ module axi_lite_slave #(
 
     always @(posedge aclk) begin
         if (!aresetn) begin
-            rvalid <= 1'b0;
-            rdata  <= 32'd0;
+            s_axi_rvalid <= 1'b0;
+            s_axi_rdata  <= 32'd0;
         end else begin
             if (s_axi_arvalid && s_axi_arready) begin
-                rvalid <= 1'b1;
-                rdata  <= reg0;             // ← 读 = 回值(把寄存器**现值**端出去)
-            end else if (rvalid && s_axi_rready) begin
-                rvalid <= 1'b0;             // 成交后放下
+                s_axi_rvalid <= 1'b1;
+                s_axi_rdata  <= reg0;       // ← 读 = 回值(把寄存器**现值**端出去)
+            end else if (s_axi_rvalid && s_axi_rready) begin
+                s_axi_rvalid <= 1'b0;       // 成交后放下
             end
         end
     end

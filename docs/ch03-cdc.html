@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 3 章 · 亚稳态:时间的灾难 — Zynq FPGA 从零到实战</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+/* 页内插图(ch00 同款画法,零依赖) */
+.fig{background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px;margin:20px 0;text-align:center}
+.fig svg{max-width:100%}
+.fig .cap{font-size:13px;color:var(--ink-soft);margin-top:10px}
+.wire{stroke:#1d5c8a;stroke-width:2;fill:none}
+.wave{stroke:#b3541e;stroke-width:2.5;fill:none}
+.clkw{stroke:#4a5568;stroke-width:2.5;fill:none}
+.dash{stroke:#5b3e96;stroke-width:1.5;fill:none;stroke-dasharray:5,4}
+.boxf{fill:#fdfcfa;stroke:#b3541e;stroke-width:2}
+.lbl{font:13px "Noto Sans SC",sans-serif;fill:#1a2332}
+.lbl2{font:12px "Noto Sans SC",sans-serif;fill:#4a5568}
+.mono{font:12.5px "JetBrains Mono",Consolas,monospace;fill:#4a5568}
+.hot{fill:#b3541e;font-weight:bold}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <span class="chip">ZYNQ · FPGA</span>
+    <h1>从零到实战</h1>
+    <p>Verilog · Vivado · Z7-Nano</p>
+  </div>
+  <nav>
+    <a href="index.html"><span class="num">00</span>封面 · 课程地图</a>
+    <a href="ch00-verilog101.html"><span class="num">01</span>Verilog 101</a>
+    <a href="ch01-sim.html"><span class="num">02</span>仿真入门</a>
+    <a href="ch02-debounce.html"><span class="num">03</span>Lab02 按键消抖</a>
+    <a href="ch03-cdc.html" class="active"><span class="num">04</span>亚稳态与 CDC</a>
+    <a href="ch04-vivado.html"><span class="num">05</span>Vivado 幕后</a>
+    <a href="ch05-pwm.html"><span class="num">06</span>PWM 呼吸灯</a>
+    <a href="ch06-uart-tx.html"><span class="num">07</span>UART 发送器</a>
+    <a href="ch07-uart-rx.html"><span class="num">08</span>UART 自环回</a>
+    <a href="ch08-axi.html"><span class="num">09</span>AXI 总线</a>
+    <a href="ch09-merge.html"><span class="num">10</span>PS-PL 会师</a>
+    <a href="ch10-capstone.html"><span class="num">11</span>毕业设计</a>
+    <a href="appendix-board.html"><span class="num">附A</span>板卡手册</a>
+    <a href="appendix-glossary.html"><span class="num">附B</span>术语表</a>
+    <a href="appendix-cheatsheet.html"><span class="num">附C</span>命令速查</a>
+  </nav>
+  <footer>硬件:Z7-Nano R20 · XC7Z020<br>软件:Vivado 2026.1 免费档<br>姊妹篇:主线 Linux 手册</footer>
+</aside>
+<main class="main">
+  <div class="chapter-tag">CHAPTER 03</div>
+  <h2 class="title">亚稳态:时间的灾难</h2>
+  <p class="subtitle">触发器也有"来不及看清楚"的瞬间——给 ch02 的悬案翻案,顺便立下 FPGA 设计第一条军规。</p>
+
+  <h3>1 · 钩子:ch02 的卷宗里,还有个从犯在逃</h3>
+  <p>上一章裸版对比实验的结论是:按一下 LED 乱翻,主犯是<strong>机械抖动</strong>,你的消抖器已经把它拿下归案。但当时我们还留了一笔账:</p>
+  <div class="box box-know"><div class="box-title">知识 · ch02 留下的那笔账</div>
+  <p>裸版乱翻其实有<strong>两个因子</strong>:抖动是主犯(人眼可见、每按必演),但还有个阴险的从犯——你把 P14 这根<strong>和 50MHz 时钟毫无关系的信号</strong>直接接进了触发器。它 99.9% 的时候乖得像只猫,剩下那 0.1% 的作案,消抖器拦不住,仿真器也看不见。这一章,就是来结这个案的。</p></div>
+  <p>你大概一次都没遇过它——概率上你大概率遇不上。但"我按了 50 次没出事"和"它不会出事"是两句话。这章要干的四件事:</p>
+  <ol>
+    <li>搞懂它是什么(亚稳态)、为什么会发生(采样窗口);</li>
+    <li>在仿真里亲眼看见它的"多比特兄弟"——<strong>数值撕裂</strong>(确定性复现,不靠运气);</li>
+    <li>承认仿真器的<strong>盲区</strong>:亚稳态本身,仿真器演不了;</li>
+    <li>所以按行业军规办事:<strong>打两拍</strong>,回炉你的 lab02 成 v2,上板验收。</li>
+  </ol>
+
+  <h3>2 · 这一章要学会什么</h3>
+  <ul>
+    <li>能用自己的话说出:异步信号为什么可能让触发器采样失败,失败时输出是什么样子;</li>
+    <li>能给出建立时间/保持时间的人话定义,并指出采样窗口在哪里;</li>
+    <li>能解释"撕裂":多比特信号跨域时,为什么每个位单独看都合法,合起来却是错数;</li>
+    <li>能说出打两拍同步器的原理、两个局限(只压概率不压延迟;一次只救 1 位);</li>
+    <li>能把 lab02 回炉成 v2(同步 → 边沿 → 消抖),板上按 50 次零误翻,仿真压测 10 万次零误脉冲;</li>
+    <li>能对 MTBF 做一次数量级粗算,体会"每加一拍,指数翻倍"。</li>
+  </ul>
+
+  <h3>3 · 原理一:你的按键和你的时钟,素不相识</h3>
+  <p>先定义两个词。<strong>异步信号(Asynchronous Signal)</strong>:和你设计的时钟没有任何时间关系的输入信号——P14 上的按键就是,它的按下时刻由你的手指决定,和 50MHz 晶振的节拍毫无约定。相对地,我们把"听同一个时钟号令的所有触发器"称为一个<strong>时钟域(Clock Domain)</strong>。信号从一个时钟域进入另一个时钟域,就叫<strong>跨时钟域(Cross-Domain Crossing, CDC)</strong>。</p>
+  <p>你的按键信号要进入 50MHz 时钟域,唯一的入口是触发器:每个时钟上升沿,"咔嚓"拍一张照片。问题就出在这张照片上——触发器拍照不是零成本的,它对被拍对象有一个要求:</p>
+  <p><strong>在时钟沿的前后一小段时间里,输入必须保持稳定。</strong></p>
+
+  <h3>4 · 原理二:采样窗口——建立时间与保持时间</h3>
+  <p>触发器内部是若干个门在"接力"。要稳定地存住一个值,输入得在时钟沿<strong>之前</strong>一小段时间就到位(给接力留出提前量),并且在时钟沿<strong>之后</strong>再稳住一小会儿(最后一个门还没松手)。这两段要求就是:</p>
+  <ul>
+    <li><strong>建立时间(Setup Time, t<sub>su</sub>)</strong>:时钟沿<strong>前</strong>,输入必须已经稳定的最短时间;</li>
+    <li><strong>保持时间(Hold Time, t<sub>h</sub>)</strong>:时钟沿<strong>后</strong>,输入必须继续稳定的最短时间。</li>
+  </ul>
+  <p>两段时间拼成的窗口,就是触发器的<strong>采样窗口</strong>——期间输入变了,就是违反时序(violation)。</p>
+
+  <div class="fig">
+  <svg viewBox="0 0 820 260" xmlns="http://www.w3.org/2000/svg">
+    <!-- clk:唯一画出的上升沿在 x=470 -->
+    <text class="lbl" x="30" y="38">clk</text>
+    <polyline class="clkw" points="90,50 470,50 470,20 590,20 590,50 790,50"/>
+    <!-- 采样沿 -->
+    <line class="dash" x1="470" y1="10" x2="470" y2="240"/>
+    <text class="lbl hot" x="480" y="24">时钟沿(拍照瞬间)</text>
+    <!-- setup/hold 窗口 -->
+    <rect x="410" y="60" width="60" height="140" fill="#b3541e" opacity="0.12"/>
+    <rect x="470" y="60" width="60" height="140" fill="#1d5c8a" opacity="0.12"/>
+    <text class="lbl hot" x="398" y="78">建立时间 t_su</text>
+    <text class="lbl" x="478" y="78">保持时间 t_h</text>
+    <!-- D:1 → 恰好在建立窗口里往下翻 -->
+    <text class="lbl" x="30" y="148">D</text>
+    <polyline class="wave" points="90,130 440,130 465,165 790,165"/>
+    <text class="lbl2" x="180" y="120">稳定的 1</text>
+    <text class="lbl2" x="540" y="158">0(但它在窗口里才翻!)</text>
+    <!-- Q:拍糊了 -->
+    <text class="lbl" x="30" y="218">Q</text>
+    <polyline class="wave" points="90,210 470,210 488,192 505,200 522,190 540,199 560,192 580,199 600,193 640,196 700,224 790,224" opacity="0.9"/>
+    <text class="lbl2" x="510" y="180">悬在半空晃悠…(倒向哪边?不知道)</text>
+    <text class="lbl2" x="700" y="240">最后随便倒向一边</text>
+  </svg>
+  <div class="cap">图 1 · D 在采样窗口(橙色=建立、蓝色=保持)内翻转 → 违反时序 → Q 拍出一张"糊"的照片</div>
+  </div>
+
+  <p>同步设计里,这个要求由工具自动满足(下一章的 WNS 就是工具给你的检查回执)。但异步信号不一样——它变化的时间是随机的,总有一些变化恰好落进采样窗口。撞上了会怎样?这就是本章的主角登场。</p>
+
+  <h3>5 · 原理三:亚稳态——悬在中间的电压</h3>
+  <p><strong>亚稳态(Metastability)</strong>:触发器在采样窗口内遇到输入翻转时,输出不再干净地是 0 或 1,而是<strong>悬在高低电平之间的某个中间电压上</strong>,像铅笔尖朝下立在桌面上——立是立住了,但一阵风(电路噪声)就能吹倒,倒向哪边由噪声决定,与输入原本想表达的值无关。</p>
+
+  <div class="fig">
+  <svg viewBox="0 0 820 260" xmlns="http://www.w3.org/2000/svg">
+    <text class="lbl" x="30" y="30">同一次"D 在窗口里翻转",输出的三种结局(掷硬币)</text>
+    <line class="dash" x1="150" y1="40" x2="150" y2="225"/>
+    <text class="mono" x="95" y="245">违规瞬间</text>
+    <!-- A:没出事(其实这是没撞进窗口的正常翻转,给个参照) -->
+    <text class="mono" x="35" y="72">A</text>
+    <polyline class="wave" points="60,55 60,55 90,55 90,90 800,90" opacity="0.55"/>
+    <text class="lbl2" x="250" y="82">A 撞都没撞上(99.9% 的日子):干净利落 1→0</text>
+    <!-- B:悬了一会,倒向本来要去的 0 -->
+    <text class="mono" x="35" y="127">B</text>
+    <polyline class="wave" points="60,115 150,115 170,132 300,130 340,150 800,150"/>
+    <text class="lbl2" x="410" y="140">悬在中间晃了会儿,收敛到 0(迟但没迟到出事)</text>
+    <!-- C:倒错方向 / 迟迟不决 -->
+    <text class="mono" x="35" y="192">C</text>
+    <polyline class="wave" points="60,175 150,175 175,192 480,190 530,192 590,177 800,177"/>
+    <text class="lbl2" x="410" y="212">悬太久甚至倒回 1(值错了)——下一拍来时它可能还悬着,错误开始传染</text>
+  </svg>
+  <div class="cap">图 2 · 亚稳态的收敛像掷硬币:倒向哪边、多久倒,都不知道。B 还算幸运,C 才是事故现场</div>
+  </div>
+
+  <p>两个关键认识,决定后面所有对策:</p>
+  <ul>
+    <li><strong>亚稳态无法消除</strong>。它是物理,不是 bug。异步信号和时钟的对齐是随机的,采样窗口永远存在,总会有撞上的那一次。能做的只有把<strong>后果的概率压到可忽略</strong>。</li>
+    <li><strong>它传染</strong>。悬在中间的电压如果直接喂给下一级逻辑,下一级可能把它读成 0、读成 1、或者自己也悬住——同一个糊值,不同下游读出不同结果,这是比"读错一位"更诡异的事故来源。</li>
+  </ul>
+
+  <h4>先看它的"多比特兄弟":撕裂</h4>
+  <p>单比特亚稳态是概率事件,演示要靠运气。但多比特信号跨时钟域有一个<strong>确定性的亲戚</strong>,可以先看:一个 4 位二进制计数器从 7(0111)变到 8(1000)时,<strong>四位同时翻转</strong>。真实芯片里,这四根线从计数器走到采样触发器,路径长短不一(术语叫<strong>偏斜(Skew)</strong>,布线造成的不齐),到达自然有先有后。如果采样沿恰好落在这段"新旧混杂"的窗口里,拍到的就是<strong>半个旧值拼半个新值</strong>——<strong>数值撕裂(value tearing)</strong>:</p>
+
+  <div class="fig">
+  <svg viewBox="0 0 820 320" xmlns="http://www.w3.org/2000/svg">
+    <text class="mono" x="30" y="24">计数 7 (0111) → 8 (1000):四位同时翻转,但四根导线不等长(#1~#4 是注入的延迟)</text>
+    <!-- 时间参考线 -->
+    <line class="dash" x1="140" y1="50" x2="140" y2="245"/>
+    <line class="dash" x1="260" y1="50" x2="260" y2="245"/>
+    <line class="dash" x1="380" y1="50" x2="380" y2="245"/>
+    <line class="dash" x1="500" y1="50" x2="500" y2="245"/>
+    <line class="dash" x1="620" y1="50" x2="620" y2="245"/>
+    <text class="mono" x="120" y="262">t=0 翻转</text>
+    <text class="mono" x="238" y="262">+1ns</text>
+    <text class="mono" x="358" y="262">+2ns</text>
+    <text class="mono" x="478" y="262">+3ns</text>
+    <text class="mono" x="598" y="262">+4ns</text>
+    <!-- clk_dst 采样沿,落在 +1~+2ns 之间 -->
+    <line x1="320" y1="40" x2="320" y2="250" style="stroke:#b3541e;stroke-width:2.5;stroke-dasharray:5,4"/>
+    <text class="lbl hot" x="252" y="34">clk_dst 采样沿</text>
+    <!-- b3:低位在 y=85,高位在 y=62;0→1 -->
+    <text class="mono" x="30" y="80">b3 (#1)</text>
+    <polyline class="wave" points="100,85 260,85 280,62 790,62"/>
+    <text class="lbl2" x="660" y="54">0→1,先到</text>
+    <!-- b2:1→0 -->
+    <text class="mono" x="30" y="130">b2 (#2)</text>
+    <polyline class="wave" points="100,112 380,112 400,135 790,135"/>
+    <text class="lbl2" x="660" y="130">1→0,在路上</text>
+    <!-- b1:1→0 -->
+    <text class="mono" x="30" y="180">b1 (#3)</text>
+    <polyline class="wave" points="100,162 500,162 520,185 790,185"/>
+    <text class="lbl2" x="660" y="180">还在路上</text>
+    <!-- b0:1→0 -->
+    <text class="mono" x="30" y="230">b0 (#4)</text>
+    <polyline class="wave" points="100,212 620,212 640,235 790,235"/>
+    <text class="lbl2" x="660" y="230">押后最久</text>
+    <!-- 采样结果 -->
+    <text class="lbl" x="30" y="292">采样沿处读到:b3=新(1) + b2、b1、b0=旧(1,1,1) = 1111 = <tspan class="hot">15</tspan></text>
+    <text class="lbl2" x="30" y="312">——既不是 7 也不是 8。这就是数值撕裂:每位都"合法",拼起来是错的</text>
+  </svg>
+  <div class="cap">图 3 · 撕裂的诞生:采样沿落在"高位已到、低位未走"的窗口 → 拍到 1111 = 15</div>
+  </div>
+
+  <p>撕裂比单比特亚稳态"亲民"得多:它是<strong>确定性的</strong>(窗口就在那里,采样沿扫过去总会撞上),所以在仿真里就能复现——这正是下面动手环节的主菜。记住这个画面,7→8 的路上会路过 15,回头 15→0 的路上还会路过 7(仿真实测,两发都能抓到)。</p>
+
+  <h3>6 · 动手一:撕裂仿真(40 分钟,本 Lab 主菜)</h3>
+  <p>位置:<code>labs/lab03-cdc/</code>。先交代一个坑,这也是本实验的灵魂:</p>
+  <div class="box box-warn"><div class="box-title">警告 · 理想 RTL 仿真里,计数器"永远不会"撕裂</div>
+  <p>Verilog 的非阻塞赋值让计数器各位在<strong>同一时间片内原子更新</strong>。目的时钟的采样沿无论落在哪,读到的要么全旧、要么全新——拍频扫的是采样相位,扫不出"半新半旧"。真实世界的撕裂来自各位布线延迟不等,而理想仿真模型里根本没有布线。所以本实验<strong>必须由 TB 显式注入各位延迟</strong>(给每一位接一根不等长的"导线"),把布线偏斜模拟出来。这不叫作弊——这正是"知道仿真器缺什么,就补什么"的工程能力。</p></div>
+
+  <h4>tear_demo.v:一对双胞胎计数器</h4>
+  <pre><code><span class="c">// labs/lab03-cdc/tear_demo.v(节选;完整文件带逐行注释)</span>
+<span class="k">module</span> tear_demo (
+    <span class="k">input</span>  <span class="k">wire</span>       clk_src,   <span class="c">// 源时钟域:两个计数器活在这里</span>
+    <span class="k">output</span> <span class="k">reg</span>  [3:0] bin_q,     <span class="c">// 二进制计数输出(未防护,等着被撕)</span>
+    <span class="k">output</span> <span class="k">reg</span>  [3:0] gray_q     <span class="c">// 格雷码计数输出(对照品)</span>
+);
+    <span class="c">// 格雷码(Gray Code)变换:右移 1 位再异或自己。</span>
+    <span class="c">// 性质:相邻数值只差 1 位——这是它的全部魔法。</span>
+    <span class="k">wire</span> [3:0] bin_gray = (bin_q &gt;&gt; 1) ^ bin_q;
+
+    <span class="k">reg</span> pace = 1'b0;                      <span class="c">// 每 2 拍才 +1(让相邻变化隔 40ns,</span>
+    <span class="k">always</span> @(posedge clk_src) pace &lt;= ~pace; <span class="c">//  撕裂窗口不重叠,判据才干净)</span>
+
+    <span class="k">always</span> @(posedge clk_src)
+        <span class="k">if</span> (pace) <span class="k">begin</span>
+            bin_q  &lt;= bin_q + 1'd1;         <span class="c">// 0,1,2,...,15,0,...</span>
+            gray_q &lt;= bin_gray;             <span class="c">// 跟着走,每步恰好翻 1 位</span>
+        <span class="k">end</span>
+<span class="k">endmodule</span></code></pre>
+  <p><strong>格雷码(Gray Code)</strong>是二进制的亲戚:相邻两个数值的编码<strong>恰好只差一位</strong>(0→1→2→3 的格雷码是 0000→0001→0011→0010)。计数器每步只动一位,跨域的每一根线上"新旧混杂"不再可能拼出怪值——采样要么旧值要么新值,都是合法计数。</p>
+
+  <h4>tear_tb.v:延迟注入 + 三路对照</h4>
+  <pre><code><span class="c">// 两个"互不相认"的时钟:同样标称 50MHz,周期差 0.3ns。</span>
+<span class="c">// 采样沿会在源周期里缓缓扫动(每拍移 0.3ns),总会撞进撕裂窗口。</span>
+<span class="k">always</span> #10.00 clk_src = ~clk_src;    <span class="c">// 周期 20.00ns</span>
+<span class="k">always</span> #9.85  clk_dst = ~clk_dst;    <span class="c">// 周期 19.70ns</span>
+
+<span class="c">// ---------- 灵魂:给每一位接一根"不等长的导线" ----------</span>
+<span class="c">// 延迟故意反着排:最高位最短、最低位最长——于是 7→8 的路上,</span>
+<span class="c">// 采样沿会先看到高位已变、低位未变 → 抓到 1111 = 15。</span>
+<span class="k">assign</span> #4 bin_skew[0] = bin_q[0];    <span class="c">// 最低位:绕最远的导线</span>
+<span class="k">assign</span> #3 bin_skew[1] = bin_q[1];
+<span class="k">assign</span> #2 bin_skew[2] = bin_q[2];
+<span class="k">assign</span> #1 bin_skew[3] = bin_q[3];    <span class="c">// 最高位:抄近道</span>
+
+<span class="k">assign</span> #4 gray_skew[0] = gray_q[0];  <span class="c">// 格雷码吃完全相同的延迟</span>
+<span class="c">// ...(#3/#2/#1 同上)</span>
+
+<span class="k">wire</span> [3:0] bin_clean = bin_q;        <span class="c">// 零延迟对照:理想 RTL 的样子</span></code></pre>
+  <p>三路信号被同一个 <code>clk_dst</code> 域的触发器采样,检测器盯着每个新样本:计数器 40ns 才 +1,而相邻采样各自的"视野"(含偏斜)只有 22.7ns 宽,装不下两次 +1——所以<strong>合法样本 = 上一拍值,或上一拍值+1</strong>,其他任何值都是撕裂。跑起来(XSIM 三步舞,命令卡在 README):</p>
+  <pre><code>cd labs/lab03-cdc
+xvlog tear_demo.v tear_tb.v
+xelab -debug typical tear_tb -s tear_tb_sim
+xsim tear_tb_sim -tclbatch sim.tcl</code></pre>
+
+  <div class="box box-win"><div class="box-title">成果 · 实测输出(约 1 秒跑完)</div>
+  <pre><code>[1133 ns] 撕裂! 上一拍 11 → 本拍 13   (合法值只有 11 或 12)
+[1152 ns] 撕裂! 上一拍 13 → 本拍 12   (合法值只有 13 或 14)
+[2571 ns] 撕裂! 上一拍 15 → 本拍 7    (合法值只有 15 或 0)
+===================================================
+ 阶段一 · 撕裂统计(共 2028 个有效采样)
+   ① 二进制 + 延迟注入 : 86 个撕裂样本   ← 该撕的,撕了
+   ② 格雷码 + 延迟注入 : 0 个撕裂样本   ← 对照组,纹丝不动
+   ③ 二进制 + 零延迟   : 0 个撕裂样本   ← 理想仿真的假象
+===================================================</code></pre>
+  <p>86 次,平均二十几个采样就撕一次;<code>15 → 7</code> 那发正是图 3 的镜像(15→0 四位同变,高位先走)。而 ②③ 两路各喂了同样的时钟、同样的采样,一次都没撕——②靠的是格雷码"每步一位"的天性;③则是警告框里说的"理想假象"。用 <code>xsim tear_tb_sim -gui</code> 打开波形,按 README 的三个截图点位各截一张图。</p></div>
+
+  <h3>7 · 动手二:仿真器的盲区——X 演不出收敛</h3>
+  <p>有人会想:那我给同步器第一拍强行注入一个 X(未知态),看看它两拍后收敛到 0 还是 1?想法很好,TB 里也真能这么干(<code>force</code>,下一行代码)。tear_tb 的阶段二就演了这一出:强制第一拍输出为 X,然后等两拍——</p>
+  <pre><code> 盲区演示: force q1 = X 两拍后, q2 = x
+ (物理世界会收敛到 0/1;四态仿真永远 X —— 安全性仿真不出来)</code></pre>
+  <p><strong>X 进,X 出。</strong>四态仿真(Verilog 的 0/1/X/Z 四个值)里的 X 是"逻辑上的未知",它没有物理、没有电压、不会自己倒向 0 或 1——只会原样传染给下一个触发器。物理世界的亚稳态是"悬在中间的<em>电压</em>",噪声会推它收敛;仿真里的 X 是个标签,谁也不推它。把上面两件事合起来:</p>
+  <div class="box box-warn"><div class="box-title">警告 · 仿真器的盲区(两条)</div>
+  <p>① 零延迟理想仿真里多比特跨域<strong>看不到撕裂</strong>(必须手工注入偏斜);② 强制 X <strong>演不出亚稳态收敛</strong>(X 只传染不收敛)。结论:<strong>"同步器安全"这件事,仿真证明不了。</strong>仿真能证功能对错,证不了概率安全。所以工程上不靠实验证明安全,而是直接上<strong>保险</strong>——这就是打两拍的地位:不是"实验验证有效的方案",是"因为无法验证,所以必须上保险"。</p>
+  <p>另外记一条规矩:<code>force</code>/<code>release</code> 是 TB 专用方言,出现在设计代码里综合器直接报错(ch01 讲过的"不可综合方言",这里又添一员)。</p></div>
+
+  <h3>8 · 打两拍:给亚稳态一个"安静的房间"</h3>
+  <p>既然亚稳态的收敛需要<strong>时间</strong>(物理上几纳秒内基本都会倒向一边),对策就朴素得惊人:给它一个完整的时钟周期去收敛,别打扰:</p>
+
+  <div class="fig">
+  <svg viewBox="0 0 820 200" xmlns="http://www.w3.org/2000/svg">
+    <text class="lbl" x="30" y="35">key_raw(异步,野信号)</text>
+    <line class="wire" x1="30" y1="55" x2="160" y2="55"/>
+    <rect class="boxf" x="160" y="30" width="150" height="50" rx="6"/>
+    <text class="lbl" x="185" y="60">第 1 拍 FF</text>
+    <line class="wire" x1="310" y1="55" x2="400" y2="55"/>
+    <text class="lbl2" x="315" y="45">可能糊的值</text>
+    <rect class="boxf" x="400" y="30" width="150" height="50" rx="6"/>
+    <text class="lbl" x="425" y="60">第 2 拍 FF</text>
+    <line class="wire" x1="550" y1="55" x2="690" y2="55"/>
+    <text class="lbl" x="560" y="45">key_sync(干净)</text>
+    <text class="lbl2" x="620" y="80">→ 去你 lab02 的下游</text>
+    <line x1="310" y1="112" x2="400" y2="112" style="stroke:#5b3e96;stroke-width:2"/>
+    <polygon points="400,112 392,108 392,116" fill="#5b3e96"/>
+    <polygon points="310,112 318,108 318,116" fill="#5b3e96"/>
+    <text class="lbl2" x="314" y="102">一个完整时钟周期(20ns)</text>
+    <text class="lbl2" x="150" y="140">两拍之间是亚稳态的"安静房间":糊值在这里收敛成 0 或 1,</text>
+    <text class="lbl2" x="150" y="162">第 2 拍拍到的,已经是收敛后的普通值(要么 0 要么 1,再无中间态)</text>
+  </svg>
+  <div class="cap">图 4 · 两级同步器(Two-stage Synchronizer),"打两拍":两个触发器背靠背接同一时钟</div>
+  </div>
+
+  <pre><code><span class="c">// v2 补丁:两行,装进你 lab02 的最前面</span>
+<span class="k">reg</span>  [1:0] sync_ff;
+<span class="k">always</span> @(posedge clk) sync_ff &lt;= {sync_ff[0], key_raw};  <span class="c">// 两级同步器</span>
+<span class="k">wire</span> key_sync = sync_ff[1];
+<span class="c">// 原 lab02 里 key_raw 的全部下游(边沿检测、消抖计数)改吃 key_sync</span></code></pre>
+
+  <p>两个局限必须说清,它们是无数事故的源头:</p>
+  <ul>
+    <li><strong>只压概率,不压延迟。</strong>打两拍后 key_sync 比 key_raw 晚 2 个时钟周期,而且亚稳态收敛倒向哪边依然是随机的(可能 0 可能 1)。它保证的是"下游看到的值永远干净",不是"值永远对、永远准时"。</li>
+    <li><strong>一次只救 1 位。</strong>同步器救的是单根信号线。多比特总线各自打两拍?每位都干净了,但图 3 的撕裂在所难免——各位的亚稳"倒向"互相独立,拼起来还是怪值。多比特跨域要靠格雷码(计数器类)或握手(数据类),本书只走到格雷码这一步,握手在毕业路线图里等你。</li>
+  </ul>
+
+  <h3>9 · MTBF:这张保险单值多少钱</h3>
+  <p><strong>平均无故障时间(Mean Time Between Failures, MTBF)</strong>:两次亚稳态事故之间的平均间隔。教材公式长这样(选学,看懂结构就行):</p>
+  <pre><code>MTBF = e^(t_r / τ) / (W × f_clk × f_data)
+
+t_r    :留给亚稳态收敛的时间(打两拍 ≈ 一个完整时钟周期,20ns)
+τ      :器件的"收敛时间常数"(工艺决定,几十皮秒量级)
+W      :采样窗口宽度(建立+保持,几十皮秒量级)
+f_clk  :采样时钟频率(50MHz)
+f_data :异步信号变化频率(按键约 10Hz;若是跨域计数器就大得多)</code></pre>
+  <p>不用记公式,感受一个数就够:分子上那个<strong>指数</strong>。用 τ≈20ps 粗算,一个完整周期 20ns 的收敛时间是 1000 个 τ,于是 e^1000 ≈ 10^434——分母上无论是什么频率量级,都被这个指数拍在地板上。<strong>每多给一拍,指数翻倍:</strong>一拍 10^434,两拍 10^868。这就是"打两拍"的全部原理:不是把概率调成零,而是把它压到"宇宙年龄都不够等一次事故"。</p>
+  <div class="box box-know"><div class="box-title">知识 · 既然一拍就"够安全",为什么打两拍?</div>
+  <p>看数字确实一拍就天文数字了——但 τ 和 W 是典型值,厂商不给保证;你的第一拍后面真有几个完整周期、挂了什么逻辑,设计大了谁也说不准。工程师的态度是:<strong>两拍几乎免费(2 个触发器,占 7z020 的十万分之二),买的是"不依赖任何数字"的确定性。</strong>保险单便宜,就别省。真正天天出事故的其实不是单比特亚稳态,而是撕裂和"同步器中间插了组合逻辑"这类结构性错误——下面坑表见。</p></div>
+
+  <h3>10 · 动手三:回炉 lab02 → v2,上板 + 压测</h3>
+  <p>把上面的两行补丁装进你自己的 lab02(具体命令和压测代码在 <code>labs/lab03-cdc/README.md</code>):</p>
+  <div class="box box-step"><div class="box-title">步骤 · 三步验收</div>
+  <ol>
+    <li><strong>改</strong>:lab02 工程最前面加上面两级同步器,下游(边沿检测 d &amp; ~d_q、消抖计数)全部改吃 <code>key_sync</code>。原三关 TB 重跑,应当原样全过(功能没变,只是入口干净了)。</li>
+    <li><strong>压测</strong>(仿真):<strong>先缩参数再拉次数</strong>——真实 20ms 窗口下按 10 万次要仿真 2000 秒,跑不完;把消抖阈值缩到 40 个时钟、给每次按键激励插 0~19ns 随机异步相位,10 万次按键约 0.2 秒仿真时间。断言:单周期脉冲总数恰好等于按键次数。v2 应当零误脉冲。</li>
+    <li><strong>上板</strong>:烧 v2,按 50 次,LED 每次恰好翻一次。顺手再烧 ch02 裸版对比一轮,感受"从犯落网前后的差别"。</li>
+  </ol></div>
+  <p>验收过后的一个问题值得停 10 秒:你按 50 次全对,<strong>证明</strong>了两拍同步器有效吗?——没有。50 次对 50 次只是没抓到从犯,不是从犯不存在(第 7 节刚说过,这类安全仿真和实验都证不了)。我们上两拍,是因为 MTBF 的账算得够狠、保险费又近乎为零——<strong>工程决策经常是"算不过来的就上保险",而不是"验证到万无一失"</strong>。这个思维方式,比同步器本身值钱。</p>
+
+  <h3>11 · 常见坑</h3>
+  <table>
+    <tr><th>坑</th><th>现象</th><th>解法</th></tr>
+    <tr><td>多比特总线"各自打两拍"</td><td>每位都干净,拼起来是撕裂值(图 3)——数值乱跳、状态机跳飞</td><td>计数器类用格雷码;数据类用握手/异步 FIFO(进阶)</td></tr>
+    <tr><td>同步器两拍之间插组合逻辑</td><td>第 1 拍的糊值被提前"使用",收敛时间被偷走</td><td>两拍必须背靠背,中间一根线都不许加</td></tr>
+    <tr><td>把"仿真零撕裂"当安全证明</td><td>零延迟理想仿真本来就看不见撕裂(③ 路);X 也不收敛</td><td>结构上正确(两拍/格雷码)+ MTBF,不指望仿真</td></tr>
+    <tr><td><code>force</code> 写进了设计代码</td><td>综合直接报错</td><td>force/release 只活在 TB 里</td></tr>
+    <tr><td>压测不缩参数</td><td>10 万次 × 20ms = 2000 秒仿真时间,一晚上跑不完</td><td>阈值和激励节奏同比缩小 25000 倍</td></tr>
+  </table>
+
+  <h3>12 · 小结与自测</h3>
+  <p>一条线串起本章:<strong>异步信号撞采样窗口 → 亚稳态(悬而不决,无法消除,仿真不出)→ 所以买保险:单比特打两拍,多比特格雷码;保险的底气来自 MTBF 的指数。</strong>你的 lab02 现在是 v2:同步 → 边沿 → 消抖,多花了 2 个触发器,买下"入口永远干净"。</p>
+  <div class="box box-know"><div class="box-title">本章新词卡(附录 B 汇总)</div>
+  <p>异步信号(Asynchronous Signal)· 时钟域(Clock Domain)· 跨时钟域(Cross-Domain Crossing, CDC)· 建立时间(Setup Time, t<sub>su</sub>)· 保持时间(Hold Time, t<sub>h</sub>)· 亚稳态(Metastability)· 偏斜(Skew)· 数值撕裂(value tearing)· 两级同步器(Two-stage Synchronizer,打两拍)· 格雷码(Gray Code)· 平均无故障时间(Mean Time Between Failures, MTBF)</p></div>
+
+  <div class="box box-step"><div class="box-title">自测(先答再看,三档)</div>
+  <p><strong>A · 概念复述</strong>:用一句人话说清——为什么打两拍不能用在 8 位总线上,而格雷码计数器可以裸采样?</p>
+  <p><strong>B · 预测(先猜后验)</strong>:把 TB 里四根延迟线改成全部 <code>#2</code>(等长),重跑,撕裂次数会变成多少?为什么?——改一下,跑一遍,对答案(应当是 0:撕裂的根因是"不齐",不是"延迟"本身)。</p>
+  <p><strong>B2 · 预测</strong>:两拍加到三拍,MTBF 往哪个方向变?代价是什么?(方向:指数再翻倍,天文数字×天文数字;代价:多 1 拍延迟、多 1 个 FF——通常不划算,所以军规是"两拍")</p>
+  <p><strong>C · 排错</strong>:v2 里有人图省事,消抖计数的清零条件仍然接的 <code>key_raw</code>(未同步),边沿检测吃的却是 <code>key_sync</code>——两路信号时间上错开了 2 拍。这会出什么事?</p>
+  <details style="margin:8px 0"><summary style="cursor:pointer;color:var(--ink-soft)">答案(点开前先自己写一遍)</summary>
+  <p><strong>A</strong>:总线各位的"糊值收敛方向"互相独立,拼起来可能半新半旧(撕裂);格雷码每步只动 1 位,任一时刻最多一根线处于"新旧之间",采样到的永远是某个合法值。<br>
+  <strong>B</strong>:等长延迟 = 同时到达 = 和零延迟同理(只是晚 2ns),原子更新照旧,撕裂 0 次。<br>
+  <strong>B2</strong>:见上;军规两拍是"够狠且免费"的平衡点。<br>
+  <strong>C</strong>:消抖计数器被未同步的野信号清零——清零动作本身可能落在亚稳窗口,产生一次"半清零"的糊值;而且两路时间错位,可能出现"计数刚被判稳定,野信号又把它清掉"的竞争,偶尔漏脉冲或出双脉冲。一句话:<strong>一个模块的所有输入必须活在同一个(干净的)世界里。</strong></p>
+  </details></div>
+
+  <h3>13 · 下一课预告:谁在替全芯片站岗</h3>
+  <p>两拍同步器救了你的按键。可放大了想:50MHz 的世界里几十万个触发器齐步走,<strong>谁保证它们自己不互相踩脚?</strong>——你的每个建立/保持时间要求,在全芯片每条路径上都得满足。其实每次跑 build.tcl,Vivado 都替你做了一次全芯片踩脚大检查,结果就印在最后那行 <code>时序余量 WNS</code> 里。它是什么、怎么读、负数了怎么办——下一章开箱 Vivado 的幕后。</p>
+
+  <div class="pager">
+    <a href="ch02-debounce.html">← 上一章:Lab02 按键消抖</a>
+    <a href="ch04-vivado.html">下一章:Vivado 幕后与一键化 →</a>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 10 章 · 会师:Debian 装载你的电路 — Zynq FPGA 从零到实战</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <span class="chip">ZYNQ · FPGA</span>
+    <h1>从零到实战</h1>
+    <p>Verilog · Vivado · Z7-Nano</p>
+  </div>
+  <nav>
+    <a href="index.html"><span class="num">00</span>封面 · 课程地图</a>
+    <a href="ch00-verilog101.html"><span class="num">01</span>Verilog 101</a>
+    <a href="ch01-sim.html"><span class="num">02</span>仿真入门</a>
+    <a href="ch02-debounce.html"><span class="num">03</span>Lab02 按键消抖</a>
+    <a href="ch03-cdc.html"><span class="num">04</span>亚稳态与 CDC</a>
+    <a href="ch04-vivado.html"><span class="num">05</span>Vivado 幕后</a>
+    <a href="ch05-pwm.html"><span class="num">06</span>PWM 呼吸灯</a>
+    <a href="ch06-uart-tx.html"><span class="num">07</span>UART 发送器</a>
+    <a href="ch07-uart-rx.html"><span class="num">08</span>UART 自环回</a>
+    <a href="ch08-axi.html"><span class="num">09</span>AXI 总线</a>
+    <a href="ch09-merge.html" class="active"><span class="num">10</span>PS-PL 会师</a>
+    <a href="ch10-capstone.html"><span class="num">11</span>毕业设计</a>
+    <a href="appendix-board.html"><span class="num">附A</span>板卡手册</a>
+    <a href="appendix-glossary.html"><span class="num">附B</span>术语表</a>
+    <a href="appendix-cheatsheet.html"><span class="num">附C</span>命令速查</a>
+  </nav>
+  <footer>硬件:Z7-Nano R20 · XC7Z020<br>软件:Vivado 2026.1 免费档<br>姊妹篇:主线 Linux 手册</footer>
+</aside>
+<main class="main">
+  <div class="chapter-tag">CHAPTER 10 · 里程碑 M4</div>
+  <h2 class="title">会师:Debian 装载你的电路</h2>
+  <p class="subtitle">两条技能树,今天在你手里合流:你自己移植的 Debian,装载、驱动、拨动你自己写的电路。</p>
+
+  <div class="box box-know"><div class="box-title">本章目标(可检验)</div>
+  <ol>
+    <li>能说清 PS 与 PL 在同一块硅片上的关系,以及 FCLK0 / GP0 两根"脐带"各送什么</li>
+    <li>能解释为什么本设计整体搬进 FCLK0 域、N18 退役(方案甲),以及不这么做的那颗 CDC 雷</li>
+    <li>能手写 create_clock,并说出"不写它时序报告全绿"为什么是假象</li>
+    <li>能走通两条装载路之一(FPGA Manager 主路 / JTAG+devmem 保底路),完成 L0 点灯与 L1 调速</li>
+    <li>毕业考:不看资料手绘"一条 devmem 写"的全路径图,从 ARM 指令到 LED 亮度</li>
+  </ol></div>
+
+  <div class="box box-warn"><div class="box-title">前置验收门 · FIQ 修复三绿(未过不堵车,走 Variant B)</div>
+  <p>主路(FPGA Manager 装载)要求先用 <strong>lab01 的 blink.bin</strong> 验收 FIQ 修复:</p>
+  <p>① 装载后 LED 亮;② ssh 仍活着(系统没冻);③ <code>cat /sys/class/fpga_manager/fpga0/state</code> 输出 <code>operating</code>。</p>
+  <p>三绿 → 走主路。未绿 → 全章走 <strong>Variant B</strong>(Vivado JTAG 烧写 + devmem),除装载动作外一切相同,<strong>课程照常毕业</strong>。</p></div>
+
+  <h3>1 · 钩子:这一天你等了两条技能树</h3>
+  <p>回想你手上的两件东西:一条技能树是<strong>去年亲历的</strong>主线 Linux 移植——U-Boot、内核、Debian、JTAG 调试,你从零搭起了 ARM 这半边;另一条是<strong>这门课</strong>——从 led_blink 的 33 行到 AXI 从机,你一块块垒起了 FPGA 这半边。</p>
+  <p>现在看这行命令:</p>
+  <pre><code>devmem 0x40000000 32 0x00000001</code></pre>
+  <p>这一枪打中的寄存器,偏移、宽度、位含义——<strong>是你上一章亲手设计的</strong>。它经过 GP0 总线、五通道握手、落到你的 CTRL 寄存器,bit0 顺着导线点亮 R14。这是全课程的会师时刻(M4),也是这门课为你这个画像独家定制的一幕:别人教程里的"假设你已经有一个 Linux",在你的板上,是"我亲手装的 Debian"。</p>
+
+  <h3>2 · 战地日记:那颗 FIQ 螺丝(简版)</h3>
+  <p>主路要过 FIQ 验收门,这个门是怎么来的?你亲历过,这里只留三行年表,详细排查过程见姊妹手册第 6-7 章(<a href="https://lzjever.github.io/zynq-z7nano-mainline-linux/">主线 Linux 手册</a>):</p>
+  <div class="box box-know"><div class="box-title">FIQ 风暴事件簿(2026-11)</div>
+  <ol>
+    <li><strong>现象</strong>:主线内核里通过 FPGA Manager(insmod 装载器)写入比特流,约十几秒后整机冻死——PS 侧被快速中断请求(Fast Interrupt ReQuest, FIQ)风暴打穿。</li>
+    <li><strong>追凶</strong>:JTAG halt 看 PC 停在中断处理;顺藤摸到 GIC 分发器的安全世界配置(寄存器被锁在 TrustZone 一侧,主线内核碰不到)。</li>
+    <li><strong>修复</strong>:u-boot 阶段提前改写 GIC 配置的 BOOT.BIN 已打包,哨兵脚本待板子断电重启自动执行验收——<strong>修复已就绪,等你上电那一刀</strong>。</li>
+  </ol>
+  <p>这门课不重复手册的排查细节;你只需要带着一句话进考场:FIQ 风暴 = PS 侧中断控制器的安全配置问题,与你的 PL 电路无关——所以保底路(Variant B)绕开它依然成立。</p></div>
+
+  <h3>3 · PS7 直例化:把隔壁那半边接出来</h3>
+  <p>Zynq 是一块硅、两个世界:处理系统(Processing System, PS,ARM 那半边)和可编程逻辑(Programmable Logic, PL,FPGA 这半边)。课程至今你只活了 PL;PS 早已被你的 FSBL/U-Boot/Debian 武装到牙齿。两个世界之间有几根固定的"脐带":<strong>GP0 总线</strong>(上一章的 AXI 门)和 <strong>FCLK 时钟</strong>(PS 送给 PL 的节拍)。</p>
+  <p>行业常规做法是在 Block Design 里拖一个 PS 模块、勾选项、自动连线。我们走一条对你更诚实的路——<strong>直接在 Verilog 里例化 PS7 原语</strong>,像例化 tick 分频器一样:</p>
+  <pre><code><span class="k">PS7</span> PS7_i (
+    .FCLKCLK0        (fclk0),     <span class="c">// PS 送给 PL 的时钟 0:整个设计的唯一节拍</span>
+    .M_AXI_GP0_ACLK  (fclk0),     <span class="c">// GP0 总线时钟同源——同域,无 CDC</span>
+    .M_AXI_GP0_AWADDR(gp0_awaddr), .M_AXI_GP0_AWVALID(gp0_awvalid), .M_AXI_GP0_AWREADY(gp0_awready),
+    <span class="c">// …… W/B/AR/R 通道同理;AXI3 独有信号(ID/突发类)挂空 = 置之不理(ch08 方案甲)</span>
+    <span class="c">// 其余几百个端口(DDR/MIO/中断…)未列出 = 挂空,PS 侧自有人管</span>
+);</code></pre>
+  <div style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin:20px 0;text-align:center;">
+  <svg viewBox="0 0 820 330" style="max-width:100%;" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="m1" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#b3541e"/></marker>
+      <marker id="m2" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#1d5c8a"/></marker>
+    </defs>
+    <rect x="20" y="30" width="330" height="270" rx="12" fill="#f4f1ec" stroke="#4a5568" stroke-width="2"/>
+    <text x="185" y="58" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a2332">PS · 处理系统(你移植的)</text>
+    <rect x="45" y="80" width="280" height="52" rx="8" fill="#1e2430"/>
+    <text x="185" y="102" text-anchor="middle" font-size="13.5" fill="#dce3ee">Debian 13 · ssh · devmem</text>
+    <text x="185" y="121" text-anchor="middle" font-size="12" fill="#aeb7c2">你敲命令的地方</text>
+    <rect x="45" y="150" width="130" height="46" rx="8" fill="#fff" stroke="#1a2332"/>
+    <text x="110" y="178" text-anchor="middle" font-size="13" fill="#1a2332">ARM 核 ×2</text>
+    <rect x="200" y="150" width="125" height="46" rx="8" fill="#fff" stroke="#1a2332"/>
+    <text x="262" y="172" text-anchor="middle" font-size="12" fill="#1a2332">SLCR 系统控制</text>
+    <text x="262" y="188" text-anchor="middle" font-size="11.5" fill="#7c3a12">0xF8000170→FCLK0</text>
+    <rect x="45" y="225" width="280" height="46" rx="8" fill="#fff" stroke="#1a2332"/>
+    <text x="185" y="245" text-anchor="middle" font-size="12.5" fill="#1a2332">FPGA Manager / fpgaload</text>
+    <text x="185" y="262" text-anchor="middle" font-size="11.5" fill="#4a5568">装载你的 .bin(PCAP 通道)</text>
+    <rect x="470" y="30" width="330" height="270" rx="12" fill="#faf1e8" stroke="#b3541e" stroke-width="2"/>
+    <text x="635" y="58" text-anchor="middle" font-size="15" font-weight="bold" fill="#7c3a12">PL · 可编程逻辑(你写的)</text>
+    <rect x="495" y="80" width="280" height="66" rx="8" fill="#fff" stroke="#b3541e"/>
+    <text x="635" y="105" text-anchor="middle" font-size="13" fill="#1a2332">axi_lite_slave(lab08+)</text>
+    <text x="635" y="125" text-anchor="middle" font-size="12" fill="#7c3a12">0x00 CTRL · 0x04 SPEED</text>
+    <rect x="495" y="175" width="130" height="46" rx="8" fill="#fff" stroke="#1a2332"/>
+    <text x="560" y="203" text-anchor="middle" font-size="13" fill="#1a2332">pwm_breather</text>
+    <rect x="650" y="175" width="125" height="46" rx="8" fill="#fff" stroke="#1a2332"/>
+    <text x="712" y="196" text-anchor="middle" font-size="12.5" fill="#1a2332">挡位 mux</text>
+    <text x="712" y="212" text-anchor="middle" font-size="11" fill="#4a5568">speed=0→手动</text>
+    <circle cx="635" cy="280" r="9" fill="#2e7d32"/>
+    <text x="660" y="285" font-size="12.5" fill="#2e7d32">R14 · led</text>
+    <!-- GP0 arrow -->
+    <line x1="350" y1="170" x2="470" y2="170" stroke="#b3541e" stroke-width="3" marker-end="url(#m1)"/>
+    <text x="410" y="155" text-anchor="middle" font-size="13" font-weight="bold" fill="#b3541e">GP0</text>
+    <text x="410" y="190" text-anchor="middle" font-size="11.5" fill="#7c3a12">AXI3 @0x4000_0000</text>
+    <!-- FCLK0 arrow -->
+    <line x1="325" y1="250" x2="470" y2="250" stroke="#1d5c8a" stroke-width="2.5" stroke-dasharray="7,5" marker-end="url(#m2)"/>
+    <text x="410" y="238" text-anchor="middle" font-size="13" font-weight="bold" fill="#1d5c8a">FCLK0</text>
+    <text x="410" y="268" text-anchor="middle" font-size="11.5" fill="#1d5c8a">50MHz 时钟</text>
+    <!-- internal arrows -->
+    <line x1="635" y1="146" x2="635" y2="173" stroke="#1a2332" stroke-width="1.5"/>
+    <line x1="625" y1="198" x2="650" y2="198" stroke="#1a2332" stroke-width="1.5" marker-end="url(#m2)"/>
+    <line x1="712" y1="221" x2="712" y2="268" stroke="#2e7d32" stroke-width="2" marker-end="url(#m2)"/>
+  </svg>
+  <p style="font-size:13px;color:#4a5568;margin:6px 0 0;">图 1 · 会师全景:PS 侧三件套(devmem、SLCR、FPGA Manager)各走一根脐带(FCLK0 时钟、GP0 总线、PCAP 装载通道)够到你的电路。</p>
+  </div>
+  <p>装载这条脐带也交代一下:Debian 侧的 FPGA 管理器(FPGA Manager)框架通过 PCAP——处理器配置访问端口(Processor Configuration Access Port, PCAP)——把比特流从内存灌进 PL。你移植时在设备树(Device Tree)里给 fpga 区域留的那几行,今天终于接上实物流。而 ch04 讲过的 .bit/.bin 之别(字节序交换)在这一步兑现:<code>bit2bin.py</code> 的产物才进得了 PCAP。</p>
+
+  <h3>4 · FCLK0 域方案甲:N18 退役,谁给电路接电源</h3>
+  <p>本设计有一个重大的人事变动:<strong>N18(板上 50MHz 晶振)退役了</strong>。从 lab01 到 lab07,它一直是你的心跳;现在整个设计改活在 FCLK0 域——时钟由 PS 供给。为什么?</p>
+  <div class="box box-warn"><div class="box-title">不换域的那颗雷(ch03 回马枪)</div>
+  <p>假设设计继续跑 N18,而你的 CTRL/SPEED 寄存器活在 FCLK0 域(总线时钟只能用 FCLK,这是 PS7 的硬规矩)。ARM 写一个 32 位的 SPEED,这 32 位跨进 N18 域——<strong>多比特跨时钟域,数值撕裂</strong>:N18 采样瞬间恰好撞上多位翻转,SPEED 可能既不是旧值也不是新值(ch03 里你亲眼让计数器撕出过 7→15)。呼吸速度偶尔抽风、复现无门——这种 bug 是作品里的定时炸弹。</p>
+  <p>方案甲一刀斩:<strong>全体逻辑搬进 FCLK0 域,一个时钟,雷不存在</strong>。代价只有一条:FCLK0 的开关在 PS 手里——所以"使能 FCLK0"那条 devmem 命令,是这门课真正意义上的<strong>"Linux 的一条命令,给你的电路接上电源"</strong>:时钟不来,设计全体冻结;命令一到,呼吸开始。</p></div>
+  <div class="box box-know"><div class="box-title">选做 · 方案乙(想练 CDC 技艺再看)</div>
+  <p>保持双域也能活:对 SPEED 逐位打两拍 + 握手脉冲(Gray 码只适合计数器,不适合任意值)。ch03 的知识在毕业章回收,教学上很美——但给顶点周加活,本课降为选做,默认方案甲。</p></div>
+  <p>顺带一提,这是全书 <code>parameter</code> 主题的第三级跳:ch01 缩仿真时间、ch07 放大波特率(肉眼 UART)、ch09 换主频——<code>pwm_breather</code> 的时间公式按 FCLK0 重新算一遍(README 命令卡里已给结论)。注意 FCLK0 频率不是天上掉下来的:它由 PS 侧 SLCR(System Level Control Register,系统级控制寄存器)的 0xF8000170 号寄存器决定,除数装多少、频率就是多少——先读回,再决定写不写。</p>
+
+  <h3>5 · 手写 create_clock:时序报告对你的第一句谎话</h3>
+  <p>ch04 你学会读 WNS;ch08 结尾留了个伏笔"什么时候才有 WNS"。现在摊牌:</p>
+  <div class="box box-warn"><div class="box-title">本课最大的暗坑:全绿是假象</div>
+  <p>以前用 Block Design 时,Vivado 会替你在 FCLK 网络上自动生成时钟约束。<strong>直例化 PS7 没有这层服务</strong>——如果你忘了写,FCLK0 网络上没有任何 <code>create_clock</code>,静态时序分析器<strong>不知道该按什么周期检查你的电路</strong>,于是它干脆什么都不查,报告里 WNS 一片"绿"。看起来时序全过,其实是<strong>根本没分析</strong>。这种"成功的假象"比红色报错危险十倍。</p>
+  <p>解药一行,写进 lab09.xdc:</p>
+  <pre><code><span class="k">create_clock</span> -period <span class="s">20.000</span> -name fclk0 [get_pins PS7_i/FCLKCLK0]</code></pre>
+  <p>(20ns = 50MHz,与 SLCR 里配的频率一致;哪天改了 FCLK0 频率,这行必须同步改,否则 WNS 又是错账。)</p></div>
+
+  <h3>6 · 动手:L0 点灯(两条路,你走一条)</h3>
+  <p>先 build 出比特流(<code>vivado -mode batch -source build.tcl</code>,确认 WNS ≥ 0 <strong>且不是灰的</strong>)。然后按验收门状态选路:</p>
+  <table>
+    <tr><th></th><th>主路 A · FPGA Manager(FIQ 门内)</th><th>Variant B · JTAG + devmem(保底)</th></tr>
+    <tr><td>谁装载</td><td>Debian:<code>./load_fpga.sh</code>(bit2bin → scp → echo 固件名)</td><td>PC:<code>vivado -mode batch -source program.tcl</code></td></tr>
+    <tr><td>前置</td><td>blink.bin 三绿验收已过</td><td>无;但开 Vivado 前先 <code>pkill -f openocd</code>(JTAG 互杀,附录 A)</td></tr>
+    <tr><td>装载后</td><td>已在运行态</td><td>设计还冻着——FCLK0 没使能</td></tr>
+  </table>
+  <p>两条路<strong>互斥,谁后到谁生效</strong>(后装的流顶掉先装的)。Variant B 装完的第一件事,就是"接电源"仪式:</p>
+  <pre><code><span class="c"># Debian 上(ssh root@192.168.1.10):先读后写</span>
+devmem 0xF8000170                     <span class="c"># 看 FCLK0 控制寄存器现状(bit24=1 已是活的)</span>
+devmem 0xF8000170 32 0x01011400      <span class="c"># 使能,IO PLL 1000MHz ÷20 ÷1 = 50MHz</span>
+
+<span class="c"># L0 点灯 / 灭灯</span>
+devmem 0x40000000 32 0x00000001
+devmem 0x40000000 32 0x00000000</code></pre>
+  <div class="box box-know"><div class="box-title">地址是怎么算出来的(你的本能问题)</div>
+  <p><code>0x4000_0000</code> = GP0 的基址 + 偏移 0x00(CTRL)。单从机直挂 GP0 <strong>没有互连重映射</strong>:Verilog 里接的哪根地址线,ARM 就直达哪个偏移。0x4000_0000+0x04 = SPEED。软件里的"地址映射"四个字,在硬件侧就是一根译码线——两个世界在这里词汇表合并。</p></div>
+
+  <h3>7 · 动手:L1 接上呼吸,改速度</h3>
+  <p>L0 的 LED 是"电灯开关";L1 把 ch05 的呼吸灯接进挡位:SPEED 非 0 即呼吸挡,数值越大越慢:</p>
+  <pre><code>devmem 0x40000004 32 0x0000017D   <span class="c"># ≈ 1 秒一次呼吸</span>
+devmem 0x40000004 32 0x000005F5   <span class="c"># ≈ 4 秒一次呼吸</span>
+devmem 0x40000004                  <span class="c"># 读回:应回显 0x5F5(读 = 回值)</span></code></pre>
+  <p>公式(数字自己验一遍,别信我——ch00 的教训):呼吸周期 ≈ (SPEED+1) × 512 × 256 ÷ FCLK0 = (SPEED+1) × 2.62ms @50MHz。你现在做的事,和游戏引擎里调粒子参数、和 systemd 里改服务阈值,在工程形态上完全同构:<strong>寄存器 = 服务的配置项</strong>。你只是第一次站在了配置项的另一端。</p>
+
+  <h3>8 · 毕业考:一条 devmem 写的全路径</h3>
+  <p>不看任何资料,白纸手绘:<code>devmem 0x40000000 32 1</code> 从敲下回车到 LED 亮起,依次经过哪些站?这是全课程知识的一条线串——参考答案(先画完再看):</p>
+  <div class="flow">
+    <div class="node"><b>① shell 解析 devmem</b> — busybox 工具,目标物理地址 0x40000000、宽 32、值 1</div>
+    <div class="arrow">↓</div>
+    <div class="node"><b>② /dev/mem 映射</b> — 用户态不能直接摸物理地址,devmem 借内核开的窗口进去</div>
+    <div class="arrow">↓</div>
+    <div class="node"><b>③ ARM 执行 store 指令</b> — 地址落入 0x4000_0000 起的 GP0 窗口,PS 内部互连把它路由向 PL</div>
+    <div class="arrow">↓</div>
+    <div class="node"><b>④ GP0 发起 AXI 写</b> — AW/W 通道握手 → 你的从机 write_fire → B 回执(ch08 的三拍)</div>
+    <div class="arrow">↓</div>
+    <div class="node"><b>⑤ CTRL 寄存器落值 1</b> — bit0 = 1;SPEED=0,挡位 mux 选手动挡</div>
+    <div class="arrow">↓</div>
+    <div class="node"><b>⑥ led 输出 1</b> — 经过输出缓冲、R14 引脚、限流电阻,LED 亮</div>
+  </div>
+  <p>画对了,你就同时回答了"软件怎么摸硬件"和"这大半年你学的是什么"两道题。</p>
+
+  <h3>9 · 常见坑</h3>
+  <div class="box box-warn"><div class="box-title">坑 1 · JTAG 互杀(hw_server vs OpenOCD)</div>
+  <p>你跑过 OpenOCD,它和 Vivado 的 hw_server 抢同一个 FT232H。开 Vivado 烧写/ILA 前 <code>pkill -f openocd</code>;反过来用 OpenOCD 前杀 hw_server。互杀口诀在附录 A/C。</p></div>
+  <div class="box box-warn"><div class="box-title">坑 2 · 两种装载互斥,谁后到谁生效</div>
+  <p>JTAG 烧完再 echo 固件名,流被顶掉;反过来亦然。现象是"刚才明明亮着怎么灭了"——先想装载顺序,再想代码 bug。</p></div>
+  <div class="box box-warn"><div class="box-title">坑 3 · .bit 直接 echo 给 FPGA Manager</div>
+  <p>必须先 <code>bit2bin.py</code>(字节序交换,ch04 讲过同步字)。症状:装载"成功"、state 却不是 operating,或 PL 行为全乱。</p></div>
+  <div class="box box-warn"><div class="box-title">坑 4 · 时序报告全灰还当全绿</div>
+  <p>看到"no timing constraints"字样 = create_clock 没生效,回第 5 节。灰的 WNS 不是 0,是"没考过试"。</p></div>
+  <div class="box box-warn"><div class="box-title">坑 5 · RST 键</div>
+  <p>老规矩:丝印 RST = 整芯片硬复位,清 PL 配置 + 重启 Debian——会师成果一键清零。按键只认 PL_KEY(P14)。</p></div>
+  <div class="box box-warn"><div class="box-title">坑 6 · AXI3 直挂不工作(待实测门)</div>
+  <p>ch08 的两案在此兑现:写 LED 无反应/读回脏值 → 切 build.tcl 里的预案乙(垫 AXI Interconnect,全脚本化不进 BD)。这是全书三项"待实测"里你今天实地验证的那一项。</p></div>
+
+  <h3>10 · 小结</h3>
+  <ul>
+    <li>PS/PL 同一块硅;脐带三根:GP0 总线、FCLK 时钟、PCAP 装载通道</li>
+    <li>PS7 直例化 = 像例化普通模块一样把 ARM 那半边的门接出来,不进 Block Design</li>
+    <li>方案甲:设计整体活进 FCLK0 域,N18 退役——斩 CDC 雷;SLCR 0xF8000170 = 电路的电源开关</li>
+    <li>直例化没有自动约束 → create_clock 必须手写,否则时序"全绿"是没分析的假象</li>
+    <li>两条装载路互斥:主路 FPGA Manager(FIQ 三绿门内)/ Variant B JTAG+devmem;L0 点灯、L1 调速</li>
+    <li>毕业考:手绘 devmem 全路径——全课程一条线</li>
+  </ul>
+  <div class="box box-know"><div class="box-title">本章新词卡(已登记附录 B)</div>
+  <p>处理系统(Processing System, PS)· 可编程逻辑(Programmable Logic, PL)· FCLK(Fabric Clock,结构时钟)· 系统级控制寄存器(System Level Control Register, SLCR)· FPGA 管理器(FPGA Manager)· 快速中断请求(Fast Interrupt ReQuest, FIQ)· 处理器配置访问端口(Processor Configuration Access Port, PCAP)· 设备树(Device Tree)· devmem(busybox 物理地址读写工具)</p></div>
+
+  <h3>11 · 三档自测</h3>
+  <p><strong>A(送分题,你的主场)</strong>· 为什么用户态不能直接写 0x40000000,而 devmem 可以?</p>
+  <p><strong>B(预测题)</strong>· 把 lab09.xdc 的周期从 20ns 改成 10ns(SLCR 不动,FCLK0 仍是 50MHz),综合实现后 WNS 会怎样变化?设计在板上会变快吗?</p>
+  <p><strong>C(排错题)</strong>· 同学说"我 LED 不亮,但 devmem 读回 0x40000000 能正确回显写进去的值"。从机活着、灯却不动——列出你怀疑的三个站点。</p>
+  <details><summary>展开答案(先自己答,再对)</summary>
+  <p><strong>A</strong>:用户态进程摸不到物理地址;devmem 通过 /dev/mem(内核开的物理内存窗口)替你读写。这也是 mmap 一类工具的共同原理——你移植期早就会,此题是给信心。</p>
+  <p><strong>B</strong>:约束改严一倍,Vivado 按 100MHz 检查同一条电路,WNS 大约减半(可能仍为正,因为这个设计很轻)。但<strong>板上什么都不会变</strong>——约束只影响工具的分析口径,不改电路;真实节拍由 FCLK0 决定。约束写错 ≠ 电路跑错,但要记住:约束是你对工具的承诺,承诺错账就全错。</p>
+  <p><strong>C</strong>:① SPEED 寄存器非 0——挡位 mux 在呼吸挡,CTRL bit0 不通到 LED(写 0x40000004 清零即验);② LED 写的是 0x40000000 吗——写串到未映射偏移(本从机未映射也回 OKAY,见 lab09 思考题);③ R14 引脚/LED 硬件本身(JTAG 烧个 lab01 blink.bin 隔离验证)。读回正确证明的总线与寄存器半区是好的,排查应向"寄存器之后"走。</p>
+  </details>
+
+  <h3>12 · 下一课预告</h3>
+  <p>会师完成,最后一课没有新知识——<strong>毕业设计</strong>:把 PWM、AXI、装载三件事合到一起,让 ARM 远控呼吸灯的亮度和速度,代码一行不给,验收标准一行不降。做完,这门课的牌子就挂在你的墙上了。</p>
+
+  <div class="pager">
+    <a href="ch08-axi.html">← 上一章:AXI 总线</a>
+    <a href="ch10-capstone.html">下一章:毕业设计 →</a>
+  </div>
+</main>
+</body>
+</html>

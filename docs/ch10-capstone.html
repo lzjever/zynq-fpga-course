@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 11 章 · 毕业设计:呼吸灯亮度远控 — Zynq FPGA 从零到实战</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <span class="chip">ZYNQ · FPGA</span>
+    <h1>从零到实战</h1>
+    <p>Verilog · Vivado · Z7-Nano</p>
+  </div>
+  <nav>
+    <a href="index.html"><span class="num">00</span>封面 · 课程地图</a>
+    <a href="ch00-verilog101.html"><span class="num">01</span>Verilog 101</a>
+    <a href="ch01-sim.html"><span class="num">02</span>仿真入门</a>
+    <a href="ch02-debounce.html"><span class="num">03</span>Lab02 按键消抖</a>
+    <a href="ch03-cdc.html"><span class="num">04</span>亚稳态与 CDC</a>
+    <a href="ch04-vivado.html"><span class="num">05</span>Vivado 幕后</a>
+    <a href="ch05-pwm.html"><span class="num">06</span>PWM 呼吸灯</a>
+    <a href="ch06-uart-tx.html"><span class="num">07</span>UART 发送器</a>
+    <a href="ch07-uart-rx.html"><span class="num">08</span>UART 自环回</a>
+    <a href="ch08-axi.html"><span class="num">09</span>AXI 总线</a>
+    <a href="ch09-merge.html"><span class="num">10</span>PS-PL 会师</a>
+    <a href="ch10-capstone.html" class="active"><span class="num">11</span>毕业设计</a>
+    <a href="appendix-board.html"><span class="num">附A</span>板卡手册</a>
+    <a href="appendix-glossary.html"><span class="num">附B</span>术语表</a>
+    <a href="appendix-cheatsheet.html"><span class="num">附C</span>命令速查</a>
+  </nav>
+  <footer>硬件:Z7-Nano R20 · XC7Z020<br>软件:Vivado 2026.1 免费档<br>姊妹篇:主线 Linux 手册</footer>
+</aside>
+<main class="main">
+  <div class="chapter-tag">CHAPTER 11 · 毕业考核</div>
+  <h2 class="title">毕业设计:呼吸灯亮度远控</h2>
+  <p class="subtitle">最后一课没有新知识——PWM、AXI、装载三件旧兵器一次出鞘;代码一行不给,验收一行不降。</p>
+
+  <div class="box box-know"><div class="box-title">本章目标(毕业的定义)</div>
+  <ol>
+    <li>不参考任何完整实现,把三个 Lab 的产物集成为一个设计:ARM 远控呼吸灯的<strong>亮度上限</strong>与<strong>呼吸速度</strong>,可整体熄灭</li>
+    <li>自己设计(或改良)寄存器映射,并写成一页文档——硬件工程师的交付物从来包括接口文档</li>
+    <li>通过三关验收:仿真波形、板上现象、口头答辩</li>
+  </ol></div>
+
+  <h3>1 · 钩子:为什么这次一行代码都不给</h3>
+  <p>从 lab02 的消抖器开始,这门课一直陪你"先自己写,再看参考"。最后一次,连参考也没有了——不是抠,是<strong>毕业考的规则本来如此</strong>:lab02 你证明了自己能从需求书写出电路,今天你证明的是更大的事——能把三门手艺<strong>自己缝合</strong>起来。缝合处才是真考点:寄存器多一个分支、三角波多一个上限、使能位多一个 mux,每一处都是你在课程里见过的形状。</p>
+  <div style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin:20px 0;text-align:center;">
+  <svg viewBox="0 0 820 200" style="max-width:100%;" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="c10" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#b3541e"/></marker>
+    </defs>
+    <rect x="20" y="70" width="120" height="60" rx="8" fill="#20262f"/>
+    <text x="80" y="97" text-anchor="middle" font-size="13.5" fill="#fff">Debian</text>
+    <text x="80" y="115" text-anchor="middle" font-size="12" fill="#c3cbd6">devmem ×3</text>
+    <line x1="140" y1="100" x2="200" y2="100" stroke="#b3541e" stroke-width="2.5" marker-end="url(#c10)"/>
+    <text x="170" y="88" text-anchor="middle" font-size="11.5" fill="#7c3a12">GP0</text>
+    <rect x="200" y="55" width="180" height="90" rx="8" fill="#faf1e8" stroke="#b3541e" stroke-width="2" stroke-dasharray="6,4"/>
+    <text x="290" y="92" text-anchor="middle" font-size="14" fill="#7c3a12" font-weight="bold">?</text>
+    <text x="290" y="112" text-anchor="middle" font-size="12" fill="#7c3a12">三寄存器从机</text>
+    <text x="290" y="130" text-anchor="middle" font-size="11" fill="#4a5568">(你扩展)</text>
+    <line x1="380" y1="100" x2="440" y2="100" stroke="#b3541e" stroke-width="2.5" marker-end="url(#c10)"/>
+    <text x="410" y="88" text-anchor="middle" font-size="11.5" fill="#7c3a12">3 旋钮</text>
+    <rect x="440" y="55" width="180" height="90" rx="8" fill="#faf1e8" stroke="#b3541e" stroke-width="2" stroke-dasharray="6,4"/>
+    <text x="530" y="92" text-anchor="middle" font-size="14" fill="#7c3a12" font-weight="bold">?</text>
+    <text x="530" y="112" text-anchor="middle" font-size="12" fill="#7c3a12">呼吸引擎 + 边界夹持</text>
+    <text x="530" y="130" text-anchor="middle" font-size="11" fill="#4a5568">(你改造)</text>
+    <line x1="620" y1="100" x2="680" y2="100" stroke="#b3541e" stroke-width="2.5" marker-end="url(#c10)"/>
+    <circle cx="708" cy="100" r="9" fill="#2e7d32"/>
+    <text x="708" y="128" text-anchor="middle" font-size="12" fill="#2e7d32">R14</text>
+    <text x="410" y="175" text-anchor="middle" font-size="12.5" fill="#4a5568">虚线框 = 你的作业;管道(PS7/GP0)在骨架文件里已铺好</text>
+  </svg>
+  </div>
+
+  <h3>2 · 需求书</h3>
+  <p>工位版速览在 <code>labs/lab10-capstone/README.md</code>,这里是需要你逐字读准的正式版。</p>
+  <h4>一句话需求</h4>
+  <p>Debian 里几条 devmem,远控 R14 呼吸灯的<strong>亮度上限</strong>与<strong>呼吸速度</strong>,并能整体熄灭——三个参数全部在线改,不许重新装载。</p>
+  <h4>建议寄存器映射(可自定,自定必须交付文档)</h4>
+  <table>
+    <tr><th>偏移</th><th>名字</th><th>读/写</th><th>含义</th></tr>
+    <tr><td><code>0x00</code></td><td>CTRL</td><td>读写</td><td>bit0:呼吸使能(0=熄灭,1=呼吸);其余位保留</td></tr>
+    <tr><td><code>0x04</code></td><td>BRIGHT</td><td>读写</td><td>亮度上限 0~255(duty 三角波峰值)</td></tr>
+    <tr><td><code>0x08</code></td><td>SPEED</td><td>读写</td><td>呼吸速度(lab09 语义,公式自己算清楚)</td></tr>
+  </table>
+  <h4>行为定义(验收逐条对号)</h4>
+  <ol>
+    <li>CTRL=0:LED 熄灭,无论 BRIGHT/SPEED 为何值</li>
+    <li>CTRL=1、BRIGHT=255、SPEED 取 1 秒档:与 lab09 现象一致</li>
+    <li>BRIGHT 改 32(约 1/8):呼吸峰值明显变暗——devmem 在线改,不重新装载</li>
+    <li>SPEED 改 4 秒档:呼吸变慢——同样在线改</li>
+    <li>读回三个寄存器:全部回显最后写入值</li>
+  </ol>
+  <div class="box box-warn"><div class="box-title">真正的考点藏在第 3 条</div>
+  <p>BRIGHT 在线改小的一瞬间,duty 可能正处在 200,而新上限是 32——你的三角波引擎怎么办?<strong>想清楚再写</strong>:这是 ch05"边界陷阱"的毕业版,答辩必问。</p></div>
+
+  <h3>3 · 验收标准(三关,全绿 = 毕业)</h3>
+  <table>
+    <tr><th>关</th><th>内容</th><th>证据</th></tr>
+    <tr><td>关 1 · 仿真</td><td>你自己的 TB(建议复用 lab08 的 axi_write/axi_read 任务)演示"BRIGHT 在线改小,duty 峰值随之变小"</td><td>波形截图,duty 峰值前后对比清晰</td></tr>
+    <tr><td>关 2 · 板上</td><td>装载(主路 A 或 Variant B 均可)+ 行为定义 1~5 逐条过</td><td>照片/录屏</td></tr>
+    <tr><td>关 3 · 答辩</td><td>不看资料:讲一条 devmem 到 LED 的全路径;讲你的 BRIGHT 边界处理;讲你的映射为什么这么定</td><td>口头,自己给自己判,或找人听</td></tr>
+  </table>
+  <p>交付物:代码 + 三关证据 + 一页 README(映射表 / 与 lab09 的差异 / 资源账本最后一行)。骨架在 <code>labs/lab10-capstone/axi_capstone_top.v</code>:管道(PS7/GP0/时钟)已铺好,器官全是 TODO。</p>
+
+  <h3>4 · 提示三级(45 分钟规则生效中)</h3>
+  <details><summary>Hint 1 · 框图级</summary>
+  <p>PS7 → 从机(3 寄存器)→ {ctrl_en, bright, speed} → 呼吸引擎(三角波峰值 = bright)→ led。三个旋钮全部只进一个模块——别把使能逻辑撒进两个模块,那是 lab02 之前的手艺。</p></details>
+  <details><summary>Hint 2 · 决策级</summary>
+  <p>BRIGHT 缩小的瞬间,若当前 duty &gt; bright,最简单的合法收敛是"下个 step_tick 直接夹到 bright 再往下走",不必平滑过渡——验收只看稳态。真正不合法的是让 duty 卡在峰值之上装没事。</p></details>
+  <details><summary>Hint 3 · 片段级(到此为止)</summary>
+  <p>三寄存器译码 = <code>case (awbuf[3:2])</code>;亮度夹持 ≈ 三角波上翻判断从 <code>duty==254</code> 改成与 bright 上限比较(下界仍 0)。再往下没有提示,只有答案——而答案不在任何文件里,在你脑子里。</p></details>
+
+  <h3>5 · 完成之后:进阶路线图</h3>
+  <p>以下每条都是"什么时候学、先会什么"的一句话路书——本课不教,但为你留了路标。</p>
+  <table>
+    <tr><th>方向</th><th>它是什么</th><th>先会什么(本课对应物)</th></tr>
+    <tr><td><strong>时序收敛深入</strong></td><td>逐行读时序报告、跨时钟域约束(set_clock_groups)、物理优化</td><td>ch04 的 WNS、ch09 的手写 create_clock——建议第一站,最便宜</td></tr>
+    <tr><td><strong>HDMI</strong> 输出</td><td>高清多媒体接口(High-Definition Multimedia Interface, HDMI),TMDS 串行 + 像素时钟域</td><td>时序收敛深入 + 双时钟域纪律(ch03);板上 HDMI TX 是现成外设</td></tr>
+    <tr><td><strong>PL 以太网</strong></td><td>自写轻量 MAC,走 GMII 到 PHY(板上有 PL ETH 口,无驱动)</td><td>AXI4-Stream(AXI 家族表里那行)+ 多通道 DMA 概念</td></tr>
+    <tr><td><strong>DDR / AXI4 完整版</strong></td><td>大流量数据搬运,PS DDR 经 HP 口进出 PL</td><td>AXI4 突发事务 + 时序收敛;是上面两条的公共前置</td></tr>
+  </table>
+  <h4>去哪继续学</h4>
+  <ul>
+    <li><strong>官方文档(工具与芯片的唯一权威)</strong>:UG585《Zynq-7000 TRM》——你板上这颗芯片的说明书,ch09 起 GP 口/SLCR 的每句话都出自它;UG949/UG903 时序收敛方法论;ARM 的 AMBA AXI 规范(IHI0022)——ch08 五通道的完整版</li>
+    <li><strong>社区与博客</strong>:Project F(projectf.io,FPGA 教程与优雅的 Verilog 库)、ZipCPU 博客(验证与形式化方法,深度向)、Nandland(入门向巩固)、/r/FPGA</li>
+    <li><strong>自家姊妹篇</strong>:<a href="https://lzjever.github.io/zynq-z7nano-mainline-linux/">主线 Linux 手册</a>——PS 那半边的深水区,FIQ 战地日记完整版在那里等你</li>
+    <li><strong>开源项目读码</strong>:挑一个中小型开源核(如 ZIP CPU)通读——你现在读得懂了</li>
+  </ul>
+
+  <h3>6 · 结课寄语</h3>
+  <p>回头看一眼你走过的路:一个"Verilog 一个字都看不懂"的命令行高手,九个 Lab 之前连 testbench 是什么都没见过——现在你读得懂波形、写得出状态机、知道亚稳态为什么骗过你的眼睛、能对一个总线从机逐拍数出握手,并且让自己移植的 Debian 给自己写的电路装载、供钟、拨旋钮。</p>
+  <p>更重要的一件装备不在代码里:这门课从 lab02 的"先写后看"到今天的"一行不给",一直在训练同一件事——<strong>面对一张白纸,从需求推出电路,再用现象验证它</strong>。这是硬件工程师的元技能,它比任何一门语法都保值。</p>
+  <p>关掉这页之前,最后一道自测,口头作答:</p>
+  <div class="box box-win"><div class="box-title">结课三问</div>
+  <ol>
+    <li>从 <code>devmem 0x40000004 32 32</code> 到 LED 变暗,经过哪些站?(ch09 毕业考的换地址版)</li>
+    <li>BRIGHT 写 0 会发生什么?写 256(0x100)呢?——8 位截断去哪了?</li>
+    <li>如果让你给这个设计再加一个按键(P14)触发的"快照读回"功能,你会先画哪张图?</li>
+  </ol></div>
+  <p>三问答完,课程结束。板子别收——路线图的第一站,今晚就能出发。</p>
+
+  <div class="pager">
+    <a href="ch09-merge.html">← 上一章:PS-PL 会师</a>
+    <a href="appendix-board.html">下一页:附录 A · 板卡手册 →</a>
+  </div>
+</main>
+</body>
+</html>

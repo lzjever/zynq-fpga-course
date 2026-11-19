@@ -30,19 +30,22 @@ module uart_rx #(
                      S_STOP = 2'd2;        // 停止位中点验收
 
     reg [1:0] state_r, next_state;
-    reg [$clog2(BAUD_DIV)-1:0] baud_cnt;   // 位内计数器(和 TX 同款,位宽自动适配)
-    reg [3:0]                   bit_cnt_r; // 0=起始位,1..8=数据位 d0..d7
-    reg [7:0]                   rx_shift;  // 右移拼装:先收到的位最后落在低位 → 自然形成 LSB 先行
+    reg [$clog2(BAUD_DIV)-1:0] baud_cnt = 0;   // 位内计数器(和 TX 同款,位宽自动适配)
+    reg [3:0]                   bit_cnt_r = 0; // 0=起始位,1..8=数据位 d0..d7
+    reg [7:0]                   rx_shift = 8'd0;  // 右移拼装:先收到的位最后落在低位 → 自然形成 LSB 先行
+
+    // 上电初始值(同 uart_tx:综合成 Xilinx INIT,仿真器不靠复位也能跑)
+    initial state_r = S_IDLE;
 
     // ---------- 第 0 级:打两拍同步(ch03 的保险,异步串口线是"野信号"本尊) ----------
-    reg [1:0] sync;
+    reg [1:0] sync = 2'b11;                    // 初值 = 空闲电平 1(声明处初值,上电即生效)
     always @(posedge clk or negedge rst_n)
         if (!rst_n) sync <= 2'b11;             // 空闲电平是 1
         else       sync <= {sync[0], rx};
     wire rx_s = sync[1];
 
     // ---------- 起始沿检测:旧值 1、新值 0 = 对方开口了 ----------
-    reg rx_s_q;
+    reg rx_s_q = 1'b1;
     always @(posedge clk or negedge rst_n)
         if (!rst_n) rx_s_q <= 1'b1;
         else        rx_s_q <= rx_s;
@@ -118,7 +121,7 @@ module uart_rx #(
     end
 
     // 帧错误 = 停止位正中读到的却是 0(双方节拍彻底对不上 / 线被拔了半截)
-    reg err_r;
+    reg err_r = 1'b0;
     always @(posedge clk or negedge rst_n)
         if (!rst_n) err_r <= 1'b0;
         else        err_r <= (state_r == S_STOP) && (baud_cnt == BAUD_DIV-1) && !rx_s;

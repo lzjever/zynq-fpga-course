@@ -12,11 +12,14 @@ set proj  lab06
 set part  xc7z020clg400-2
 
 # ---------- 模式 → 参数映射 ----------
+# 注释必须写在 switch 体外:switch 的第二参数按"模式/体"成对解析,
+# 体内的 `;#` 会被当成列表元素,挤乱后面的模式配对(slow/real/ila 会失配)。
+#   eye  = 2 波特(肉眼 UART)| slow = 9600 | real = 115200 | ila = 115200 + ILA 核
 switch $mode {
-    "eye"  { set top lab06_top;       set div 25000000; set ila 0 }  ;# 2 波特
-    "slow" { set top lab06_top;       set div 5208;     set ila 0 }  ;# 9600
-    "real" { set top lab06_top;       set div 434;      set ila 0 }  ;# 115200
-    "ila"  { set top lab06_ila_top;   set div 434;      set ila 1 }  ;# 115200+ILA
+    "eye"  { set top lab06_top;       set div 25000000; set ila 0 }
+    "slow" { set top lab06_top;       set div 5208;     set ila 0 }
+    "real" { set top lab06_top;       set div 434;      set ila 0 }
+    "ila"  { set top lab06_ila_top;   set div 434;      set ila 1 }
     default { puts "未知模式:$mode(可用:eye / slow / real / ila)"; exit 1 }
 }
 puts "=============================="

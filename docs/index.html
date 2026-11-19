@@ -58,7 +58,7 @@
   <div class="box box-know"><div class="box-title">M2 · 第一件自产电路(ch02)</div>
   <p>按键消抖。不再改别人的代码,而是从一张白纸开始:自己写需求、自己写电路、自己写测试、自己验收。身份从"改代码的人"变成"设计电路的人"——这是全课程最大的一次跃迁。</p></div>
   <div class="box box-know"><div class="box-title">M3 · 让硅片呼吸、开口说话(ch05-07)</div>
-  <p>呼吸灯顺着正弦表渐亮渐灭;然后板子用你 ssh 上 Debian 的那个波特率,亲口"说"出一帧数据——你用自己的眼睛当接收器逐位解码。课程中后段的续航包。</p></div>
+  <p>呼吸灯顺着三角波渐亮渐灭;然后板子用你 ssh 上 Debian 的那个波特率,亲口"说"出一帧数据——你用自己的眼睛当接收器逐位解码。课程中后段的续航包。</p></div>
   <div class="box box-know"><div class="box-title">M4 · 会师(ch08-10)</div>
   <p>你移植的 Debian 用 FPGA Manager 装载你写的电路;<code>devmem</code> 一枪打中的寄存器,是你自己设计的。两条技能树在你手里合流——这一座,是给写过 Linux 的你独家定制的。</p></div>
 
@@ -71,7 +71,7 @@
     <tr><td>ch02</td><td><a href="ch02-debounce.html">Lab02 按键消抖:先写后看</a></td><td>你以为按了一下按键?金属片其实弹了 20 毫秒、几十次。软件工程师的第一反应是 sleep——电路里没有 sleep,只有计数。</td><td>Lab02 消抖器</td><td>M2</td></tr>
     <tr><td>ch03</td><td><a href="ch03-cdc.html">亚稳态:时间的灾难</a></td><td>ch02 结尾埋的那颗雷在这里引爆:你把一根"野信号"直接接进了 50MHz 的世界——它 99.9% 的时候乖得像只猫。</td><td>Lab03 双时钟域</td><td>—</td></tr>
     <tr><td>ch04</td><td><a href="ch04-vivado.html">Vivado 幕后与一键化</a></td><td>五步舞你跳熟了,但幕后乐队在演奏什么?那 4MB 的 .bit 文件里装的是什么?(故意安排的呼吸谷。)</td><td>Lab01 加烧写脚本</td><td>—</td></tr>
-    <tr><td>ch05</td><td><a href="ch05-pwm.html">PWM 呼吸灯与模块例化</a></td><td>上次"半亮"是意外,这次我们故意造半亮,还要让它顺着正弦表呼吸。第一次把电路装进电路(例化)。</td><td>Lab05 呼吸灯</td><td>M3</td></tr>
+    <tr><td>ch05</td><td><a href="ch05-pwm.html">PWM 呼吸灯与模块例化</a></td><td>上次"半亮"是意外,这次我们故意造半亮,还要让它顺着三角波呼吸。第一次把电路装进电路(例化)。</td><td>Lab05 呼吸灯</td><td>M3</td></tr>
     <tr><td>ch06</td><td><a href="ch06-uart-tx.html">UART 发送器:时间是编码</a></td><td>你 ssh 上 Debian 全靠的那个 115200,今天从发送端亲手造一个——5 秒钟用 LED 给你"打"出一个字符。顺带把逻辑分析仪焊进你的芯片。</td><td>Lab06 发送器</td><td>M3</td></tr>
     <tr><td>ch07</td><td><a href="ch07-uart-rx.html">UART 接收器:自环回(先写后看)</a></td><td>一根杜邦线,让板子说一句自己听得懂的话。第二个状态机由你来写——这次课程只给需求,不给答案。</td><td>Lab07 自环回</td><td>M3</td></tr>
     <tr><td>ch08</td><td><a href="ch08-axi.html">AXI 总线:和 ARM 说同一种话</a></td><td>你的电路至今在自说自话。总线的规矩学会了,隔壁那颗 ARM 才敲得开你的门——纯仿真,不上板也能毕业。</td><td>Lab08 最小从机</td><td>M4</td></tr>

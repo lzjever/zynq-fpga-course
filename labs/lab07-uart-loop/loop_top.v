@@ -20,10 +20,9 @@ module loop_top #(
     input  wire key,      // PL_KEY(P14)= 发射按钮
     input  wire rx_pad,   // 排针 W16(杜邦线一头)
     output wire tx_pad,   // 排针 U12(杜邦线另一头)
-    output wire led,      // R14:收到一个字节翻转一次
-    output wire dbg_done,      // 观察窗:RX 完成一帧的单周期脉冲(TB/ILA 用)
-    output wire [7:0] dbg_data,// 观察窗:RX 收到的字节
-    output wire dbg_match      // 观察窗:收到的 == 发出的?(回环完整性)
+    output wire led       // R14:收到一个字节翻转一次
+    // 注:dbg_done/dbg_data/dbg_match 不再作为端口引出(纯片内观察信号
+    // 不该上端口表);它们降级为下面的内部 wire,TB 用分层引用 dut.dbg_* 读
 );
     wire tick;
     wire [3:0] tx_bit_cnt, rx_bit_cnt;   // ILA 模式下接探针,普通模式悬空
@@ -57,9 +56,10 @@ module loop_top #(
     // R14 低电平点亮:引脚侧取反(T 触发器只管翻转,极性不影响"收到即翻转")
     assign led = ~led_r;
 
-    assign dbg_done  = rx_done_w;
-    assign dbg_data  = rx_data_w;
-    assign dbg_match = (rx_data_w == CHAR);   // 回环比较:发送内容 vs 接收结果
+    // 观察窗:RX 完成一帧的单周期脉冲 / 收到的字节 / 收发是否一致(回环完整性)
+    wire       dbg_done  = rx_done_w;
+    wire [7:0] dbg_data  = rx_data_w;
+    wire       dbg_match = (rx_data_w == CHAR);   // 回环比较:发送内容 vs 接收结果
 
 // ---------- ILA 模式:加 -verilog_define ILA 时,5 探针核自动长进来 ----------
 // (build.tcl 的 ila 模式负责 create_ip ila_uart + 打开这个宏,普通模式整段消失)

@@ -21,14 +21,17 @@ module tb_uart_loop;
 
     // ---------- 被测 1:自环顶层(tx_pad 和 rx_pad 之间的 wire 就是杜邦线) ----------
     wire tx_pad, rx_pad;
-    wire led, dbg_done, dbg_match;
-    wire [7:0] dbg_data;
+    wire led;
+    // dbg_done/dbg_data/dbg_match 已从 loop_top 端口表退役(纯片内观察信号),
+    // 这里改用分层引用 dut.dbg_* 直接读内部 wire —— ch01 仿真课的老手艺
+    wire       dbg_done  = dut.dbg_done;
+    wire [7:0] dbg_data  = dut.dbg_data;
+    wire       dbg_match = dut.dbg_match;
 
     loop_top #(.BAUD_DIV(8), .STABLE_CYCLES(40), .CHAR(8'h48)) dut (
         .clk(clk), .key(key),
         .rx_pad(rx_pad), .tx_pad(tx_pad),
-        .led(led),
-        .dbg_done(dbg_done), .dbg_data(dbg_data), .dbg_match(dbg_match)
+        .led(led)
     );
     assign rx_pad = tx_pad;        // ← 杜邦线:一行 wire,把"接线即外设"演到极致
 

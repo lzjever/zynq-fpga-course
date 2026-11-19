@@ -93,8 +93,8 @@
     <tr><td>板上</td><td><code>echo lab01.bin &gt; /sys/class/fpga_manager/fpga0/firmware</code></td><td>让 FPGA Manager(Linux 内核的 FPGA 装载框架)装载你的电路——ch09 会师主路</td></tr>
     <tr><td>板上</td><td><code>cat /sys/class/fpga_manager/fpga0/state</code></td><td>查状态:<code>operating</code> = 装好,PL 已在跑</td></tr>
     <tr><td>板上</td><td><code>devmem 0xF8000170 32 值</code></td><td>写 SLCR(系统级控制寄存器,System-Level Control Registers, SLCR)使能 FCLK0——值的除数计算见 ch09"会师仪式"</td></tr>
-    <tr><td>板上</td><td><code>devmem 0x40000000 32 0x2</code></td><td>往 GP0 直挂从机的 0 号寄存器写值(示例:写 duty=2;地址怎么来的见 ch09)</td></tr>
-    <tr><td>板上</td><td><code>devmem 0x40000000</code></td><td>读回:验证版本魔数 / 寄存器写对了没</td></tr>
+    <tr><td>板上</td><td><code>devmem 0x40000000 32 0x1</code></td><td>往 GP0 直挂从机的 0 号寄存器写值(写 CTRL 寄存器 bit0=1 点灯;地址怎么来的见 ch09)</td></tr>
+    <tr><td>板上</td><td><code>devmem 0x40000000</code></td><td>读回:回显最后写入值,验证寄存器写对了没</td></tr>
   </table>
 
   <h3>C.5 OpenOCD 三板斧:halt / reg pc / resume(学在姊妹手册第 6 章)</h3>

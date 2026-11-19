@@ -1,4 +1,0 @@
-INFO: [VRFC 10-2263] Analyzing Verilog file "/home/percy/works/zynq-fpga-course/labs/lab02-debounce/reference/debounce.v" into library work
-INFO: [VRFC 10-311] analyzing module debounce
-INFO: [VRFC 10-2263] Analyzing Verilog file "/home/percy/works/zynq-fpga-course/labs/lab02-debounce/tb_debounce.v" into library work
-INFO: [VRFC 10-311] analyzing module tb_debounce

@@ -1,4 +1,0 @@
-INFO: [VRFC 10-2263] Analyzing Verilog file "/home/percy/works/zynq-fpga-course/labs/lab08-axi/axi_lite_slave.v" into library work
-INFO: [VRFC 10-311] analyzing module axi_lite_slave
-INFO: [VRFC 10-2263] Analyzing Verilog file "/home/percy/works/zynq-fpga-course/labs/lab08-axi/tb_axi_slave.v" into library work
-INFO: [VRFC 10-311] analyzing module tb_axi_slave

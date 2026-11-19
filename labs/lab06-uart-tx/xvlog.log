@@ -1,8 +1,0 @@
-INFO: [VRFC 10-2263] Analyzing Verilog file "/home/percy/works/zynq-fpga-course/labs/lab06-uart-tx/uart_tx.v" into library work
-INFO: [VRFC 10-311] analyzing module uart_tx
-INFO: [VRFC 10-2263] Analyzing Verilog file "/home/percy/works/zynq-fpga-course/labs/lab06-uart-tx/key_pulse.v" into library work
-INFO: [VRFC 10-311] analyzing module key_pulse
-INFO: [VRFC 10-2263] Analyzing Verilog file "/home/percy/works/zynq-fpga-course/labs/lab06-uart-tx/lab06_top.v" into library work
-INFO: [VRFC 10-311] analyzing module lab06_top
-INFO: [VRFC 10-2263] Analyzing Verilog file "/home/percy/works/zynq-fpga-course/labs/lab06-uart-tx/tb_uart_tx.v" into library work
-INFO: [VRFC 10-311] analyzing module tb_uart_tx

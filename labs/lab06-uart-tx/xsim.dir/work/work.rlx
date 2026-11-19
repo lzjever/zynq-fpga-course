@@ -1,8 +1,0 @@
-0.7
-2020.2
-Jun 16 2026
-11:12:08
-/home/percy/works/zynq-fpga-course/labs/lab06-uart-tx/key_pulse.v,1795111564,verilog,,/home/percy/works/zynq-fpga-course/labs/lab06-uart-tx/lab06_top.v,,key_pulse,,,,,,,,
-/home/percy/works/zynq-fpga-course/labs/lab06-uart-tx/lab06_top.v,1795110645,verilog,,/home/percy/works/zynq-fpga-course/labs/lab06-uart-tx/tb_uart_tx.v,,lab06_top,,,,,,,,
-/home/percy/works/zynq-fpga-course/labs/lab06-uart-tx/tb_uart_tx.v,1795111651,verilog,,,,tb_uart_tx,,,,,,,,
-/home/percy/works/zynq-fpga-course/labs/lab06-uart-tx/uart_tx.v,1795111551,verilog,,/home/percy/works/zynq-fpga-course/labs/lab06-uart-tx/key_pulse.v,,uart_tx,,,,,,,,

@@ -152,12 +152,14 @@
   </table>
   <p>两条路<strong>互斥,谁后到谁生效</strong>(后装的流顶掉先装的)。Variant B 装完的第一件事,就是"接电源"仪式:</p>
   <pre><code><span class="c"># Debian 上(ssh root@192.168.1.10):先读后写</span>
-devmem 0xF8000170                     <span class="c"># 看 FCLK0 控制寄存器现状(bit24=1 已是活的)</span>
-devmem 0xF8000170 32 0x01011400      <span class="c"># 使能,IO PLL 1000MHz ÷20 ÷1 = 50MHz</span>
+devmem 0xF8000170                     <span class="c"># 看 FCLK0 控制寄存器现状(bit0=1 已是活的)</span>
+devmem 0xF8000008 32 0xDF0D          <span class="c"># 解锁 SLCR(SLCR 写操作前必须;待上板验证)</span>
+devmem 0xF8000170 32 0x00101401      <span class="c"># 使能,IO PLL 1000MHz ÷20 ÷1 = 50MHz</span>
 
 <span class="c"># L0 点灯 / 灭灯</span>
 devmem 0x40000000 32 0x00000001
 devmem 0x40000000 32 0x00000000</code></pre>
+  <p>那个魔数的账要算清:0x00101401 = <strong>bit0</strong>(时钟使能 CLKENABLE)| [13:8]=0x14(DIV0=20)| [25:20]=0x1(DIV1=1)| [17:16]=00(源选 IO PLL)——1000MHz ÷ 20 ÷ 1 = 50MHz。位域对照 Zynq TRM 的 FPGA0_CLK_CTRL,别背,会查。<span style="color:#7c3a12;">(解锁命令与位域拼装为待上板验证项。)</span></p>
   <div class="box box-know"><div class="box-title">地址是怎么算出来的(你的本能问题)</div>
   <p><code>0x4000_0000</code> = GP0 的基址 + 偏移 0x00(CTRL)。单从机直挂 GP0 <strong>没有互连重映射</strong>:Verilog 里接的哪根地址线,ARM 就直达哪个偏移。0x4000_0000+0x04 = SPEED。软件里的"地址映射"四个字,在硬件侧就是一根译码线——两个世界在这里词汇表合并。</p></div>
 

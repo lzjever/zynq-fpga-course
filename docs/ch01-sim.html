@@ -246,7 +246,7 @@
   <div class="box box-warn"><div class="box-title">坑 4 · 命令行跑完波形里没信号</div>
   <p><code>xelab</code> 不加 <code>-debug typical</code>,快照里只留顶层端口,<code>cnt</code> 这些内部信号在波形里根本不存在。GUI(Run Behavioral Simulation)自动带调试信息,命令行要自己记得加——这也是 sim.tcl 替你写死它的原因。</p></div>
   <div class="box box-know"><div class="box-title">如实交代 · XSIM 免费档的限制</div>
-  <p>免费档(安装界面名 Vivado ML Standard,授权页称 Basic)的 XSIM 限制:一次仿真最多约 <strong>50000 个设计实例</strong>(触发器/门级单元的计数)。lab01 总共 24 个触发器加一点逻辑,离限额差三个数量级;后面最大的设计(ch08 的总线从机)也到不了零头。这个限制真正影响的是"仿真整颗 SoC"那种规模的活——到时候你会换工具,而不是换钱包。</p></div>
+  <p>免费档(BASIC 授权)的 XSIM 限制:一次仿真最多约 <strong>50000 个设计实例</strong>(触发器/门级单元的计数)。lab01 总共 24 个触发器加一点逻辑,离限额差三个数量级;后面最大的设计(ch08 的总线从机)也到不了零头。这个限制真正影响的是"仿真整颗 SoC"那种规模的活——到时候你会换工具,而不是换钱包。</p></div>
 
   <h3>小结</h3>
   <div class="box box-win"><div class="box-title">本章一句话</div>

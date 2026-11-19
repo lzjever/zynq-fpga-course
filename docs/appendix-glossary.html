@@ -68,6 +68,7 @@
     <tr><td>CDC</td><td>跨时钟域(Cross-Domain Crossing)</td><td>信号从一个时钟域进入另一个时钟域;多比特跨域会数值撕裂</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
     <tr><td>CLB</td><td>可配置逻辑块(Configurable Logic Block)</td><td>芯片里格子状的基本单位;布局就是给零件挑塞进哪一格</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
     <tr><td>DDR3</td><td>双倍速率三代同步内存(Double Data Rate 3)</td><td>板上 512MB,归 PS 管,跑 Debian 全靠它;PL 课程不碰</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>Differential Pair</td><td>差分对</td><td>一根信号配一根互补线的抗干扰走法,引脚名带 _P(正端)/_N(负端)后缀;注意本板排针名里的 P/N 只是"第几对的正/负编号",两根都是普通单端 IO,不是差分对(附A.5)</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
     <tr><td>DMA *</td><td>—(全书未展开)</td><td>ch10 路线图提名的数据搬运概念(与 AXI4 搭配出现)</td><td><a href="ch10-capstone.html">ch10 · 毕业设计</a></td></tr>
     <tr><td>DRC</td><td>设计规则检查(Design Rule Check)</td><td>IOSTANDARD 写错时轻则报它,重则电平不匹配</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
     <tr><td>DUT</td><td>被测器件(Device Under Test)</td><td>被测电路的行话;仿真器能看到 DUT 内部每一根线</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
@@ -76,7 +77,7 @@
     <tr><td>FIQ</td><td>快速中断请求(Fast Interrupt ReQuest)</td><td>PS 侧中断;FIQ 风暴曾把整机打穿冻死——根源在 PS,与你的 PL 电路无关</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
     <tr><td>FCLK</td><td>结构时钟(Fabric Clock)</td><td>PS 送给 PL 的时钟(FCLK0);会师后整个设计的唯一节拍,由 SLCR 定频率</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
     <tr><td>force / release</td><td>—(TB 专用方言)</td><td>测试台里强制改写信号的手段;写进设计代码,综合器直接报错</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
-    <tr><td>FPGA *</td><td>—(全书未给全称)</td><td>本课主角:出厂空白的可编程芯片,三种零件遍地都是,烧进比特流后"捏"成你的电路</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>FPGA</td><td>现场可编程门阵列(Field-Programmable Gate Array)</td><td>本课主角:出厂空白的可编程芯片,三种零件遍地都是,烧进比特流后"捏"成你的电路</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
     <tr><td>FPGA Manager</td><td>FPGA 管理器</td><td>Linux 内核的 FPGA 装载框架,经 PCAP 把 .bin 灌进 PL;会师主路</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
     <tr><td>GP0</td><td>通用端口(General Purpose Port)</td><td>ARM 侧伸进 PL 的 AXI 窗口,给你的从机划段从 0x4000_0000 开始</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
     <tr><td>GIC *</td><td>—(全书未展开全称)</td><td>PS 侧中断分发器;其安全世界配置被锁是 FIQ 风暴的根源</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
@@ -85,13 +86,14 @@
     <tr><td>HP 口 *</td><td>—(全书未展开)</td><td>路线图:大流量数据经它进出 PS DDR(HP = 高性能端口,书内未展开)</td><td><a href="ch10-capstone.html">ch10 · 毕业设计</a></td></tr>
     <tr><td>ILA</td><td>集成逻辑分析仪(Integrated Logic Analyzer)</td><td>住进芯片的"显微镜"IP:按系统时钟记录、循环覆盖,触发时冻结上传真波形</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
     <tr><td>IIO</td><td>工业输入输出子系统(Industrial I/O)</td><td>Linux 里挂 XADC 的子系统,读法在 /sys/bus/iio/</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>Implementation</td><td>实现(实现阶段)</td><td>五步舞第四步:网表住进真实硅片;impl_1 这个 run 后台按 opt_design → place_design → route_design → write_bitstream 四步推进,前三步即 ch04 说的"内幕三幕"(映射/布局/布线)</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
     <tr><td>IP 核 *</td><td>—(全书未展开全称)</td><td>Vivado 生成的现成电路单元;ILA 就是一个 IP 核</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
     <tr><td>JTAG</td><td>联合测试工作组接口(Joint Test Action Group)</td><td>烧写 / ILA 走的调试通道;装载是易失的,断电即失;与 OpenOCD 会互杀</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
     <tr><td>Journal(.jou)</td><td>日志回放文件(Journal)</td><td>Vivado 每个会话把执行过的 Tcl 逐条写进 .jou;翻它 = 找回"刚才那个操作叫什么"</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
     <tr><td>localparam</td><td>—(Verilog 关键字)</td><td>模块内部常数,外部改不了($clog2 算出的位宽用它存)</td><td><a href="ch05-pwm.html">ch05 · PWM 呼吸灯</a></td></tr>
     <tr><td>LSB First</td><td>最低有效位先行(Least Significant Bit First)</td><td>UART 数据位从 byte 第 0 位开始发;双方必须一致,反着发会解出另一个字节</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
     <tr><td>LUT</td><td>查找表(Look-Up Table)</td><td>一张 64 格真值表的"万能可编程门";7z020 有 53,200 个</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
-    <tr><td>LVCMOS33</td><td>3.3V 低压 CMOS 电平标准(Low-Voltage CMOS 33)</td><td>本板 bank 34/35 的电气标准;XDC 里 IOSTANDARD 与此一致</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
+    <tr><td>LVCMOS33</td><td>3.3V 低压 CMOS 电平标准(Low-Voltage CMOS 33)</td><td>本板 bank 34/35 的电气标准;XDC 里 IOSTANDARD 与此一致;33 = VCCO 3.3V 档,换板先查手册</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
     <tr><td>MRCC *</td><td>—(全书未展开)</td><td>时钟专用输入脚;N18 就是 bank 34 的时钟专用脚</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
     <tr><td>MTBF</td><td>平均无故障时间(Mean Time Between Failures)</td><td>两次亚稳态事故的平均间隔;每多打一拍,指数翻倍</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
     <tr><td>MUX *</td><td>数据选择器(全书未给全称)</td><td>在两路信号里挑一路的组合电路——if/else 分支的硬件真身</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
@@ -113,6 +115,7 @@
     <tr><td>STA</td><td>静态时序分析(Static Timing Analysis)</td><td>不跑仿真、纯查表算全芯片每条路径延迟的检查;一条路径都不漏</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
     <tr><td>TB</td><td>测试台(Testbench)</td><td>写给仿真器的软件,不是电路;造时钟、造激励、说停;详见 B-2「测试台」</td><td><a href="ch01-sim.html">ch01 · 仿真入门</a></td></tr>
     <tr><td>task</td><td>—(Verilog TB 语法)</td><td>测试台里把一段动作封装成可调用的"函数"(如 axi_write/axi_read)</td><td><a href="ch08-axi.html">ch08 · AXI 总线</a></td></tr>
+    <tr><td>TCK / TMS / TDI / TDO</td><td>测试时钟 / 测试模式选择 / 测试数据入 / 测试数据出(Test Clock / Test Mode Select / Test Data In / Test Data Out)</td><td>JTAG 的四根信号线;板上 FT232H 就是驱动这四线的芯片,hw_server 与 OpenOCD 抢它(A.7)</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
     <tr><td>TNS *</td><td>—(全书未给英文全称)</td><td>违反时序路径的总量;为 0 即全过</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
     <tr><td>TMDS *</td><td>—(全书未展开)</td><td>HDMI 路线图提名的串行传输方式</td><td><a href="ch10-capstone.html">ch10 · 毕业设计</a></td></tr>
     <tr><td>UART</td><td>通用异步收发传输器(Universal Asynchronous Receiver/Transmitter)</td><td>电路世界最古老、至今没死的社交协议;你调 Debian 的那根 115200 串口线</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
@@ -230,7 +233,7 @@
     <tr><td>芯片</td><td>Cortex-A9</td><td>PS 的双核 ARM 处理器</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
     <tr><td>器件</td><td>CH340 / CH340E</td><td>USB 转串口芯片,焊死在 PS 侧接 ARM 的 UART——PL 的 TX 永远出不了这根线</td><td><a href="ch06-uart-tx.html">ch06 · UART 发送器</a></td></tr>
     <tr><td>器件</td><td>FT232H</td><td>USB 转 JTAG 芯片(USB ID 0403:6014),独占设备;hw_server 与 OpenOCD 抢它</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
-    <tr><td>工具</td><td>Vivado</td><td>FPGA 开发工具;母语是 Tcl,GUI 只是它的皮;本课用 2026.1 免费档(安装名 Vivado ML Standard)</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
+    <tr><td>工具</td><td>Vivado</td><td>FPGA 开发工具;母语是 Tcl,GUI 只是它的皮;本课用 2026.1 免费档(BASIC 授权)</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
     <tr><td>工具</td><td>Verilog</td><td>描述电路的语言:可综合子集 + 仿真方言,两页语法一种语言</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
     <tr><td>工具</td><td>Tcl</td><td>(Tool Command Language)Vivado 的母语、工具胶水语言;GUI 每次点击都被翻译成一条 Tcl</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
     <tr><td>工具</td><td>OpenOCD</td><td>开源 JTAG 服务器,姊妹手册里的排雷工具箱;与 hw_server 互杀</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>

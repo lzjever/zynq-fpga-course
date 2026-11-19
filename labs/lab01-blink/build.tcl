@@ -5,7 +5,7 @@
 set proj  lab01
 set part  xc7z020clg400-2        ;# 我们板上的芯片(注意 -2 速度等级)
 
-# ① 建工程(在内存中,不落盘一堆中间文件)
+# ① 建工程(在 ./lab01/ 下落盘;工程产物能用本脚本一键重建,git 不收藏)
 create_project $proj ./$proj -part $part -force
 
 # ② 加入 Verilog 源码和约束

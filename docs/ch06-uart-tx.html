@@ -256,7 +256,7 @@ vivado -mode batch -source program.tcl
   <div class="box box-step"><div class="box-title">练习 · 游标量位宽(自环的盲区,只有它能救)</div>
   <p>波形窗里放两根游标,卡在 tx 相邻两次电平变化的沿上,读出时间差。应为 <strong>8680ns ± 20ns</strong>(434 × 20ns,容 1 个时钟的量化误差)。这就是"用测量验证波特率"——记住这个动作,下一章自环实验有个隐蔽盲区:<strong>TX 和 RX 用同一个 BAUD_DIV,错也错得整整齐齐,回环永远自洽</strong>,波特率错了它查不出来。到时候,唯一说真话的就是这两根游标。</p></div>
   <div class="box box-know"><div class="box-title">知识 · 免费档的 ILA 限额,如实交代</div>
-  <p>免费档(安装界面名 Vivado ML Standard,授权页称 Basic)<strong>限 1 个 ILA 核、每核 5 个探针(Probe,被测信号;多位总线算 1 个)</strong>。本设计探针 5 个用满:tx、busy、tick、bit_cnt[3:0]、state[1:0]——其中解一帧其实只要 tx/busy/bit_cnt/state 四个,第 5 个名额给了 tick(按键脉冲),它是个好触发词:按一次抓一次。采样深度(Sample Depth)按 8192 配:115200 一帧 = 4340 点,8192 能装下一帧半,够用。<strong>待实测注记</strong>:免费档深度上限以 2026.1 实机为准;万一 8192 不可用,方向是<strong>升波特率</strong>(921600 → 一帧仅 542 点)而不是降——采样率固定 50MHz,波特率越低一帧点数越多,降波特率只会更装不下。</p></div>
+  <p>免费档(BASIC 授权)<strong>限 1 个 ILA 核、每核 5 个探针(Probe,被测信号;多位总线算 1 个)</strong>。本设计探针 5 个用满:tx、busy、tick、bit_cnt[3:0]、state[1:0]——其中解一帧其实只要 tx/busy/bit_cnt/state 四个,第 5 个名额给了 tick(按键脉冲),它是个好触发词:按一次抓一次。采样深度(Sample Depth)按 8192 配:115200 一帧 = 4340 点,8192 能装下一帧半,够用。<strong>待实测注记</strong>:免费档深度上限以 2026.1 实机为准;万一 8192 不可用,方向是<strong>升波特率</strong>(921600 → 一帧仅 542 点)而不是降——采样率固定 50MHz,波特率越低一帧点数越多,降波特率只会更装不下。</p></div>
 
   <h3 id="pitfalls">8 · 常见坑</h3>
   <table>

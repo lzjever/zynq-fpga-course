@@ -9,3 +9,4 @@ program_hw_devices [current_hw_device]
 puts "=============================="
 puts " JTAG 烧写完成。提醒:JTAG 装的流会顶掉 FPGA Manager 装的流(互斥,谁后到谁生效)"
 puts "=============================="
+close_hw_manager

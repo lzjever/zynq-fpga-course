@@ -50,7 +50,7 @@
 <span class="k">set_property</span> top led_blink [current_fileset]              <span class="c"># ② 指定顶层模块</span>
 <span class="k">launch_runs</span> synth_1 -jobs 8                              <span class="c"># ③ 综合:Verilog → 门级电路</span>
 <span class="k">wait_on_run</span> synth_1                                        <span class="c"># ③ 等它跑完</span>
-<span class="k">launch_runs</span> impl_1 -jobs 8                               <span class="c"># ④ 实现:放进真实 LUT/FF、布线</span>
+<span class="k">launch_runs</span> impl_1 -jobs 8                               <span class="c"># ④ 实现:内部分三幕(映射/布局/布线),住进真实 LUT/FF</span>
 <span class="k">wait_on_run</span> impl_1                                         <span class="c"># ④ 等它跑完</span>
 <span class="k">launch_runs</span> impl_1 -to_step write_bitstream -jobs 8       <span class="c"># ⑤ 生成比特流 .bit</span>
 <span class="k">wait_on_run</span> impl_1                                         <span class="c"># ⑤ 等它跑完</span></code></pre>

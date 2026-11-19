@@ -57,18 +57,27 @@
   </ul>
 
   <h3>3 · 五步舞的幕后:每一步在造什么</h3>
-  <p>把 build.tcl 的五步竖着看一遍,每步的"产出物"才是重点:</p>
+  <p>先把口径钉死:五步舞就是 build.tcl 里那五步——<strong>建工程 → 加源 → 综合 → 实现 → 比特流</strong>;GUI 里对应五个按钮:<strong>Create Project / Add Sources / Run Synthesis / Run Implementation / Generate Bitstream</strong>。把它们竖着看一遍,每步的"产出物"才是重点:</p>
   <div class="flow">
-    <div class="node"><b>① 综合 Synthesis</b> —— Verilog(RTL)翻译成 <b>网表(Netlist)</b>:一张"零件+连线"的图纸,零件是 LUT、FF、进位链这些芯片里真实存在的东西</div>
+    <div class="node"><b>① 建工程 Project Setup</b> —— <code>create_project</code>:立一张户口页——工程目录 + 芯片型号 <code>xc7z020clg400-2</code>(速度等级 -2 抄错,后面全白搭)</div>
     <div class="arrow">↓</div>
-    <div class="node"><b>② 映射 Mapping</b> —— 图纸上的零件逐一领到户口:这个加法器拆成 24 个 LUT、那排寄存器落成 24 个 FF……结果记进<b>利用率(Utilization)报告</b></div>
+    <div class="node"><b>② 加源 Add Sources</b> —— <code>add_files</code>:把手写物登记进户口——设计源 .v、约束 .xdc、指定顶层模块。到这步为止,一切还只是"清单"</div>
     <div class="arrow">↓</div>
-    <div class="node"><b>③ 布局 Placement</b> —— 给每个零件挑物理坐标(塞进哪一格 <b>可配置逻辑块(Configurable Logic Block,CLB)</b>)。零件放得好,线就短</div>
+    <div class="node"><b>③ 综合 Synthesis</b> —— Verilog(RTL)翻译成 <b>网表(Netlist)</b>:一张"零件+连线"的图纸,零件是 LUT、FF、进位链这些芯片里真实存在的东西</div>
     <div class="arrow">↓</div>
-    <div class="node"><b>④ 布线 Routing</b> —— 把图纸上的每根连线,变成芯片里真实的金属线段:一路闭合可编程开关。这步做完,你的电路在物理上已经"长好"了</div>
+    <div class="node"><b>④ 实现 Implementation</b> —— 网表住进真实硅片:零件领户口、挑坐标、连线走金属(内部分三幕,下面展开)。这步做完,你的电路在物理上已经"长好"了</div>
     <div class="arrow">↓</div>
     <div class="node"><b>⑤ 比特流 Bitstream</b> —— 把几百万个开关的状态打包成一个文件:.bit。烧写 = 把这份"开关总账"灌进芯片</div>
   </div>
+
+  <div class="box box-know"><div class="box-title">内幕 · 实现(Implementation)一步,后台分三幕</div>
+  <p>④ 在 GUI 里只占一个 Run Implementation 按钮,Tcl 里只占一条 <code>launch_runs impl_1</code>,但它内部连演三幕:</p>
+  <ul>
+    <li><strong>映射(Mapping)</strong> —— 图纸上的零件逐一领到户口:这个加法器拆成 24 个 LUT、那排寄存器落成 24 个 FF……结果记进<strong>利用率(Utilization)报告</strong>;</li>
+    <li><strong>布局(Placement)</strong> —— 给每个零件挑物理坐标(塞进哪一格<strong>可配置逻辑块(Configurable Logic Block, CLB)</strong>)。零件放得好,线就短;</li>
+    <li><strong>布线(Routing)</strong> —— 把图纸上的每根连线,变成芯片里真实的金属线段:一路闭合可编程开关。</li>
+  </ul>
+  <p>所以"映射/布局/布线"不是五步舞里的三步,而是第四步"实现"的内幕三幕——你在报告里看到的三者痕迹,都躺在 <code>impl_1</code> 这一个 run 的目录里。</p></div>
 
   <div class="box box-know"><div class="box-title">知识 · LUT 到底是怎么"万能"的</div>
   <p>ch00 说过 LUT(查找表)是"可编程门",现在兑现原理:一个 6 输入 LUT 就是一张<strong>64 格的真值表</strong>——任意 6 输入的逻辑函数,无非是 64 种输入组合各自对应什么输出。把这张表写进 LUT 的配置存储,它就"变成"了你要的任何门。所以综合器不造门,它只是把你的代码翻译成一张张真值表 + 一堆"连线开关"。所谓 FPGA 可编程,编的就是这些表和开关;所谓比特流,装的就是它们的内容。一个 7z020 有 53,200 个 LUT,每个 64 格——这就是 4MB 比特流的主要去处。</p></div>
@@ -105,6 +114,7 @@
     <tr><td>Add Sources 加文件</td><td><code>add_files ...</code></td></tr>
     <tr><td>设顶层模块</td><td><code>set_property top xxx [current_fileset]</code></td></tr>
     <tr><td>Run Synthesis</td><td><code>launch_runs synth_1</code></td></tr>
+    <tr><td>Run Implementation</td><td><code>launch_runs impl_1</code></td></tr>
     <tr><td>Open Implemented Design</td><td><code>open_run impl_1</code></td></tr>
     <tr><td>Generate Bitstream</td><td><code>launch_runs impl_1 -to_step write_bitstream</code></td></tr>
     <tr><td>打开 Utilization 报告</td><td><code>report_utilization</code></td></tr>
@@ -201,9 +211,9 @@ lab01/
   </table>
 
   <h3>10 · 小结与自测</h3>
-  <p>一条线:五步舞每步都在"造实物"(网表→资源→坐标→金属线→开关总账),每步都留了报告当证据;GUI 是 Tcl 的皮,.jou 是你的点击存档;比特流=配置帧总账,.bin 是它的"去头+字节反转"版;git 只收藏手写物;账本从 lab01 记起。</p>
+  <p>一条线:五步舞每步都在"造实物"(工程户口→源清单→网表→实现三幕住进硅片→开关总账),每步都留了报告当证据;GUI 是 Tcl 的皮,.jou 是你的点击存档;比特流=配置帧总账,.bin 是它的"去头+字节反转"版;git 只收藏手写物;账本从 lab01 记起。</p>
   <div class="box box-know"><div class="box-title">本章新词卡(附录 B 汇总)</div>
-  <p>Tcl(Tool Command Language)· 网表(Netlist)· 映射(Mapping)· 布局(Placement)· 布线(Routing)· 利用率(Utilization)· 可配置逻辑块(Configurable Logic Block, CLB)· 静态时序分析(Static Timing Analysis, STA)· 时序裕量(Slack)· 最差负裕量(Worst Negative Slack, WNS)· 配置帧(Configuration Frame)· 日志回放文件(Journal, .jou)· 联合测试工作组接口(Joint Test Action Group, JTAG)· 处理器配置访问端口(Processor Configuration Access Port, PCAP)</p></div>
+  <p>Tcl(Tool Command Language)· 网表(Netlist)· 实现(Implementation)· 映射(Mapping)· 布局(Placement)· 布线(Routing)· 利用率(Utilization)· 可配置逻辑块(Configurable Logic Block, CLB)· 静态时序分析(Static Timing Analysis, STA)· 时序裕量(Slack)· 最差负裕量(Worst Negative Slack, WNS)· 配置帧(Configuration Frame)· 日志回放文件(Journal, .jou)· 联合测试工作组接口(Joint Test Action Group, JTAG)· 处理器配置访问端口(Processor Configuration Access Port, PCAP)</p></div>
 
   <div class="box box-step"><div class="box-title">自测(三档)</div>
   <p><strong>A · 概念复述</strong>:不看表格,一口气说出五步舞每步"造什么"、留下什么证据。</p>

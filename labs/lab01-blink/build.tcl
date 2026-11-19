@@ -17,7 +17,7 @@ set_property top led_blink [current_fileset]
 launch_runs synth_1 -jobs 8
 wait_on_run synth_1
 
-# ④ 实现:门级电路 → 放进 7z020 的真实资源(LUT/FF/布线)
+# ④ 实现:门级电路 → 放进 7z020 的真实资源(内部分三幕:映射/布局/布线)
 launch_runs impl_1 -jobs 8
 wait_on_run impl_1
 

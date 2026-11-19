@@ -264,7 +264,7 @@ vivado -mode batch -source program.tcl
     <tr><td>烧完 LED 常亮,"坏了?"</td><td>tx 空闲态 = 1,这是协议</td><td>按一下 PL_KEY 看演出;想确认没坏,回 eye 模式</td></tr>
     <tr><td>Hardware Manager 找不到目标</td><td>OpenOCD 占着 FT232H(JTAG 互杀)</td><td><code>pkill -f openocd</code> 再重连;数据线确认插的是 JTAG 口不是串口口</td></tr>
     <tr><td>ILA 武装后立刻触发/永远不触发</td><td>触发电平写成 1:空闲就是 1</td><td>触发条件用 <code>tx==0</code>(起始沿语义),或直接用 tick 当触发词</td></tr>
-    <tr><td>现象突然全没了(LED 灭、ILA 断连)</td><td>手滑按到板上 RST 键 = 整芯片硬复位,PL 配置被清 + Debian 重启</td><td>重新烧写;认清丝印——PL_KEY 才是我们的键</td></tr>
+    <tr><td>现象突然全没了(LED 灭、ILA 断连)</td><td>手滑按到板上 RST 键 = 整芯片硬复位,PL 配置被清 + Debian 重启(<strong>已实测确认:RST 后 PL 比特流确实消失,Debian 起来后 PL 空白</strong>)</td><td>重新烧写;认清丝印——PL_KEY 才是我们的键</td></tr>
     <tr><td>create_ip 报"找不到 ila 定义"</td><td>IP 版本号随版本变(脚本按 6.2 写)</td><td><code>get_ipdefs *ila*</code> 查实号改一行(已列"待实测")</td></tr>
     <tr><td>real 模式连按两下,只发了一帧</td><td>第二拍 start 落在 SEND 里,状态机不看它(丢帧保护)</td><td>本课够用;要排队就得加缓冲,那是下一课你自己写 RX 之后再想的事</td></tr>
   </table>

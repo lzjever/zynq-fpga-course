@@ -187,6 +187,8 @@ rx_shift &lt;= { rx_s, rx_shift[7:1] };</pre>
 <pre><code><span class="k">set_property</span> PACKAGE_PIN U12 [get_ports tx_pad]
 <span class="k">set_property</span> PACKAGE_PIN W16 [get_ports rx_pad]
 <span class="k">set_property</span> PULLUP true    [get_ports rx_pad]  <span class="c"># 拔线后读恒 1(空闲)而非悬空乱读</span></code></pre>
+  <div class="box box-know"><div class="box-title">知识 · 选脚的门道:P14/R14 就住在排针上</div>
+  <p>一个本板冷知识:<strong>板载按键 P14 和 LED R14,物理上就是 JP1 排针的 39/40 脚</strong>(GPIO1_17P/N)——板上外设和排针共享同一根芯片引脚。两个后果:① 给 TX/RX 选脚要<strong>避开 39/40</strong>,否则你的串口线直接顶在按键/LED 的驱动上(我们选的 U12/W16 已避开,也避开了 11/12/29/30 四根 VCC);② 这恰好是 ch00 铁律二"一个信号只在一个 always 里赋值"的<strong>物理世界版本</strong>——一根引脚一个驱动源,综合器不许两个 always 抢一根线,物理世界同样不许两个驱动源顶一根引脚,轻则现象混乱,重则输出级对打受伤。规则和现实在这里惊人地一致。</p></div>
   <div class="box box-know"><div class="box-title">知识 · 共地:第一次飞线要带走的习惯</div>
   <p>今天这根线<strong>不用接地</strong>——TX 和 RX 在同一块板上,地就是板子本身,天然共地。但请把这句话带走:一旦接<strong>外部</strong>设备(USB-TTL 转串口、另一块板),<strong>GND 必须先接</strong>。电压是相对参考点的差,没有共同的地,双方的"0V"不是同一个 0V,"0 和 1"就都没有了定义——悬浮地能吃掉你一个晚上。另有一个本板事实要记牢(附录 A 有完整警告):<strong>JP1/JP2 排针上没有 GND 脚</strong>——40 根里 11/12 是 VCC_5V、29/30 是 VCC_3V3,其余全是信号脚。所以选做 USB-TTL 观测时,共地方案是接板上 GND 测试点或 USB 外壳,不是"接排针 GND"(那根脚不存在)。</p></div>
   <div class="box box-warn"><div class="box-title">警告 · 排针上有电源脚,插线前先对表</div>
@@ -214,6 +216,8 @@ vivado -mode batch -source program.tcl</code></pre>
   <table>
     <tr><th>症状</th><th>真相</th><th>药</th></tr>
     <tr><td>插线按键,LED 不动</td><td>杜邦线插错排针脚 / 未插紧</td><td>对照附录 A 排针表确认 U12/W16;换个按法(现象 4 的可逆性帮你定位)</td></tr>
+    <tr><td>插线瞬间板子异常/掉电重启</td><td>插到了排针上的 VCC 脚(JP1/JP2 的 11/12=5V、29/30=3.3V,排针没有 GND)</td><td><strong>立即断电</strong>,核对附录 A;插线前先确认目标脚及邻居,别凭感觉下针</td></tr>
+    <tr><td>把线插到了 JP1 的 39/40 脚</td><td>那两脚 = P14/R14,板载按键/LED 与排针共享引脚,两个驱动源对顶</td><td>拔线绕开;串口脚只用 U12/W16——铁律二的物理版,一根引脚一个驱动源</td></tr>
     <tr><td>仿真自环通了,板上不通</td><td>TB 的 rx 没有"打两拍"也能过仿真(理想世界不闹亚稳态)</td><td>检查 rx 是否先过同步器——板上的线才是真实世界</td></tr>
     <tr><td>soak 偶发错一两个字节</td><td>采样点偏了:半位/整位条件写串,或 bit_cnt 复位时机错</td><td>对着错误字节找波形:错在第几位?通常从某一位起全错 = 节奏漂移</td></tr>
     <tr><td>拔线后 LED 偶尔自己跳</td><td>线没拔干净,半接触产生毛刺</td><td>彻底拔掉;上拉只保证"完全断开"时的静默</td></tr>

@@ -1,0 +1,4 @@
+INFO: [VRFC 10-2263] Analyzing Verilog file "/home/percy/works/zynq-fpga-course/labs/lab05-pwm/tick_gen.v" into library work
+INFO: [VRFC 10-311] analyzing module tick_gen
+INFO: [VRFC 10-2263] Analyzing Verilog file "/home/percy/works/zynq-fpga-course/labs/lab05-pwm/pwm_breathe.v" into library work
+INFO: [VRFC 10-311] analyzing module pwm_breathe

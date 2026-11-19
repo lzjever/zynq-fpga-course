@@ -1,0 +1,45 @@
+#-----------------------------------------------------------
+# xsim v2026.1 (64-bit)
+# SW Build 6511674 on Tue Jun 16 11:01:26 MDT 2026
+# IP Build 6504888 on Tue Jun 09 09:05:25 MDT 2026
+# SharedData Build 6501428 on Mon Jun 08 17:34:18 MDT 2026
+# Start of session at: Fri Nov 20 02:13:32 2026
+# Process ID         : 599589
+# Current directory  : /home/percy/works/zynq-fpga-course/labs/lab03-cdc
+# Command line       : xsim -mode tcl -source {xsim.dir/tb3/xsim_script.tcl}
+# Log file           : /home/percy/works/zynq-fpga-course/labs/lab03-cdc/xsim.log
+# Journal file       : /home/percy/works/zynq-fpga-course/labs/lab03-cdc/xsim.jou
+# Running On         : PF5X7YZ8
+# Platform           : Ubuntu
+# Operating System   : Ubuntu 24.04.5 LTS
+# Processor Detail   : Intel(R) Core(TM) Ultra 9 275HX
+# CPU Frequency      : 3047.620 MHz
+# CPU Physical cores : 24
+# CPU Logical cores  : 24
+# Host memory        : 66819 MB
+# Swap memory        : 8589 MB
+# Total Virtual      : 75409 MB
+# Available Virtual  : 38392 MB
+#-----------------------------------------------------------
+source xsim.dir/tb3/xsim_script.tcl
+# xsim {tb3} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+[   1133 ns] 撕裂! 上一拍 11 → 本拍 13   (合法值只有 11 或 12)
+[   1152 ns] 撕裂! 上一拍 13 → 本拍 12   (合法值只有 13 或 14)
+[   2413 ns] 撕裂! 上一拍 11 → 本拍 13   (合法值只有 11 或 12)
+[   2433 ns] 撕裂! 上一拍 13 → 本拍 12   (合法值只有 13 或 14)
+[   2571 ns] 撕裂! 上一拍 15 → 本拍 7   (合法值只有 15 或 0)
+===================================================
+ 阶段一 · 撕裂统计(共 2028 个有效采样)
+   ① 二进制 + 延迟注入 : 86 个撕裂样本   ← 该撕的,撕了
+   ② 格雷码 + 延迟注入 : 0 个撕裂样本   ← 对照组,纹丝不动
+   ③ 二进制 + 零延迟   : 0 个撕裂样本   ← 理想仿真的假象
+===================================================
+ 盲区演示: force q1 = X 两拍后, q2 = x
+ (物理世界会收敛到 0/1;四态仿真永远 X —— 安全性仿真不出来)
+ PASS:撕裂已被延迟注入复现;格雷码与理想对照干净。
+$finish called at time : 40021550 ps : File "/home/percy/works/zynq-fpga-course/labs/lab03-cdc/tear_tb.v" Line 145
+exit
+INFO: xsimkernel Simulation Memory Usage: 303752 KB (Peak: 361284 KB), Simulation CPU Usage: 810 ms
+INFO: [Common 17-206] Exiting xsim at Fri Nov 20 02:13:34 2026...

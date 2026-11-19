@@ -1,0 +1,1 @@
+-debug "typical" "tear_tb" -s "tb3" 

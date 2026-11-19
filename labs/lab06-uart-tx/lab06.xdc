@@ -15,7 +15,7 @@ set_property IOSTANDARD LVCMOS33 [get_ports clk]
 set_property PACKAGE_PIN P14 [get_ports key]
 set_property IOSTANDARD LVCMOS33 [get_ports key]
 
-# ---------- PL LED:R14(高电平点亮)= tx 串口线 ----------
-# 注意:tx 空闲态为 1,所以 LED 平时常亮 —— 协议规定,不是坏了
+# ---------- PL LED:R14(低电平点亮,顶层已取反)= tx 观测窗 ----------
+# 注意:tx 空闲态为 1 → 取反后 LED 平常灭;亮 = 线路 0 —— 协议使然,不是坏了
 set_property PACKAGE_PIN R14 [get_ports led]
 set_property IOSTANDARD LVCMOS33 [get_ports led]

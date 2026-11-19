@@ -54,7 +54,8 @@ module loop_top #(
     reg led_r = 1'b0;
     always @(posedge clk)
         if (rx_done_w) led_r <= ~led_r;
-    assign led = led_r;
+    // R14 低电平点亮:引脚侧取反(T 触发器只管翻转,极性不影响"收到即翻转")
+    assign led = ~led_r;
 
     assign dbg_done  = rx_done_w;
     assign dbg_data  = rx_data_w;

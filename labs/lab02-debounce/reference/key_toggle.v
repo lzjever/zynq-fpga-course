@@ -6,7 +6,7 @@
 module key_toggle (
     input  wire clk,     // 50MHz 晶振(N18)
     input  wire key,     // PL_KEY(P14,按下 = 0)——lab01 里它当过复位,今天转正当主角
-    output reg  led      // LED(R14,高 = 亮);上电时触发器自动为 0,无需初始化
+    output reg  led      // LED(R14,低 = 亮);上电时触发器自动为 0,无需初始化(翻转逻辑不关心极性)
 );
 
     wire tick;    // 消抖器的产出:每按一次,恰好一个时钟宽的脉冲

@@ -7,7 +7,7 @@
 module key_toggle_raw (
     input  wire clk,     // 50MHz 晶振(N18)
     input  wire key,     // PL_KEY(P14,按下 = 0)
-    output reg  led      // LED(R14,高 = 亮)
+    output reg  led      // LED(R14,低 = 亮)
 );
 
     // 给输入拍一张"上一拍照片"——边沿检测的材料(和参考实现同一个惯用法)

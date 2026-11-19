@@ -19,7 +19,7 @@
 //   - GP0 是 AXI3 方言(ch08 方案甲):下面只接 AXI4-Lite 用得着的线,
 //     AXI3 独有信号(ID/突发类)全部挂空置之不理。
 module axi_led_top (
-    output wire led        // R14,高电平点亮 —— 本设计唯一的物理引脚
+    output wire led        // R14,低电平点亮(本顶层在引脚侧取反)—— 本设计唯一的物理引脚
 );
 
     // ============ ① 复位策略 ============
@@ -99,6 +99,7 @@ module axi_led_top (
 
     // SPEED=0 → 手动挡:LED 直接等于 CTRL 的 bit0(L0 点灯)
     // SPEED>0 → 呼吸挡:LED 跟着呼吸灯跑,速度由 SPEED 定(L1 调速)
-    assign led = (speed[15:0] == 16'd0) ? ctrl[0] : breath_led;
+    // R14 低电平点亮:引脚侧单点取反(内部一路保持"1=点亮意图"的约定)
+    assign led = ~((speed[15:0] == 16'd0) ? ctrl[0] : breath_led);
 
 endmodule

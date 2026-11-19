@@ -226,11 +226,11 @@ vivado -mode batch -source sim.tcl</code></pre>
 <pre><code><span class="c"># 肉眼版:2 波特(一个位 0.5 秒)</span>
 vivado -mode batch -source build.tcl -tclargs eye
 vivado -mode batch -source program.tcl   <span class="c"># 烧写前先 pkill -x openocd</span></code></pre>
-  <p>烧完先别按键——LED 常亮?对,tx 空闲态 = 1,协议规定。<strong>按一下 PL_KEY,然后盯着 LED 数五秒</strong>,对照下表(按行读,每行 0.5 秒):</p>
+  <p>烧完先别按键——LED 灭着?对:tx 空闲态 = 1,而 R14 是<strong>低电平点亮</strong>,顶层已在引脚侧取反(<code>lab06_top.v</code> 的 <code>assign led = ~tx_w;</code>)——空闲 = 灭,亮才代表"线上是 0"。<strong>按一下 PL_KEY,然后盯着 LED 数五秒</strong>,对照下表(按行读,每行 0.5 秒;记住口径:<strong>LED 亮 = 线路 0</strong>):</p>
   <table>
     <tr><th>时间</th><th>0–2.0s</th><th>2.0–2.5</th><th>2.5–3.5</th><th>3.5–4.0</th><th>4.0–4.5</th><th>4.5s 起</th></tr>
     <tr><td>位</td><td>起始+d0+d1+d2</td><td>d3</td><td>d4+d5</td><td>d6</td><td>d7</td><td>停止→空闲</td></tr>
-    <tr><td>LED</td><td>灭</td><td>亮</td><td>灭</td><td>亮</td><td>灭</td><td>亮起后常亮</td></tr>
+    <tr><td>LED</td><td>亮</td><td>灭</td><td>亮</td><td>灭</td><td>亮</td><td>灭(此后保持灭)</td></tr>
     <tr><td>位值</td><td>0 0 0 0</td><td>1</td><td>0 0</td><td>1</td><td>0</td><td>1</td></tr>
   </table>
   <p>读出来的数据位序列(LSB 起):0001 0010 → 倒着拼 = <strong>0100 1000 = 0x48 = 'H'</strong>。你的视网膜刚刚扮演了一台 2 波特的串口终端。<strong>同一个人眼,同一份代码,现在逐级换合同</strong>(build.tcl 的 <code>-tclargs</code> 换一个词,源码零改动):</p>
@@ -261,7 +261,7 @@ vivado -mode batch -source program.tcl
   <h3 id="pitfalls">8 · 常见坑</h3>
   <table>
     <tr><th>症状</th><th>真相</th><th>药</th></tr>
-    <tr><td>烧完 LED 常亮,"坏了?"</td><td>tx 空闲态 = 1,这是协议</td><td>按一下 PL_KEY 看演出;想确认没坏,回 eye 模式</td></tr>
+    <tr><td>烧完 LED 一直灭,"坏了?"</td><td>tx 空闲态 = 1,R14 低有效、顶层已取反 → 空闲就是灭</td><td>按一下 PL_KEY:eye 模式应先亮约 2 秒(起始位 + 三个 0 位)再逐位演出;想确认没坏,回 eye 模式</td></tr>
     <tr><td>Hardware Manager 找不到目标</td><td>OpenOCD 占着 FT232H(JTAG 互杀)</td><td><code>pkill -x openocd</code> 再重连;数据线确认插的是 JTAG 口不是串口口</td></tr>
     <tr><td>ILA 武装后立刻触发/永远不触发</td><td>触发电平写成 1:空闲就是 1</td><td>触发条件用 <code>tx==0</code>(起始沿语义),或直接用 tick 当触发词</td></tr>
     <tr><td>现象突然全没了(LED 灭、ILA 断连)</td><td>手滑按到板上 RST 键 = 整芯片硬复位,PL 配置被清 + Debian 重启(<strong>已实测确认:RST 后 PL 比特流确实消失,Debian 起来后 PL 空白</strong>)</td><td>重新烧写;认清丝印——PL_KEY 才是我们的键</td></tr>

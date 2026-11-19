@@ -65,6 +65,8 @@ module pwm_breathe #(
     // duty=255 → 亮 255/256(差 1/256 满亮,肉眼不可见)
     // 陷阱:写成 phase <= duty 的话,duty=0 会在 phase==0 那 1 拍
     //       偷亮 → "最暗档关不严"的微光 bug(ch05 讲)
-    assign led = (phase < duty);
+    // 本模块就是顶层:比较结果在引脚侧取反后才上 R14(R14 低电平点亮,
+    // LED 一端接 3.3V,引脚拉低才导通)—— 单点取反,内部约定仍是"1=亮"
+    assign led = ~(phase < duty);
 
 endmodule

@@ -70,7 +70,7 @@
     </tr>
     <tr>
       <td>PL 外设</td>
-      <td>LED ×1(<strong>R14</strong>,高电平点亮)+ 按键 ×1(<strong>P14</strong>,按下=0)+ 40pin 排针 ×2</td>
+      <td>LED ×1(<strong>R14</strong>,低电平点亮:输出 0 才亮)+ 按键 ×1(<strong>P14</strong>,按下=0)+ 40pin 排针 ×2</td>
       <td>板上输出就一个 LED:多输出靠时间复用、PWM、排针飞线(<a href="#pins">A.5</a>)</td>
     </tr>
     <tr>
@@ -185,7 +185,7 @@
       <td><strong>R14</strong></td>
       <td>34</td>
       <td>LVCMOS33</td>
-      <td>高电平点亮:引脚 → 1kΩ 限流 → 绿色 LED;输出 1 就亮,驱动能力绰绰有余</td>
+      <td>低电平点亮:3.3V → 限流电阻 → 绿色 LED → 引脚,输出 0(拉低)时电流灌入才亮,输出 1 = 灭;课程各顶层一律在引脚侧取反,模块内部仍保持"1 = 点亮意图"的约定</td>
     </tr>
   </table>
 
@@ -232,7 +232,7 @@
     <tr><td>37</td><td>GPIO1_16P</td><td>T11</td><td>LVCMOS33</td><td>—(例程未用)</td></tr>
     <tr><td>38</td><td>GPIO1_16N</td><td>T10</td><td>LVCMOS33</td><td>—(例程未用)</td></tr>
     <tr><td>39</td><td>GPIO1_17P</td><td><strong>P14</strong></td><td>LVCMOS33</td><td><strong>就是板上按键 PL_KEY</strong>(按=0)</td></tr>
-    <tr><td>40</td><td>GPIO1_17N</td><td><strong>R14</strong></td><td>LVCMOS33</td><td><strong>就是板上 LED</strong>(高=亮)</td></tr>
+    <tr><td>40</td><td>GPIO1_17N</td><td><strong>R14</strong></td><td>LVCMOS33</td><td><strong>就是板上 LED</strong>(低=亮)</td></tr>
   </table>
 
   <h4>JP2 / GPIO2(bank 35)——40 脚全表</h4>
@@ -337,7 +337,7 @@
   <div class="box box-win">
     <div class="box-title">本页小结(值得背下来的五条)</div>
     <ul>
-      <li>核心三脚:<strong>N18</strong>(50MHz)/ <strong>P14</strong>(PL_KEY,按=0)/ <strong>R14</strong>(LED,高=亮),全 bank 34、LVCMOS33;</li>
+      <li>核心三脚:<strong>N18</strong>(50MHz)/ <strong>P14</strong>(PL_KEY,按=0)/ <strong>R14</strong>(LED,低=亮),全 bank 34、LVCMOS33;</li>
       <li>JP1/JP2 各 40 脚:11/12=VCC_5V、29/30=VCC_3V3,<strong>没有 GND</strong>;39/40(JP1)就是按键和 LED 本尊;</li>
       <li><strong>RST = 整芯复位</strong>(Debian 重启 + PL 配置清空);现象消失先想"是不是按错键";</li>
       <li>FT232H 独占:<strong>开一个 JTAG 服务器,先 pkill 另一个</strong>(用 <code>-x</code>,别用 <code>-f</code> 自伤);</li>

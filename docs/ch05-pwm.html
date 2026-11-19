@@ -63,7 +63,7 @@
     <li>能算出 8 位分辨率 @50MHz 的载波频率(50M ÷ 256 ≈ 195kHz),并说明人眼为何看不见闪烁;</li>
     <li>能把 led_blink 重构成"例化 tick_gen"的版本,并说出函数调用与例化的三点差异;</li>
     <li>会用 parameter 给模块传参数(#(.DIV(...)) 语法),理解 $clog2 自动位宽;</li>
-    <li>能实现"三角波亮度 + 载波相位 + 比较器"的 PWM,板上看到约 4s 的呼吸,并按住按键验证 duty=0 全灭;</li>
+    <li>能实现"三角波亮度 + 载波相位 + 比较器"的 PWM,板上看到约 4s 的呼吸,并按住按键验证 duty=0 全灭(R14 低电平点亮,顶层已在引脚侧取反);</li>
     <li>能踩准比较器的边界陷阱(phase&lt;duty 与 phase&lt;=duty 的差别)。</li>
   </ul>
 
@@ -191,14 +191,14 @@
          = 510 × 390625 × 20ns ≈ 4.0 s</code></pre>
 
   <div class="box box-warn"><div class="box-title">警告 · 比较器的边界陷阱:一个字符的亮度差</div>
-  <p><code>assign led = (phase &lt; duty);</code> 写成 <code>(phase &lt;= duty)</code> 会怎样? duty=0 时,前者恒假(全灭 ✓);后者在 phase==0 那一拍为真——占空比从 0/256 变成 1/256,"最暗档关不严"。就一个等号,暗房间里看得见微光。边界条件(duty=0、duty=255)永远值得单独问一句:<strong>极端值下,表达式还讲道理吗?</strong></p></div>
+  <p>真实源码是 <code>assign led = ~(phase &lt; duty);</code>——末尾的取反是 R14 低电平点亮的引脚侧适配,比较逻辑本身不变。把 <code>&lt;</code> 写成 <code>&lt;=</code> 会怎样? duty=0 时,前者恒假 → 取反后引脚恒 1 → 低有效 = 全灭 ✓;后者在 phase==0 那一拍为真——占空比从 0/256 变成 1/256,"最暗档关不严"。就一个等号,暗房间里看得见微光。边界条件(duty=0、duty=255)永远值得单独问一句:<strong>极端值下,表达式还讲道理吗?</strong></p></div>
 
   <h3>6 · 动手二:上板(30 分钟)</h3>
   <div class="box box-step"><div class="box-title">步骤</div>
   <ol>
     <li><code>cd labs/lab05-pwm &amp;&amp; vivado -mode batch -source build.tcl</code> —— 注意 build.tcl 这次 add 了<strong>两个</strong> .v(tick_gen 是零件,pwm_breathe 是顶层);</li>
     <li>烧写:照 README 复用 ch04 的 program.tcl(<code>sed 's/lab01/lab05/g'</code> 改个路径——脚本复用的第一次实战);</li>
-    <li>验收现象:呼吸约 4s、平滑无频闪;<strong>按住 PL_KEY 应全灭</strong>(复位清 duty,占空比 0/256——顺手验了边界陷阱的"正确版");</li>
+    <li>验收现象:呼吸约 4s、平滑无频闪;<strong>按住 PL_KEY 应全灭</strong>(复位清 duty,占空比 0/256,取反后引脚恒 1 → 低有效 = 全灭——顺手验了边界陷阱的"正确版");</li>
     <li>把 <code>STEP_DIV</code> 改成 <code>195_312</code> 重新构建:呼吸变 2s。<strong>先猜再改</strong>;</li>
     <li>跑完 build 顺手把 utilization 抄进 README 的账本表(ch04 立的规矩,本 Lab 预估 ≈55 LUT / ≈40 FF)。</li>
   </ol></div>
@@ -208,7 +208,7 @@
     <tr><th>坑</th><th>现象</th><th>解法</th></tr>
     <tr><td>例化端口按位置连线 <code>tick_gen u (clk, rst_n, tick);</code></td><td>顺序一错 → 编译通过但行为诡异(最阴险的一类 bug)</td><td>永远用命名关联 <code>.clk(clk)</code></td></tr>
     <tr><td>参数括号和端口括号写串</td><td><code>tick_gen (.DIV(434), .clk(...))</code> 语法错</td><td>参数在 <code>#()</code>,端口在 <code>()</code>:<code>tick_gen #(.DIV(434)) u (...)</code></td></tr>
-    <tr><td>比较器用 <code>&lt;=</code></td><td>最暗档微光(1/256 偷亮)</td><td>用 <code>&lt;</code>;0 档必须全灭</td></tr>
+    <tr><td>比较器用 <code>&lt;=</code></td><td>最暗档微光(1/256 偷亮)</td><td>用 <code>&lt;</code>(取反在引脚侧,不救这个陷阱);0 档必须全灭</td></tr>
     <tr><td>改 DIV 忘改计数器位宽</td><td>位宽不够 → 计数器永远数不到 DIV-1,tick 失踪</td><td>用 <code>$clog2(DIV)</code> 自动算</td></tr>
     <tr><td>把 tick 接到组合逻辑再判边沿</td><td>多此一举还引入毛刺风险</td><td>tick 本身就是干净的 1 拍脉冲,直接当使能用</td></tr>
   </table>

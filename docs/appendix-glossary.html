@@ -95,7 +95,7 @@
     <tr><td>MRCC *</td><td>—(全书未展开)</td><td>时钟专用输入脚;N18 就是 bank 34 的时钟专用脚</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>
     <tr><td>MTBF</td><td>平均无故障时间(Mean Time Between Failures)</td><td>两次亚稳态事故的平均间隔;每多打一拍,指数翻倍</td><td><a href="ch03-cdc.html">ch03 · 亚稳态与 CDC</a></td></tr>
     <tr><td>MUX *</td><td>数据选择器(全书未给全称)</td><td>在两路信号里挑一路的组合电路——if/else 分支的硬件真身</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
-    <tr><td>N18 / P14 / R14</td><td>—(封装引脚,核心三脚)</td><td>50MHz 时钟 / 按键 PL_KEY(按下=0)/ LED(高=亮);全在 bank 34</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
+    <tr><td>N18 / P14 / R14</td><td>—(封装引脚,核心三脚)</td><td>50MHz 时钟 / 按键 PL_KEY(按下=0)/ LED(低=亮,顶层在引脚侧取反);全在 bank 34</td><td><a href="ch00-verilog101.html">ch00 · Verilog 101</a></td></tr>
     <tr><td>PCAP</td><td>处理器配置访问端口(Processor Configuration Access Port)</td><td>FPGA Manager 从 Linux 侧装载比特流走的通道(不走 JTAG);要求喂 .bin</td><td><a href="ch04-vivado.html">ch04 · Vivado 幕后</a></td></tr>
     <tr><td>PL</td><td>可编程逻辑(Programmable Logic)</td><td>Zynq 上你在写的那半边 FPGA;导线/寄存器/时钟三种零件遍地都是,本课程全部电路的家</td><td><a href="ch09-merge.html">ch09 · PS-PL 会师</a></td></tr>
     <tr><td>PLL / PLLE2</td><td>锁相环(Phase-Locked Loop)</td><td>片内 4 个,可把 50MHz 倍频/分频;课程进阶篇之外自行探索</td><td><a href="appendix-board.html">附A · 板卡手册</a></td></tr>

@@ -10,7 +10,8 @@
 //   real : BAUD_DIV=434(115200 波特)→ 按一次键,LED 几乎无感(86.8µs 的事,
 //          肉眼失效 → 所以有 ILA 版,见 lab06_ila_top.v)
 //
-// 注意 1:tx 空闲态 = 1 → LED 平时常亮,这是协议规定,不是 bug。
+// 注意 1:tx 空闲态 = 1,而 R14 低电平点亮、顶层已在引脚侧取反 →
+//   LED 平常灭(不是坏了);线上打 0(起始位/数据位 0)时 LED 亮。
 // 注意 2:P14 在 lab01 里当"复位"用,本课改行当"发射按钮"——按一下,发一帧。
 //   复位怎么办?FPGA 的触发器上电会读 initial 值(uart_tx 里 tx 出生就是 1),
 //   所以本设计不需要外部复位键。真想硬复位整个电路:按板上 RST?不行!那是
@@ -33,15 +34,19 @@ module lab06_top #(
         .tick  (tick)
     );
 
+    wire tx_w;    // tx 串口线(协议电平:空闲 1)
     uart_tx #(.BAUD_DIV(BAUD_DIV)) u_tx (
         .clk    (clk),
         .rst_n  (1'b1),
         .start  (tick),   // tick 来了就发一帧
         .data   (CHAR),
-        .tx     (led),    // ← 戏法所在:tx 线就是 LED
+        .tx     (tx_w),   // ← 戏法所在:tx 线经 LED 观测(下面取反后接引脚)
         .busy   (busy),
         .bit_cnt(),       // 观察窗悬空(ILA 版才接)
         .state  ()
     );
+
+    // R14 低电平点亮:引脚侧单点取反 —— 线路 0(起始位/数据 0)→ LED 亮
+    assign led = ~tx_w;
 
 endmodule

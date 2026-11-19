@@ -143,7 +143,7 @@ footer{margin-top:48px;padding-top:18px;border-top:2px solid var(--line);font-si
 
 <span class="c">// ---------- 一根导线:从计数器最高位,牵到 LED ----------</span>
 <span class="k">assign</span> led = cnt[23];                   <span class="c">// led 引脚永久焊在 cnt 的第 23 位上,</span>
-                                        <span class="c">// 它是 1 就亮,是 0 就灭,全自动</span>
+                                        <span class="c">// R14 是低电平点亮:0 才亮,1 是灭(方波照样闪,全自动)</span>
 <span class="k">endmodule</span></pre>
 
   <div class="fig">

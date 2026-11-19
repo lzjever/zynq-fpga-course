@@ -13,6 +13,6 @@ set_property IOSTANDARD LVCMOS33 [get_ports clk]
 set_property PACKAGE_PIN P14 [get_ports key]
 set_property IOSTANDARD LVCMOS33 [get_ports key]
 
-# ---------- PL LED:R14(高电平点亮)----------
+# ---------- PL LED:R14(低电平点亮:输出 0 才亮)----------
 set_property PACKAGE_PIN R14 [get_ports led]
 set_property IOSTANDARD LVCMOS33 [get_ports led]

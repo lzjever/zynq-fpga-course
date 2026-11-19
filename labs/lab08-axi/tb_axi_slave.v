@@ -47,6 +47,7 @@ module tb_axi_slave;
         .s_axi_bvalid(s_axi_bvalid), .s_axi_bready(s_axi_bready),   .s_axi_bresp(s_axi_bresp),
         .s_axi_araddr(s_axi_araddr), .s_axi_arvalid(s_axi_arvalid), .s_axi_arready(s_axi_arready),
         .s_axi_rvalid(s_axi_rvalid), .s_axi_rready(s_axi_rready),   .s_axi_rresp(s_axi_rresp),
+        .s_axi_rdata(s_axi_rdata),
         .knob(knob)
     );
 

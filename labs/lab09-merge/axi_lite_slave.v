@@ -60,7 +60,7 @@ module axi_lite_slave #(
         if (!aresetn) begin
             aw_seen <= 1'b0;  w_seen <= 1'b0;
             reg_ctrl <= 32'd0;  reg_speed <= 32'd0;
-            bvalid  <= 1'b0;
+            s_axi_bvalid <= 1'b0;
         end else begin
             if (s_axi_awvalid && s_axi_awready) begin
                 aw_seen <= 1'b1;
@@ -77,10 +77,10 @@ module axi_lite_slave #(
                 endcase
                 aw_seen <= 1'b0;
                 w_seen  <= 1'b0;
-                bvalid  <= 1'b1;
+                s_axi_bvalid <= 1'b1;
             end
-            if (bvalid && s_axi_bready)
-                bvalid <= 1'b0;
+            if (s_axi_bvalid && s_axi_bready)
+                s_axi_bvalid <= 1'b0;
         end
     end
 
@@ -91,17 +91,17 @@ module axi_lite_slave #(
 
     always @(posedge aclk) begin
         if (!aresetn) begin
-            rvalid <= 1'b0;
-            rdata  <= 32'd0;
+            s_axi_rvalid <= 1'b0;
+            s_axi_rdata  <= 32'd0;
         end else begin
             if (s_axi_arvalid && s_axi_arready) begin
-                rvalid <= 1'b1;
+                s_axi_rvalid <= 1'b1;
                 case (s_axi_araddr[2])           // ← DIFF:读也译码
-                    1'b0: rdata <= reg_ctrl;
-                    1'b1: rdata <= reg_speed;
+                    1'b0: s_axi_rdata <= reg_ctrl;
+                    1'b1: s_axi_rdata <= reg_speed;
                 endcase
-            end else if (rvalid && s_axi_rready) begin
-                rvalid <= 1'b0;
+            end else if (s_axi_rvalid && s_axi_rready) begin
+                s_axi_rvalid <= 1'b0;
             end
         end
     end

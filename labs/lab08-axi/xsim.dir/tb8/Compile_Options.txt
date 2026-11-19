@@ -1,0 +1,1 @@
+-debug "typical" "tb_axi_slave" -s "tb8" 

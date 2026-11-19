@@ -7,12 +7,15 @@
 // 时间账(时钟 = FCLK0,默认 50MHz):
 //   PWM 载波 = 256 拍(8bit 分辨率,50MHz/256 ≈ 195kHz,人眼无感)
 //   duty 每走一步 = 等 (SPEED+1) 个载波周期
-//   一次完整呼吸(三角 0→255→0)= 512 步
-//   ⇒ 呼吸周期 ≈ (SPEED+1) × 512 × 256 ÷ 50MHz = (SPEED+1) × 2.62ms
-//      SPEED=0x17D(381)  ≈ 1 秒
-//      SPEED=0x5F5(1525) ≈ 4 秒
+//   一次完整呼吸(三角 0→255→0)= 255 步上 + 255 步下 = 510 步
+//   ⇒ 呼吸周期 = (SPEED+1) × 510 × 256 ÷ 50MHz ≈ (SPEED+1) × 2.61ms
+//      SPEED=0x17E(382)  ≈ 1 秒
+//      SPEED=0x5FB(1531) ≈ 4 秒
 //
 // SPEED = 0:duty 冻结在当前值(顶层用它切"手动挡",见 axi_led_top.v)
+//
+// 本模块没有复位端口:内部寄存器全部用声明初始化(综合时成为 FPGA 的
+// 上电 INIT 值,仿真里也避免 X 毒——两种语义在这里是同一件事)。
 module pwm_breather (
     input  wire        clk,
     input  wire [15:0] speed,
@@ -20,12 +23,12 @@ module pwm_breather (
 );
 
     // ---- 第一级 tick:载波节拍(每 256 拍一下)----
-    reg [7:0] carrier_div;
+    reg [7:0] carrier_div = 8'd0;
     always @(posedge clk) carrier_div <= carrier_div + 8'd1;
     wire carrier_tick = (carrier_div == 8'd0);
 
     // ---- 第二级 tick:呼吸步进节拍(每 SPEED+1 个载波一下)----
-    reg [15:0] step_cnt;
+    reg [15:0] step_cnt = 16'd0;
     always @(posedge clk) begin
         if (carrier_tick)
             step_cnt <= (step_cnt >= speed) ? 16'd0 : step_cnt + 16'd1;
@@ -34,8 +37,8 @@ module pwm_breather (
     wire step_tick = carrier_tick && (speed != 16'd0) && (step_cnt >= speed);
 
     // ---- duty 三角波:0→255→0 循环爬升 ----
-    reg [7:0] duty;
-    reg       up;
+    reg [7:0] duty = 8'd0;
+    reg       up   = 1'b1;
     always @(posedge clk) begin
         if (step_tick) begin
             if (up) begin
@@ -49,7 +52,7 @@ module pwm_breather (
     end
 
     // ---- PWM 载波比较(ch05 的老朋友;用 < 号,duty=255 时亮度 255/256)----
-    reg [7:0] phase;
+    reg [7:0] phase = 8'd0;
     always @(posedge clk) phase <= phase + 8'd1;
     assign led = (phase < duty);
 

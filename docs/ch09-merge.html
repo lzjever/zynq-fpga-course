@@ -163,10 +163,10 @@ devmem 0x40000000 32 0x00000000</code></pre>
 
   <h3>7 · 动手:L1 接上呼吸,改速度</h3>
   <p>L0 的 LED 是"电灯开关";L1 把 ch05 的呼吸灯接进挡位:SPEED 非 0 即呼吸挡,数值越大越慢:</p>
-  <pre><code>devmem 0x40000004 32 0x0000017D   <span class="c"># ≈ 1 秒一次呼吸</span>
-devmem 0x40000004 32 0x000005F5   <span class="c"># ≈ 4 秒一次呼吸</span>
-devmem 0x40000004                  <span class="c"># 读回:应回显 0x5F5(读 = 回值)</span></code></pre>
-  <p>公式(数字自己验一遍,别信我——ch00 的教训):呼吸周期 ≈ (SPEED+1) × 512 × 256 ÷ FCLK0 = (SPEED+1) × 2.62ms @50MHz。你现在做的事,和游戏引擎里调粒子参数、和 systemd 里改服务阈值,在工程形态上完全同构:<strong>寄存器 = 服务的配置项</strong>。你只是第一次站在了配置项的另一端。</p>
+  <pre><code>devmem 0x40000004 32 0x0000017E   <span class="c"># ≈ 1 秒一次呼吸</span>
+devmem 0x40000004 32 0x000005FB   <span class="c"># ≈ 4 秒一次呼吸</span>
+devmem 0x40000004                  <span class="c"># 读回:应回显 0x5FB(读 = 回值)</span></code></pre>
+  <p>公式(数字自己验一遍,别信我——ch00 的教训):呼吸周期 = (SPEED+1) × 510 × 256 ÷ FCLK0 ≈ (SPEED+1) × 2.61ms @50MHz(510 = 三角波 255 步上 + 255 步下)。你现在做的事,和游戏引擎里调粒子参数、和 systemd 里改服务阈值,在工程形态上完全同构:<strong>寄存器 = 服务的配置项</strong>。你只是第一次站在了配置项的另一端。</p>
 
   <h3>8 · 毕业考:一条 devmem 写的全路径</h3>
   <p>不看任何资料,白纸手绘:<code>devmem 0x40000000 32 1</code> 从敲下回车到 LED 亮起,依次经过哪些站?这是全课程知识的一条线串——参考答案(先画完再看):</p>

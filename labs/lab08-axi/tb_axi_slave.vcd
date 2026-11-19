@@ -1,443 +1,622 @@
 $date
-	Fri Nov 20 02:05:29 2026
+   Fri Nov 20 02:10:37 2026
 $end
+
 $version
-	Icarus Verilog
+  2026.1
+  $dumpfile ("tb_axi_slave.vcd") 
 $end
+
 $timescale
-	1ps
+  1ps
 $end
+
 $scope module tb_axi_slave $end
-$var wire 2 ! s_axi_bresp [1:0] $end
-$var wire 32 " s_axi_rdata [31:0] $end
-$var wire 2 # s_axi_rresp [1:0] $end
-$var wire 1 $ s_axi_wready $end
-$var wire 1 % s_axi_rvalid $end
-$var wire 1 & s_axi_bvalid $end
-$var wire 1 ' s_axi_awready $end
-$var wire 1 ( s_axi_arready $end
-$var wire 32 ) knob [31:0] $end
-$var reg 1 * aclk $end
-$var reg 1 + aresetn $end
-$var reg 32 , rdata [31:0] $end
-$var reg 4 - s_axi_araddr [3:0] $end
-$var reg 1 . s_axi_arvalid $end
-$var reg 4 / s_axi_awaddr [3:0] $end
-$var reg 1 0 s_axi_awvalid $end
-$var reg 1 1 s_axi_bready $end
-$var reg 1 2 s_axi_rready $end
-$var reg 32 3 s_axi_wdata [31:0] $end
-$var reg 1 4 s_axi_wvalid $end
+$var reg 1 ! aclk $end
+$var reg 1 " aresetn $end
+$var reg 4 # s_axi_awaddr [3:0] $end
+$var reg 1 $ s_axi_awvalid $end
+$var reg 32 % s_axi_wdata [31:0] $end
+$var reg 1 & s_axi_wvalid $end
+$var reg 1 ' s_axi_bready $end
+$var reg 4 ( s_axi_araddr [3:0] $end
+$var reg 1 ) s_axi_arvalid $end
+$var reg 1 * s_axi_rready $end
+$var wire 1 + s_axi_awready $end
+$var wire 1 , s_axi_wready $end
+$var wire 1 - s_axi_bvalid $end
+$var wire 2 . s_axi_bresp [1:0] $end
+$var wire 1 / s_axi_arready $end
+$var wire 1 0 s_axi_rvalid $end
+$var wire 32 1 s_axi_rdata [31:0] $end
+$var wire 2 2 s_axi_rresp [1:0] $end
+$var wire 32 3 knob [31:0] $end
+$var integer 32 4 errors [31:0] $end
 $var integer 32 5 checks [31:0] $end
-$var integer 32 6 errors [31:0] $end
+$var reg 32 6 rdata [31:0] $end
 $scope module dut $end
-$var wire 1 * aclk $end
-$var wire 1 + aresetn $end
-$var wire 32 7 knob [31:0] $end
-$var wire 4 8 s_axi_araddr [3:0] $end
-$var wire 1 . s_axi_arvalid $end
+$var wire 1 7 aclk $end
+$var wire 1 8 aresetn $end
 $var wire 4 9 s_axi_awaddr [3:0] $end
-$var wire 1 0 s_axi_awvalid $end
-$var wire 1 1 s_axi_bready $end
-$var wire 2 : s_axi_bresp [1:0] $end
-$var wire 1 2 s_axi_rready $end
-$var wire 2 ; s_axi_rresp [1:0] $end
-$var wire 32 < s_axi_wdata [31:0] $end
-$var wire 1 4 s_axi_wvalid $end
-$var wire 1 = write_fire $end
-$var wire 1 $ s_axi_wready $end
-$var wire 1 ' s_axi_awready $end
-$var wire 1 ( s_axi_arready $end
-$var parameter 32 > ADDR_W $end
-$var reg 1 ? aw_seen $end
-$var reg 4 @ awbuf [3:0] $end
-$var reg 32 A reg0 [31:0] $end
-$var reg 1 & s_axi_bvalid $end
+$var wire 1 : s_axi_awvalid $end
+$var wire 1 + s_axi_awready $end
+$var wire 32 ; s_axi_wdata [31:0] $end
+$var wire 1 < s_axi_wvalid $end
+$var wire 1 , s_axi_wready $end
+$var reg 1 = s_axi_bvalid $end
+$var wire 1 > s_axi_bready $end
+$var wire 2 . s_axi_bresp [1:0] $end
+$var wire 4 ? s_axi_araddr [3:0] $end
+$var wire 1 @ s_axi_arvalid $end
+$var wire 1 / s_axi_arready $end
+$var reg 1 A s_axi_rvalid $end
 $var reg 32 B s_axi_rdata [31:0] $end
-$var reg 1 % s_axi_rvalid $end
-$var reg 1 C w_seen $end
-$var reg 32 D wbuf [31:0] $end
-$upscope $end
-$scope task axi_read $end
-$var reg 4 E addr [3:0] $end
-$var reg 32 F data [31:0] $end
-$upscope $end
-$scope task axi_write $end
-$var reg 4 G addr [3:0] $end
-$var reg 1 H aw_done $end
-$var reg 32 I data [31:0] $end
-$var reg 1 J w_done $end
+$var wire 1 C s_axi_rready $end
+$var wire 2 2 s_axi_rresp [1:0] $end
+$var wire 32 3 knob [31:0] $end
+$var reg 1 D aw_seen $end
+$var reg 1 E w_seen $end
+$var reg 4 F awbuf [3:0] $end
+$var reg 32 G wbuf [31:0] $end
+$var reg 32 H reg0 [31:0] $end
+$var wire 1 I write_fire $end
 $upscope $end
 $scope task check $end
-$var reg 32 K got [31:0] $end
+$var reg 32 J got [31:0] $end
+$var reg 32 K want [31:0] $end
 $var reg 256 L name [255:0] $end
-$var reg 32 M want [31:0] $end
 $upscope $end
 $scope task do_reset $end
 $upscope $end
+$scope task axi_write $end
+$var reg 4 M addr [3:0] $end
+$var reg 32 N data [31:0] $end
+$var reg 1 O aw_done $end
+$var reg 1 P w_done $end
+$upscope $end
+$scope task axi_read $end
+$var reg 4 Q addr [3:0] $end
+$var reg 32 R data [31:0] $end
+$upscope $end
 $upscope $end
 $enddefinitions $end
-$comment Show the parameter values. $end
-$dumpall
-b100 >
-$end
+
 #0
 $dumpvars
-bx M
-bx L
-bx K
-xJ
-bx I
-xH
-bx G
-bx F
-bx E
-bx D
-xC
-bx B
-bx A
-bx @
-x?
-x=
-b0 <
-b0 ;
-b0 :
-b0 9
-b0 8
-bx 7
-b0 6
-b0 5
-04
-b0 3
-02
-01
-00
-b0 /
-0.
-b0 -
-bx ,
-0+
-0*
-bx )
-x(
-x'
-x&
-x%
-x$
+0!
+0"
 b0 #
-bz "
-b0 !
+0$
+b0 %
+0&
+0'
+b0 (
+0)
+0*
+x+
+x,
+x-
+b0 .
+x/
+x0
+bx 1
+b0 2
+bx 3
+b0 4
+b0 5
+bx 6
+07
+08
+b0 9
+0:
+b0 ;
+0<
+x=
+0>
+b0 ?
+0@
+xA
+bx B
+0C
+xD
+xE
+bx F
+bx G
+bx H
+xI
+bx J
+bx K
+bx L
+bx M
+bx N
+xO
+xP
+bx Q
+bx R
 $end
+
 #10000
-0=
-0&
-b0 )
-b0 7
-b0 A
-1$
-0C
-1'
-0?
-b0 B
-1(
-0%
-1*
-#20000
-0*
-#30000
-1*
-#40000
-0*
-#50000
-1*
-#60000
-0*
-#70000
-1*
-#80000
-0*
-#90000
+1!
 1+
-1*
-#100000
-0*
-#110000
-0J
-0H
-b1010101 I
-b0 G
-1*
-#120000
-0*
-#130000
-11
-b1010101 3
-b1010101 <
-14
-10
-1*
-#140000
-0*
-#150000
-1=
-04
+1,
+0-
+1/
 00
-b1010101 D
-0$
-1C
-b0 @
-0'
-1?
-1J
-1H
-1*
-#160000
-0*
-#170000
-0=
-1&
-1$
-0C
-1'
-0?
-b1010101 )
-b1010101 7
-b1010101 A
-1*
-#180000
-0*
-#190000
-01
-0&
-b0 E
-b10 5
-b1111111111111111111111111110011011111111111111111111111110010010101011100010000001101011011011101111111111111111111111111110100111111111111111111111111110000110111111111111111111111111100110001111111111111111101110100010000000110000011110000011010100110101 L
-b1010101 M
-b1010101 K
-1*
-#200000
-0*
-#210000
-12
-1.
-1*
-#220000
-0*
-#230000
-b1010101 B
-0(
-1%
-1*
-#240000
-0*
-#250000
-02
-0.
-1(
-0%
-0J
-0H
-b1000000 I
-b1 6
-bz ,
-b100 5
-b111111111111111111111111101110111111111111111111100111100010000000110000011110000011010100110101 L
-b1010101 M
-bz K
-bz F
-1*
-#260000
-0*
-#270000
-11
-b1000000 3
-b1000000 <
-14
-10
-1*
-#280000
-0*
-#290000
-1=
-04
-00
-b1000000 D
-0$
-1C
-0'
-1?
-1J
-1H
-1*
-#300000
-0*
-#310000
-0=
-1&
-1$
-0C
-1'
-0?
-b1000000 )
-b1000000 7
-b1000000 A
-1*
-#320000
-0*
-#330000
-01
-0&
-0J
-0H
-b11111111 I
-b110 5
-b11111111111111111111111110010111111111111111111111111111101011101111111111111111101110010010000000110000011110000011010000110000 L
-b1000000 M
-b1000000 K
-1*
-#340000
-0*
-#350000
-11
-b11111111 3
-b11111111 <
-14
-10
-1*
-#360000
-0*
-#370000
-1=
-04
-00
-b11111111 D
-0$
-1C
-0'
-1?
-1J
-1H
-1*
-#380000
-0*
-#390000
-0=
-1&
-1$
-0C
-1'
-0?
-b11111111 )
-b11111111 7
-b11111111 A
-1*
-#400000
-0*
-#410000
-01
-0&
-0J
-0H
-b0 I
-b1000 5
-b11111111111111111111111110010111111111111111111111111111101011101111111111111111101110010010000000110000011110000100011001000110 L
-b11111111 M
-b11111111 K
-1*
-#420000
-0*
-#430000
-11
+b0 1
 b0 3
-b0 <
-14
-10
-1*
-#440000
-0*
-#450000
-1=
-04
-00
-b0 D
-0$
-1C
-0'
-1?
-1J
-1H
-1*
-#460000
-0*
-#470000
+17
 0=
-1&
-1$
-0C
-1'
-0?
-b0 )
-b0 7
-b0 A
-1*
-#480000
-0*
-#490000
-0+
-01
-0&
-b1010 5
-b111111111111111111111111111010011111111111111111111111111011100011111111111111111111111110110110 L
-b0 M
-b0 K
-1*
-#500000
-0*
-#510000
+0A
 b0 B
-1*
-#520000
-0*
-#530000
-1*
-#540000
-0*
-#550000
-1*
-#560000
-0*
-#570000
-1*
-#580000
-0*
-#590000
+0D
+0E
+b0 H
+0I
+
+#20000
+0!
+07
+
+#30000
+1!
+17
+
+#40000
+0!
+07
+
+#50000
+1!
+17
+
+#60000
+0!
+07
+
+#70000
+1!
+17
+
+#80000
+0!
+07
+
+#90000
+1!
+1"
+17
+18
+
+#100000
+0!
+07
+
+#110000
+1!
+17
+b0 M
+b1010101 N
+0O
+0P
+
+#120000
+0!
+07
+
+#130000
+1!
+1$
+b1010101 %
+1&
+1'
+17
+1:
+b1010101 ;
+1<
+1>
+
+#140000
+0!
+07
+
+#150000
+1!
+0$
+0&
+0+
+0,
+17
+0:
+0<
+1D
+1E
+b0 F
+b1010101 G
+1I
+1O
+1P
+
+#160000
+0!
+07
+
+#170000
+1!
 1+
+1,
+1-
+b1010101 3
+17
+1=
+0D
+0E
+b1010101 H
+0I
+
+#180000
+0!
+07
+
+#190000
+1!
+0'
+0-
+b10 5
+17
+0=
+0>
+b1010101 J
+b1010101 K
+b1111111111111111111111111110011011111111111111111111111110010010101011100010000001101011011011101111111111111111111111111110100111111111111111111111111110000110111111111111111111111111100110001111111111111111101110100010000000110000011110000011010100110101 L
+b0 Q
+
+#200000
+0!
+07
+
+#210000
+1!
+1)
 1*
+17
+1@
+1C
+
+#220000
+0!
+07
+
+#230000
+1!
+0/
+10
+b1010101 1
+17
+1A
+b1010101 B
+
+#240000
+0!
+07
+
+#250000
+1!
+0)
+0*
+1/
+00
+b100 5
+b1010101 6
+17
+0@
+0A
+0C
+b1010101 J
+b1010101 K
+b111111111111111111111111101110111111111111111111100111100010000000110000011110000011010100110101 L
+b1000000 N
+0O
+0P
+b1010101 R
+
+#260000
+0!
+07
+
+#270000
+1!
+1$
+b1000000 %
+1&
+1'
+17
+1:
+b1000000 ;
+1<
+1>
+
+#280000
+0!
+07
+
+#290000
+1!
+0$
+0&
+0+
+0,
+17
+0:
+0<
+1D
+1E
+b1000000 G
+1I
+1O
+1P
+
+#300000
+0!
+07
+
+#310000
+1!
+1+
+1,
+1-
+b1000000 3
+17
+1=
+0D
+0E
+b1000000 H
+0I
+
+#320000
+0!
+07
+
+#330000
+1!
+0'
+0-
+b110 5
+17
+0=
+0>
+b1000000 J
+b1000000 K
+b11111111111111111111111110010111111111111111111111111111101011101111111111111111101110010010000000110000011110000011010000110000 L
+b11111111 N
+0O
+0P
+
+#340000
+0!
+07
+
+#350000
+1!
+1$
+b11111111 %
+1&
+1'
+17
+1:
+b11111111 ;
+1<
+1>
+
+#360000
+0!
+07
+
+#370000
+1!
+0$
+0&
+0+
+0,
+17
+0:
+0<
+1D
+1E
+b11111111 G
+1I
+1O
+1P
+
+#380000
+0!
+07
+
+#390000
+1!
+1+
+1,
+1-
+b11111111 3
+17
+1=
+0D
+0E
+b11111111 H
+0I
+
+#400000
+0!
+07
+
+#410000
+1!
+0'
+0-
+b1000 5
+17
+0=
+0>
+b11111111 J
+b11111111 K
+b11111111111111111111111110010111111111111111111111111111101011101111111111111111101110010010000000110000011110000100011001000110 L
+b0 N
+0O
+0P
+
+#420000
+0!
+07
+
+#430000
+1!
+1$
+b0 %
+1&
+1'
+17
+1:
+b0 ;
+1<
+1>
+
+#440000
+0!
+07
+
+#450000
+1!
+0$
+0&
+0+
+0,
+17
+0:
+0<
+1D
+1E
+b0 G
+1I
+1O
+1P
+
+#460000
+0!
+07
+
+#470000
+1!
+1+
+1,
+1-
+b0 3
+17
+1=
+0D
+0E
+b0 H
+0I
+
+#480000
+0!
+07
+
+#490000
+1!
+0"
+0'
+0-
+b1010 5
+17
+08
+0=
+0>
+b0 J
+b0 K
+b111111111111111111111111111010011111111111111111111111111011100011111111111111111111111110110110 L
+
+#500000
+0!
+07
+
+#510000
+1!
+b0 1
+17
+b0 B
+
+#520000
+0!
+07
+
+#530000
+1!
+17
+
+#540000
+0!
+07
+
+#550000
+1!
+17
+
+#560000
+0!
+07
+
+#570000
+1!
+17
+
+#580000
+0!
+07
+
+#590000
+1!
+1"
+17
+18
+
 #600000
-0*
+0!
+07
+
 #610000
-1*
+1!
+17
+
 #620000
-0*
+0!
+07
+
 #630000
-12
-1.
+1!
+1)
 1*
+17
+1@
+1C
+
 #640000
-0*
+0!
+07
+
 #650000
-0(
-1%
-1*
+1!
+0/
+10
+17
+1A
+
 #660000
-0*
+0!
+07
+
 #670000
-02
-0.
-1(
-0%
-b10 6
-bz K
+1!
 b1100 5
+b0 6
+17
 b1111111111111111111111111110010111111111111111111111111110111101111111111111111111111111100011101111111111111111111111111110010111111111100111100010000000110000 L
-1*
+b0 R

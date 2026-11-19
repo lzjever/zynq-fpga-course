@@ -1,9 +1,10 @@
-# Lab 06 一键构建脚本 — 三种模式,一份代码
+# Lab 06 一键构建脚本 — 三种波特率 + ILA,一份代码
 # 用法:
 #   vivado -mode batch -source build.tcl -tclargs eye    ← 肉眼 UART(2 波特,LED 5 秒打 'H')默认
+#   vivado -mode batch -source build.tcl -tclargs slow   ← 9600(按一次,LED 短促一闪,读不出位)
 #   vivado -mode batch -source build.tcl -tclargs real   ← 真实波特率 115200(板上现象:几乎无感)
 #   vivado -mode batch -source build.tcl -tclargs ila    ← 115200 + ILA 核(5 探针,抓帧主验证)
-# 三种模式改的都是同一份 uart_tx.v —— parameter 三级跳,零代码改动。
+# 所有模式改的都是同一份 uart_tx.v —— parameter 三级跳,零代码改动。
 
 if {$argc < 1} { set mode "eye" } else { set mode [lindex $argv 0] }
 
@@ -13,9 +14,10 @@ set part  xc7z020clg400-2
 # ---------- 模式 → 参数映射 ----------
 switch $mode {
     "eye"  { set top lab06_top;       set div 25000000; set ila 0 }  ;# 2 波特
+    "slow" { set top lab06_top;       set div 5208;     set ila 0 }  ;# 9600
     "real" { set top lab06_top;       set div 434;      set ila 0 }  ;# 115200
     "ila"  { set top lab06_ila_top;   set div 434;      set ila 1 }  ;# 115200+ILA
-    default { puts "未知模式:$mode(可用:eye / real / ila)"; exit 1 }
+    default { puts "未知模式:$mode(可用:eye / slow / real / ila)"; exit 1 }
 }
 puts "=============================="
 puts " Lab06 模式:$mode  顶层:$top  BAUD_DIV=$div"
@@ -23,11 +25,12 @@ puts "=============================="
 
 create_project $proj ./$proj -part $part -force
 
-add_files uart_tx.v key_pulse.v lab06_top.v lab06_ila_top.v
+add_files uart_tx.v key_pulse.v lab06_top.v
 add_files -fileset constrs_1 lab06.xdc
 
 # ---------- ILA 模式:显式例化路线,create_ip 全脚本化(不点 GUI)----------
 if {$ila} {
+    add_files lab06_ila_top.v     ;# 这个文件例化了 ila_uart 核,只在 ILA 模式下进工程
     create_ip -name ila -vendor xilinx.com -library ip -version 6.2 -module_name ila_uart
     set_property -dict [list \
         CONFIG.C_NUM_OF_PROBES {5} \

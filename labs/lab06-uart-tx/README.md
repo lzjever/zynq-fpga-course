@@ -27,6 +27,7 @@ vivado -mode batch -source program.tcl     # 烧写前 pkill -f openocd
 
 # 三级跳(同一份代码,零改动):
 vivado -mode batch -source build.tcl -tclargs eye    # 2 波特,逐位可读
+vivado -mode batch -source build.tcl -tclargs slow   # 9600,按一次 LED 短促一闪
 vivado -mode batch -source build.tcl -tclargs real   # 115200,LED 几乎无感
 vivado -mode batch -source build.tcl -tclargs ila    # 115200 + ILA 抓帧主验证
 ```
@@ -36,6 +37,7 @@ vivado -mode batch -source build.tcl -tclargs ila    # 115200 + ILA 抓帧主验
 | 模式 | BAUD_DIV | 一个位 | 一帧耗时 | 按一次键 LED 的现象 |
 |---|---|---|---|---|
 | eye | 25_000_000 | 0.5 s | 5 s | 灭 2 s(起始+d0~d2)→ 亮 0.5 → 灭 1 s(d4+d5)→ 亮 0.5 → 灭 0.5 → 亮起后**常亮**(停止位+空闲) |
+| slow | 5_208 | 104 µs | 1.04 ms | 短促一闪——肉眼能看到"有事发生",但读不出任何一位 |
 | real | 434 | 8.68 µs | 86.8 µs | 几乎无感(太快,肉眼失效 → 需要 ILA) |
 | ila | 434 | 8.68 µs | 86.8 µs | 同上;波形窗里逐位解出 0100_1000 = 'H' |
 

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 5 章 · PWM 呼吸灯与模块例化 — Zynq FPGA 从零到实战</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+.fig{background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px;margin:20px 0;text-align:center}
+.fig svg{max-width:100%}
+.fig .cap{font-size:13px;color:var(--ink-soft);margin-top:10px}
+.wire{stroke:#1d5c8a;stroke-width:2;fill:none}
+.wave{stroke:#b3541e;stroke-width:2.5;fill:none}
+.avg{stroke:#2e7d32;stroke-width:2;fill:none;stroke-dasharray:7,5}
+.dash{stroke:#5b3e96;stroke-width:1.5;fill:none;stroke-dasharray:5,4}
+.boxf{fill:#fdfcfa;stroke:#b3541e;stroke-width:2}
+.boxb{fill:#f4f1ec;stroke:#1d5c8a;stroke-width:2}
+.lbl{font:13px "Noto Sans SC",sans-serif;fill:#1a2332}
+.lbl2{font:12px "Noto Sans SC",sans-serif;fill:#4a5568}
+.mono{font:12.5px "JetBrains Mono",Consolas,monospace;fill:#4a5568}
+.hot{fill:#b3541e;font-weight:bold}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <span class="chip">ZYNQ · FPGA</span>
+    <h1>从零到实战</h1>
+    <p>Verilog · Vivado · Z7-Nano</p>
+  </div>
+  <nav>
+    <a href="index.html"><span class="num">00</span>封面 · 课程地图</a>
+    <a href="ch00-verilog101.html"><span class="num">01</span>Verilog 101</a>
+    <a href="ch01-sim.html"><span class="num">02</span>仿真入门</a>
+    <a href="ch02-debounce.html"><span class="num">03</span>Lab02 按键消抖</a>
+    <a href="ch03-cdc.html"><span class="num">04</span>亚稳态与 CDC</a>
+    <a href="ch04-vivado.html"><span class="num">05</span>Vivado 幕后</a>
+    <a href="ch05-pwm.html" class="active"><span class="num">06</span>PWM 呼吸灯</a>
+    <a href="ch06-uart-tx.html"><span class="num">07</span>UART 发送器</a>
+    <a href="ch07-uart-rx.html"><span class="num">08</span>UART 自环回</a>
+    <a href="ch08-axi.html"><span class="num">09</span>AXI 总线</a>
+    <a href="ch09-merge.html"><span class="num">10</span>PS-PL 会师</a>
+    <a href="ch10-capstone.html"><span class="num">11</span>毕业设计</a>
+    <a href="appendix-board.html"><span class="num">附A</span>板卡手册</a>
+    <a href="appendix-glossary.html"><span class="num">附B</span>术语表</a>
+    <a href="appendix-cheatsheet.html"><span class="num">附C</span>命令速查</a>
+  </nav>
+  <footer>硬件:Z7-Nano R20 · XC7z020<br>软件:Vivado 2026.1 免费档<br>姊妹篇:主线 Linux 手册</footer>
+</aside>
+<main class="main">
+  <div class="chapter-tag">CHAPTER 05</div>
+  <h2 class="title">PWM 呼吸灯与模块例化</h2>
+  <p class="subtitle">数字世界没有 0.5V——但你的眼睛会替你算平均。这次我们故意造"半亮",还要让它学会呼吸;顺便解决你憋了三个 Lab 的烦躁。</p>
+
+  <h3>1 · 钩子:第三次抄 tick 之前,你烦躁了吗</h3>
+  <p>数一数:lab01 的闪烁,靠一个 24 位计数器;lab02 的 20ms 消抖,又写一遍"数满 N 个时钟";ch03 的压测激励里,还是计数。写软件出身的你,DRY(Don't Repeat Yourself,不要重复自己)的本能早就痒了:<strong>同一段"数满 N 产一拍"的逻辑,凭什么抄第三遍?</strong></p>
+  <p>电路世界当然能抽——而且比函数更彻底:抽成一个<strong>模块</strong>,它就成了一颗独立存在的芯片;哪里要用,就"摆一颗"进去,两颗、三颗并行工作,互不打扰。这个"摆一颗"的动作,就是<strong>模块例化(Module Instantiation)</strong>,今天的主角之一。</p>
+  <p>主角之二借个旧悬案开场:ch00 实验 2 里,LED "半亮"把你骗了——那是 25MHz 翻转骗过了眼睛的<strong>意外</strong>。今天反过来<strong>利用</strong>这个生理漏洞,故意、精确、可调地造出 0 到 255 共 256 档亮度,再让它顺滑地涨落——呼吸灯。今晚结束时,你的板子会像睡着了一样。</p>
+
+  <h3>2 · 这一章要学会什么</h3>
+  <ul>
+    <li>能解释 PWM 为什么能用 0/1 造出中间亮度(占空比 → 时间平均 → 人眼滤波);</li>
+    <li>能算出 8 位分辨率 @50MHz 的载波频率(50M ÷ 256 ≈ 195kHz),并说明人眼为何看不见闪烁;</li>
+    <li>能把 led_blink 重构成"例化 tick_gen"的版本,并说出函数调用与例化的三点差异;</li>
+    <li>会用 parameter 给模块传参数(#(.DIV(...)) 语法),理解 $clog2 自动位宽;</li>
+    <li>能实现"三角波亮度 + 载波相位 + 比较器"的 PWM,板上看到约 4s 的呼吸,并按住按键验证 duty=0 全灭;</li>
+    <li>能踩准比较器的边界陷阱(phase&lt;duty 与 phase&lt;=duty 的差别)。</li>
+  </ul>
+
+  <h3>3 · 原理:占空比 = 平均亮度</h3>
+  <p><strong>脉冲宽度调制(Pulse Width Modulation, PWM)</strong>:输出只有 0 和 1,但<strong>高电平占整个周期的比例</strong>可以任意调。这个比例叫<strong>占空比(Duty Cycle)</strong>。LED 亮不亮取决于<em>一段时间</em>里的平均电流——只要周期够快,眼睛(和 LED 的惰性)就像一个低通滤波器,只看得见平均值:</p>
+
+  <div class="fig">
+  <svg viewBox="0 0 820 300" xmlns="http://www.w3.org/2000/svg">
+    <text class="mono" x="30" y="24">同一个载波周期 T(5.12us),三种占空比:</text>
+    <!-- 25% -->
+    <text class="mono" x="30" y="58">duty=25%:</text>
+    <polyline class="wave" points="150,70 150,45 180,45 180,70 270,70 270,45 300,45 300,70 390,70 390,45 420,45 420,70 510,70 510,45 540,45 540,70 630,70 630,45 660,45 660,70 780,70"/>
+    <line class="avg" x1="150" y1="64" x2="780" y2="64"/>
+    <text class="lbl2" x="700" y="40">平均 ≈ 0.25 亮</text>
+    <!-- 50% -->
+    <text class="mono" x="30" y="128">duty=50%:</text>
+    <polyline class="wave" points="150,140 150,115 210,115 210,140 270,140 270,115 330,115 330,140 390,140 390,115 450,115 450,140 510,140 510,115 570,115 570,140 630,140 630,115 690,115 690,140 780,140"/>
+    <line class="avg" x1="150" y1="128" x2="780" y2="128"/>
+    <text class="lbl2" x="700" y="110">平均 ≈ 半亮</text>
+    <!-- 75% -->
+    <text class="mono" x="30" y="198">duty=75%:</text>
+    <polyline class="wave" points="150,210 150,185 240,185 240,210 270,210 270,185 360,185 360,210 390,210 390,185 480,185 480,210 510,210 510,185 600,185 600,210 630,210 630,185 720,185 720,210 780,210"/>
+    <line class="avg" x1="150" y1="192" x2="780" y2="192"/>
+    <text class="lbl2" x="700" y="180">平均 ≈ 0.75 亮</text>
+    <text class="lbl2" x="150" y="250">每个周期高电平的宽度(脉冲宽度)被"调制"了——占空比越宽,平均值越高。</text>
+    <text class="lbl2" x="150" y="274">绿色虚线 = 眼睛看到的亮度(时间平均)。T 越短(载波频率越高),滤波越干净。</text>
+  </svg>
+  <div class="cap">图 1 · PWM:0/1 的方波,靠"高电平宽度"编码亮度,靠人眼/LED 的惰性还原成模拟量</div>
+  </div>
+
+  <p>两个设计旋钮:</p>
+  <ul>
+    <li><strong>载波频率(Carrier Frequency)</strong>:方波跑多快。我们的实现是"一个 8 位计数器每拍 +1",每 256 拍一圈 → 50MHz ÷ 256 ≈ <strong>195.3kHz</strong>,周期 5.12µs。人眼暂留约几十赫兹,195kHz 安全四个数量级——你绝不会看见频闪。(反过来,载波降到 100Hz,LED 就开始"嗡嗡闪",自测题里让你推一遍。)</li>
+    <li><strong>分辨率(Resolution)</strong>:亮度分几档。8 位 = 256 档,呼吸已经绸缎般顺滑;档位越多,占空比颗粒越细,但载波频率也要越高(或加长周期)。8 位是这个应用的标准答案。</li>
+  </ul>
+  <div class="box box-know"><div class="box-title">知识 · 这招你家里到处都是</div>
+  <p>PWM 调光、调速、调音量:显示器背光、风扇、舵机、Class-D 音放……"数字系统造模拟效果"的第一工具。Zynq 的 PS 侧硬件 PWM 外设原理相同——而你今天用 55 个 LUT 手搓了一个。</p></div>
+
+  <h3>4 · 动手一:先拿老朋友开刀——led_blink 例化版</h3>
+  <p>新零件 <code>tick_gen.v</code>(完整带注释版在 <code>labs/lab05-pwm/tick_gen.v</code>):</p>
+  <pre><code><span class="c">// 数满 DIV 个时钟,发一个单周期脉冲。DIV 任意整数(≥2),不必是 2 的幂</span>
+<span class="k">module</span> tick_gen #(
+    <span class="k">parameter</span> DIV = 390_625          <span class="c">// 参数:多少个时钟一个 tick</span>
+)(
+    <span class="k">input</span>  <span class="k">wire</span> clk,
+    <span class="k">input</span>  <span class="k">wire</span> rst_n,
+    <span class="k">output</span> <span class="k">reg</span>  tick                <span class="c">// 高电平恰好 1 拍</span>
+);
+    <span class="k">localparam</span> W = $clog2(DIV);       <span class="c">// 需要几位计数器:clog2(390625)=19</span>
+    <span class="k">reg</span> [W-1:0] div_cnt;
+
+    <span class="k">always</span> @(posedge clk) <span class="k">begin</span>
+        <span class="k">if</span> (!rst_n)              <span class="k">begin</span> div_cnt &lt;= 0; tick &lt;= 1'b0; <span class="k">end</span>
+        <span class="k">else</span> <span class="k">if</span> (div_cnt == DIV-1) <span class="k">begin</span> div_cnt &lt;= 0; tick &lt;= 1'b1; <span class="k">end</span>
+        <span class="k">else</span>                    <span class="k">begin</span> div_cnt &lt;= div_cnt + 1'd1; tick &lt;= 1'b0; <span class="k">end</span>
+    <span class="k">end</span>
+<span class="k">endmodule</span></code></pre>
+  <p>然后是仪式性的时刻——led_blink 不再自己数数,改成例化:</p>
+  <pre><code><span class="k">module</span> led_blink2 (
+    <span class="k">input</span>  <span class="k">wire</span> clk,
+    <span class="k">input</span>  <span class="k">wire</span> rst_n,
+    <span class="k">output</span> <span class="k">reg</span>  led                 <span class="c">// 注意:从 wire 变成了 reg(现在它在 always 里翻转)</span>
+);
+    <span class="k">wire</span> tick;                          <span class="c">// 一根内部导线,准备接零件的输出</span>
+
+    tick_gen #(.DIV(2**23)) u_tick (   <span class="c">// 摆一颗零件,DIV=2^23</span>
+        .clk   (clk),                   <span class="c">// 端口按"名字"接线,永不接错</span>
+        .rst_n (rst_n),
+        .tick  (tick)
+    );
+
+    <span class="k">always</span> @(posedge clk)
+        <span class="k">if</span> (!rst_n)    led &lt;= 1'b0;
+        <span class="k">else</span> <span class="k">if</span> (tick) led &lt;= ~led;   <span class="c">// 每 2^23 拍翻一次 → 50M/2^24 ≈ 2.98Hz</span>
+<span class="k">endmodule</span></code></pre>
+  <p>验算一下连续性:每 2<sup>23</sup> 拍翻转一次,周期 = 2×2<sup>23</sup> = 2<sup>24</sup> 拍 → 50M ÷ 2<sup>24</sup> ≈ 2.98Hz。<strong>和 lab01 的 cnt[23] 一拍不差</strong>——同一件事,两种写法,而这一种从今天起只写一次。</p>
+
+  <div class="box box-know"><div class="box-title">知识 · 函数调用 vs 模块例化(三点差异)</div>
+  <p>① <strong>存在方式</strong>:函数调用是"用完即走";例化出的子电路<strong>永久存在、永远上电</strong>——例化两次就是两块真实电路并行工作,不是"调用了两遍";② <strong>传值方式</strong>:函数靠参数表传值;模块靠<strong>导线</strong>连端口——例化处的括号就是在"接线";③ <strong>层级</strong>:顶层模块(Top-level Module)是直接接引脚的那层(我们的 pwm_breathe),它可以例化子模块,子模块再例化子模块——Vivado 左侧的 Hierarchy 面板就是这棵树。软件是调用栈,电路是积木。</p></div>
+
+  <h4>parameter:每个实例一份自己的常数</h4>
+  <p>ch01 你用过 parameter 缩小仿真规模,今天它当主角:<code>#(.DIV(...))</code> 在例化的那一刻把常数"灌进"这一颗零件。<code>2**23</code> 是 lab01 的节奏,<code>390_625</code> 是下面的呼吸步进,<code>434</code> 是 ch06 的 UART 位节拍——<strong>同一份 tick_gen.v,三种性格</strong>。两个细节:</p>
+  <ul>
+    <li><code>localparam</code> 是"内部常数"($clog2 算出的位宽 W),外部改不了;parameter 才对外开放。该开的开,该关的关;</li>
+    <li><code>$clog2(DIV)</code> 编译期自动算位宽,以后改 DIV 不用跟着改线宽——手写位宽迟早忘。</li>
+  </ul>
+
+  <h3>5 · 原理到电路:呼吸灯的结构图</h3>
+  <div class="fig">
+  <svg viewBox="0 0 820 250" xmlns="http://www.w3.org/2000/svg">
+    <!-- tick_gen -->
+    <rect class="boxf" x="40" y="40" width="190" height="60" rx="6"/>
+    <text class="lbl" x="62" y="64">tick_gen(例化)</text>
+    <text class="mono" x="62" y="86">DIV = STEP_DIV</text>
+    <line class="wire" x1="230" y1="70" x2="330" y2="70"/>
+    <text class="mono" x="240" y="60">step_tick</text>
+    <!-- duty 三角波 -->
+    <rect class="boxb" x="330" y="40" width="190" height="60" rx="6"/>
+    <text class="lbl" x="356" y="64">亮度 duty 三角波</text>
+    <text class="mono" x="356" y="86">0→255→0(每步 ±1)</text>
+    <line class="wire" x1="520" y1="70" x2="610" y2="70"/>
+    <text class="mono" x="532" y="60">duty[7:0]</text>
+    <!-- phase -->
+    <rect class="boxb" x="330" y="150" width="190" height="60" rx="6"/>
+    <text class="lbl" x="356" y="174">载波相位 phase</text>
+    <text class="mono" x="356" y="196">每 clk +1,0..255</text>
+    <line class="wire" x1="520" y1="180" x2="610" y2="180"/>
+    <text class="mono" x="532" y="170">phase[7:0]</text>
+    <!-- 比较器 -->
+    <rect class="boxf" x="610" y="105" width="120" height="70" rx="10"/>
+    <text class="lbl" x="632" y="134">比较器</text>
+    <text class="mono" x="632" y="156">phase &lt; duty</text>
+    <line class="wire" x1="610" y1="70" x2="640" y2="105"/>
+    <line class="wire" x1="610" y1="180" x2="640" y2="145"/>
+    <line class="wire" x1="730" y1="140" x2="790" y2="140"/>
+    <text class="mono" x="742" y="130">led</text>
+    <!-- clk -->
+    <text class="mono" x="30" y="230">clk(50MHz)喂给所有方框;rst_n 喂给所有方框(图上略)</text>
+  </svg>
+  <div class="cap">图 2 · pwm_breathe 结构:tick 定步速,duty 是亮度目标,phase 是高速锯齿,比较器输出方波</div>
+  </div>
+
+  <p>对照代码读(<code>labs/lab05-pwm/pwm_breathe.v</code>,逐行注释版)。三段各司其职:载波相位每拍 +1 转圈(195.3kHz);亮度 duty 收到 step_tick 才动一步,三角波往返(0↔255 各 255 步,顶底各停一步);比较器每拍判决 <code>phase &lt; duty</code> 输出方波。呼吸周期一笔账:</p>
+  <pre><code>呼吸周期 = (255 亮步 + 255 暗步) × STEP_DIV ÷ 50MHz
+         = 510 × 390625 × 20ns ≈ 4.0 s</code></pre>
+
+  <div class="box box-warn"><div class="box-title">警告 · 比较器的边界陷阱:一个字符的亮度差</div>
+  <p><code>assign led = (phase &lt; duty);</code> 写成 <code>(phase &lt;= duty)</code> 会怎样? duty=0 时,前者恒假(全灭 ✓);后者在 phase==0 那一拍为真——占空比从 0/256 变成 1/256,"最暗档关不严"。就一个等号,暗房间里看得见微光。边界条件(duty=0、duty=255)永远值得单独问一句:<strong>极端值下,表达式还讲道理吗?</strong></p></div>
+
+  <h3>6 · 动手二:上板(30 分钟)</h3>
+  <div class="box box-step"><div class="box-title">步骤</div>
+  <ol>
+    <li><code>cd labs/lab05-pwm &amp;&amp; vivado -mode batch -source build.tcl</code> —— 注意 build.tcl 这次 add 了<strong>两个</strong> .v(tick_gen 是零件,pwm_breathe 是顶层);</li>
+    <li>烧写:照 README 复用 ch04 的 program.tcl(<code>sed 's/lab01/lab05/g'</code> 改个路径——脚本复用的第一次实战);</li>
+    <li>验收现象:呼吸约 4s、平滑无频闪;<strong>按住 PL_KEY 应全灭</strong>(复位清 duty,占空比 0/256——顺手验了边界陷阱的"正确版");</li>
+    <li>把 <code>STEP_DIV</code> 改成 <code>195_312</code> 重新构建:呼吸变 2s。<strong>先猜再改</strong>;</li>
+    <li>跑完 build 顺手把 utilization 抄进 README 的账本表(ch04 立的规矩,本 Lab 预估 ≈55 LUT / ≈40 FF)。</li>
+  </ol></div>
+
+  <h3>7 · 常见坑</h3>
+  <table>
+    <tr><th>坑</th><th>现象</th><th>解法</th></tr>
+    <tr><td>例化端口按位置连线 <code>tick_gen u (clk, rst_n, tick);</code></td><td>顺序一错 → 编译通过但行为诡异(最阴险的一类 bug)</td><td>永远用命名关联 <code>.clk(clk)</code></td></tr>
+    <tr><td>参数括号和端口括号写串</td><td><code>tick_gen (.DIV(434), .clk(...))</code> 语法错</td><td>参数在 <code>#()</code>,端口在 <code>()</code>:<code>tick_gen #(.DIV(434)) u (...)</code></td></tr>
+    <tr><td>比较器用 <code>&lt;=</code></td><td>最暗档微光(1/256 偷亮)</td><td>用 <code>&lt;</code>;0 档必须全灭</td></tr>
+    <tr><td>改 DIV 忘改计数器位宽</td><td>位宽不够 → 计数器永远数不到 DIV-1,tick 失踪</td><td>用 <code>$clog2(DIV)</code> 自动算</td></tr>
+    <tr><td>把 tick 接到组合逻辑再判边沿</td><td>多此一举还引入毛刺风险</td><td>tick 本身就是干净的 1 拍脉冲,直接当使能用</td></tr>
+  </table>
+
+  <h3>8 · 小结与自测</h3>
+  <p>一条线:DRY 烦躁 → 抽出 tick_gen(parameter 化的零件)→ 例化进 led_blink2(和 cnt[23] 殊途同归)→ 例化进 pwm_breathe,三角波亮度喂给 PWM 比较器 → 呼吸灯。你第一次拥有了<strong>多模块工程</strong>:Vivado 左侧 Hierarchy 面板里那棵树,就是你的积木结构。tick_gen 请收好——ch06 它要换上 DIV=434 再出场。</p>
+  <div class="box box-know"><div class="box-title">本章新词卡(附录 B 汇总)</div>
+  <p>脉冲宽度调制(Pulse Width Modulation, PWM)· 占空比(Duty Cycle)· 载波频率(Carrier Frequency)· 分辨率(Resolution)· 模块例化(Module Instantiation)· 顶层模块(Top-level Module)·(选做)只读存储器(Read-Only Memory, ROM)</p></div>
+
+  <div class="box box-step"><div class="box-title">自测(三档)</div>
+  <p><strong>A · 概念复述</strong>:数字输出只有 0 和 1,"中间亮度"是从哪里来的?用"占空比 → 平均 → 人眼"三步说给人听。</p>
+  <p><strong>B · 预测(先猜后验)</strong>:duty=1 时,LED 亮度是 1/256 还是 0?如果比较器写成了 <code>phase &lt;= duty</code> 呢?(前者 1/256、后者 2/256——算完改代码烧板,或写 3 行 TB 数 led 高电平拍数)</p>
+  <p><strong>B2 · 预测</strong>:把载波从 195kHz 降到 100Hz(比如 phase 用 18 位、每拍 +4000 之类),板上会看到什么?(频闪——载波进了人眼暂留区间,PWM 的"低通滤波"失效)</p>
+  <p><strong>C · 排错</strong>:同学的呼吸灯不亮,他的例化长这样,两处错误找出来:</p>
+  <pre><code>tick_gen #(.STEP_DIV) u_step (clk, rst_n, step_tick);</code></pre>
+  <details style="margin:8px 0"><summary style="cursor:pointer;color:var(--ink-soft)">答案(点开前先自己找)</summary>
+  <p><strong>B</strong>:见题面括号。<strong>B2</strong>:频闪,且占空比高时更明显(亮的更久,闪烁对比强)。<br>
+  <strong>C</strong>:① 参数名错了——tick_gen 的参数叫 <code>DIV</code>,而且覆盖要给值:<code>#(.DIV(390_625))</code>(他写的 <code>.STEP_DIV</code> 既不是本模块的参数、又没给值);② 端口用了位置连接——这次恰好对,但这是"对了也是错"的写法,改成名命关联才算修好。顺带:参数名和顶层参数重名(STEP_DIV 是 pwm_breathe 的参数),说明他分不清"顶层的参数"和"零件的参数"——顶层的 STEP_DIV 应该在例化处传给零件的 DIV。</p>
+  </details></div>
+
+  <h3>9 · 下一课预告:板子该开口说话了</h3>
+  <p>呼吸很美,但到现在为止,你的 PL 一直在自说自话:呼吸自己呼吸,闪自己闪——它还没对<em>你</em>说过一个字。而你跟这块板最熟的通道,恰恰是串口:调 Debian 全靠那个 115200。下一课,亲手造一个 UART 发送器:把 'H' 这个字符拆成 10 个时间片,一位一位拍上线——你会发现"波特率"不过是又一个 tick 而已(<code>DIV=434</code>,零件已就位)。还有个关于 CH340 的坏消息,到时候先摊牌。</p>
+
+  <div class="pager">
+    <a href="ch04-vivado.html">← 上一章:Vivado 幕后与一键化</a>
+    <a href="ch06-uart-tx.html">下一章:UART 发送器 →</a>
+  </div>
+</main>
+</body>
+</html>

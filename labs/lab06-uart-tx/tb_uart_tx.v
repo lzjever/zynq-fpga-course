@@ -46,6 +46,7 @@ module tb_uart_tx;
 
     // ---------- 软件接收器:收一帧并核对 ----------
     task recv_frame(input [7:0] expect_ch);
+        integer i;                              // 注意:任务内私有变量,不许用全局 k(会和主循环打架)
         begin
             @(negedge tx);                     // ① 等起始位下降沿(TB 独立检测,不碰 DUT 内部)
             #(HALF_NS);                        // ② 走到起始位正中
@@ -54,9 +55,9 @@ module tb_uart_tx;
                 errors = errors + 1;
             end
             rx_byte = 8'd0;
-            for (k = 0; k < 8; k = k + 1) begin
+            for (i = 0; i < 8; i = i + 1) begin
                 #BIT_NS;                       // ③ 每过一个位时间 = 下一位的正中
-                rx_byte[k] = tx;               //    LSB 先行:第 k 个收到的位放进第 k 位
+                rx_byte[i] = tx;               //    LSB 先行:第 i 个收到的位放进第 i 位
             end
             #BIT_NS;                           // ④ 停止位正中
             if (tx !== 1'b1) begin

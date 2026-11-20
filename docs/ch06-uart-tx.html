@@ -188,6 +188,7 @@ summary{cursor:pointer;font-weight:600;color:var(--accent-deep)}
 <span class="k">case</span> (state_r)
   S_IDLE: <span class="k">begin</span>
       tx &lt;= <span class="k">1</span>'b1;                       <span class="c">// 空闲电平(协议规定)</span>
+      <span class="c">// (节选省略:实际 RTL 在 IDLE 态还清零 baud_cnt——照抄节选,残留计数值会使起始位变短)</span>
       <span class="k">if</span> (start) <span class="k">begin</span>
           shifter &lt;= data;  bit_cnt_r &lt;= <span class="k">0</span>;  <span class="c">// 装弹:字节进移位寄存器</span>
           tx &lt;= <span class="k">1</span>'b0;                       <span class="c">// ← 起始位:拉低!对应图2第一条弧</span>
@@ -218,8 +219,9 @@ summary{cursor:pointer;font-weight:600;color:var(--accent-deep)}
 vivado -mode batch -source sim.tcl</code></pre>
   <p>控制台最后应该滚出:</p>
 <pre><code>Hello PL!
---- PASS (10/10 字节,位序/位宽/起停全对) ---</code></pre>
+--- PASS (10/10 帧解码正确,不证明位宽精确) ---</code></pre>
   <p>硬件在发,软件在收,两边各写各的——这一刻你完成了一次真正的通信,虽然双方都在同一台电脑上。<strong>注意一个刻意的细节</strong>:TB 的位宽是它自己声明的常数,并不引用 DUT 的 <code>BAUD_DIV</code>。发送器波特率写错了,TB 会采错位置、打出乱码,bug 当场现形——<strong>验证方不能和被验方共用同一份假设</strong>,这是比本课代码更值钱的习惯。</p>
+  <p>PASS 的判词要如实读:它证明的是<strong>10 帧解码全部正确</strong>,<strong>不证明位宽精确</strong>——TB 只在每个位的正中采样(1/4、3/4 处的体检留作思考题),位宽小幅偏差照样全对;位宽是否精确到 434 拍,只有 §7 的 ILA 游标说了算。另外,TB 与 DUT 都用 8 分频缩时,<strong>板上的 434 分频未在本 TB 中测</strong>——它在真实时钟下的对错,同样交给 §7 上板验证。</p>
 
   <h3 id="board">6 · 板上现象:肉眼 UART 与参数三级跳</h3>
   <p>现在解决开场埋的问题:PL 的 TX 到不了电脑,那谁当接收器?<strong>你的眼睛</strong>。顶层 <code>lab06_top.v</code> 干了一件恶作剧的事:把 tx 线直接接到 R14 LED 上。然后利用波特率"只是一句约定"的本质,恶意违约——把约改成<strong>每秒 2 个位</strong>:</p>
@@ -252,9 +254,9 @@ vivado -mode batch -source program.tcl
 <span class="c"># 然后开 GUI:Hardware Manager → Open Target → Add ILA core</span></code></pre>
   <div class="box box-warn"><div class="box-title">警告 · ILA 当天必撞的坑:JTAG 互杀</div>
   <p>ILA 走 JTAG,而 JTAG 上那颗 FT232H 是<strong>独占</strong>的——你调 Debian 时开过的 OpenOCD 还在后台的话,hw_server 起不来,Hardware Manager 会"找不到目标"。开 Vivado 硬件管理器之前,先执行 <code>pkill -x openocd</code>;反过来要用 OpenOCD 时杀 hw_server。口诀进附录 C,今天先肌肉记忆一次。</p></div>
-  <p><strong>抓帧五步</strong>:① 触发条件设 <code>tx == 0</code>(线空闲恒 1,拉低即起始位,条件干脆);② 点 Run Trigger(武装);③ 按一下 PL_KEY;④ 波形冻结,tx 线上就是那 86.8µs 的一帧;⑤ 放大读位,配合 <code>bit_cnt/state</code> 两根总线看状态机脚步。然后做本课的保留节目:</p>
+  <p><strong>抓帧五步</strong>:① 触发条件设 <code>tx == 0</code>(线空闲恒 1,拉低即起始位,条件干脆);② 点 Run Trigger(武装);③ 按一下 PL_KEY;④ 波形冻结,tx 线上就是那 86.8µs 的一帧;⑤ 放大读位,配合 <code>bit_cnt/state</code> 两根总线看状态机脚步。另有<strong>两个易漏的设置</strong>:刷新设备后 Vivado 通常会<strong>自动关联 .ltx 探针文件</strong>——若信号窗口是空的,手动在 Device 窗口右键 Associate Probes(或在 Tcl Console 里 <code>set_property PROBES.FILE &lt;.ltx 路径&gt; [get_hw_ilas]</code>)指到 build 产物里的 .ltx;<strong>触发位置(Trigger Position)设 0</strong>——让触发点落在缓冲区最前部,起始沿之后的整帧(4340 点)才完整落在窗口里。</p>
   <div class="box box-step"><div class="box-title">练习 · 游标量位宽(自环的盲区,只有它能救)</div>
-  <p>波形窗里放两根游标,卡在 tx 相邻两次电平变化的沿上,读出时间差。应为 <strong>8680ns ± 20ns</strong>(434 × 20ns,容 1 个时钟的量化误差)。这就是"用测量验证波特率"——记住这个动作,下一章自环实验有个隐蔽盲区:<strong>TX 和 RX 用同一个 BAUD_DIV,错也错得整整齐齐,回环永远自洽</strong>,波特率错了它查不出来。到时候,唯一说真话的就是这两根游标。</p></div>
+  <p><strong>别从起始沿量起</strong>:'H' 的起始位后面跟着 d0~d2 三个 0——<strong>连续 4 个低位</strong>,从起始沿到下一次跳变是 4 × 8.68µs = <strong>34.72µs</strong>,那不是一位。正确量法:把两根游标卡在 <strong>d3 两侧</strong>的跳变上(d3 = 1 且前后都是 0,是这帧里第一个"孤立位";量 d6 两侧同理),或卡在 <code>bit_cnt</code> 相邻两次递增的边界上。读数应为 <strong>8680ns ± 20ns</strong>(434 × 20ns,容 1 个时钟的量化误差)。这就是"用测量验证波特率"——记住这个动作,下一章自环实验有个隐蔽盲区:<strong>TX 和 RX 用同一个 BAUD_DIV,错也错得整整齐齐,回环永远自洽</strong>,波特率错了它查不出来。到时候,唯一说真话的就是这两根游标。</p></div>
   <div class="box box-know"><div class="box-title">知识 · 免费档的 ILA 限额,如实交代</div>
   <p>免费档(BASIC 授权)<strong>限 1 个 ILA 核、每核 5 个探针(Probe,被测信号;多位总线算 1 个)</strong>。本设计探针 5 个用满:tx、busy、tick、bit_cnt[3:0]、state[1:0]——其中解一帧其实只要 tx/busy/bit_cnt/state 四个,第 5 个名额给了 tick(按键脉冲),它是个好触发词:按一次抓一次。采样深度(Sample Depth)按 8192 配:115200 一帧 = 4340 点,8192 能装下一帧半,够用。<strong>已实测验证(2026.1:BASIC 档 5 探针 + 8192 深度全流程通过)注记</strong>:免费档深度上限以 2026.1 实机为准;万一 8192 不可用,方向是<strong>升波特率</strong>(921600 → 一帧仅 542 点)而不是降——采样率固定 50MHz,波特率越低一帧点数越多,降波特率只会更装不下。</p></div>
 
@@ -266,7 +268,7 @@ vivado -mode batch -source program.tcl
     <tr><td>ILA 武装后立刻触发/永远不触发</td><td>触发电平写成 1:空闲就是 1</td><td>触发条件用 <code>tx==0</code>(起始沿语义),或直接用 tick 当触发词</td></tr>
     <tr><td>现象突然全没了(LED 灭、ILA 断连)</td><td>手滑按到板上 RST 键 = 整芯片硬复位,PL 配置被清 + Debian 重启(<strong>已实测确认:RST 后 PL 比特流确实消失,Debian 起来后 PL 空白</strong>)</td><td>重新烧写;认清丝印——PL_KEY 才是我们的键</td></tr>
     <tr><td>create_ip 报"找不到 ila 定义"</td><td>IP 版本号随版本变(脚本按 6.2 写)</td><td><code>get_ipdefs *ila*</code> 查实号改一行(已列"已实测验证(2026.1:BASIC 档 5 探针 + 8192 深度全流程通过)")</td></tr>
-    <tr><td>real 模式连按两下,只发了一帧</td><td>第二拍 start 落在 SEND 里,状态机不看它(丢帧保护)</td><td>本课够用;要排队就得加缓冲,那是下一课你自己写 RX 之后再想的事</td></tr>
+    <tr><td>eye 模式一帧没播完(5 秒)又按一下,没反应</td><td>第二拍 start 落在 SEND 里,状态机不看它(丢帧保护)。real 模式人手其实撞不上:一帧仅 86.8µs,而消抖后两次 tick 至少间隔约 40ms,下一拍来时早回 IDLE 了</td><td>想亲眼看 busy 挡键,用 eye 模式(5 秒/帧)演示即可;要排队就得加缓冲,那是下一课你自己写 RX 之后再想的事</td></tr>
   </table>
 
   <h3 id="summary">9 · 小结</h3>

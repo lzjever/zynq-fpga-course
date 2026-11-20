@@ -103,7 +103,9 @@ module tb_uart_tx;
             join
         $display("");
         if (errors == 0 && sent_chars == 10)
-            $display("--- PASS (10/10 字节,位序/位宽/起停全对) ---");
+            // 判词如实:只证明 10 帧解码正确(各位正中采样),不证明位宽精确;
+            // 板上 434 分频未在本 TB 中测(本 TB 用 8 分频缩时),交给 ILA 游标验证。
+            $display("--- PASS (10/10 帧解码正确,不证明位宽精确) ---");
         else
             $display("--- FAIL:错误 %0d 个,收对 %0d/10 ---", errors, sent_chars);
         $finish;

@@ -55,9 +55,24 @@
   <div class="box box-warn"><div class="box-title">判定边界 · 三绿 ≠ GP0 通</div>
   <p>三绿(灯亮 + ssh 活 + state=operating)证明的是<strong>PL 配上了、PS 活着</strong>——验收用的 lab01.bin 里根本没有 AXI 从机,所以它<strong>不能证明 GP0 通路可访问</strong>。GP0 真正打通还依赖:FCLK0 真的在跑(它同时充当总线 ACLK)、互连接受你的 AXI3/Lite 从机时序(坑 6 的预案)、PS-PL <strong>电平转换器</strong>使能(SLCR 的 LVL_SHFTR_EN,未开时 GP0 访问会直接挂死)。这些只有 L0 那条 devmem 写才算验收——三绿只是入场券。</p></div>
 
-  <div class="box box-warn"><div class="t">战报更新(2026-11-20 实测)·主路与备路对调</div>
-<p>三种 GIC 分组方案(原始/全 Group1/全 Group0)均在 insmod 触发 PCAP 完成中断的瞬间冻结系统(JTAG 验尸:三次卡点分别在 FIQ 处理循环、内核启动 5 秒、中断进出路径)——<strong>病根不在 GIC 分组,在该内核 FIQ/NMI 机制与 PCAP 中断的组合,属内核级待解问题</strong>。</p>
-<p><strong>因此本课主线改为 Variant B(Vivado JTAG 烧写 + Debian devmem 点灯)</strong>,fpga_mgr 路线降级为"已知问题研究"(想挑战内核调试的同学按下方战地日记深入)。注意:全 Group1 方案(u-boot 写 0xFFFFFFFF 到 IGROUPR)会破坏内核启动,勿用;全 Group0 版启动正常,可留。</p></div>
+  <div class="box box-win"><div class="t">🏆 最终战报(2026-11-20 晚)· PS-PL 会师成功!</div>
+<p><strong>Variant B(JTAG 烧写 + Debian devmem)已完整跑通</strong>——LED 呼吸、AXI 寄存器读写、系统零挂死。FPGA Manager insmod 路线的 FIQ 风暴仍为"已知问题"(内核级待解),但 Variant B 的三颗地雷全部排除:</p>
+<ul>
+<li><strong>AXI3 响应缺失</strong>(codex 发现):AXI-Lite 从机未驱动 BID/RID/RLAST → PS 等不到合法响应 → 总线挂死。修:顶层反射 ID + 从机背压修复 + WLAST 传入(已改入 axi_led_top.v 和 axi_lite_slave.v)</li>
+<li><strong>FCLK0 寄存器值错</strong>(codex 发现):0xF8000170 的 bit0-3 是保留位不是使能;真正的启停在 <strong>0xF8000178</strong>(THR_CNT):写 1 停钟、写 0 连续运行。正确序列:<strong>解锁→停钟→写分频(0x00101400=50MHz)→开钟</strong></li>
+<li><strong>LVL_SHFTR_EN=0</strong>(codex 警告但首轮漏执行):0xF8000900 低 4 位须=<strong>0xF</strong>(电平转换器使能)。JTAG 烧写 PL 后<strong>不会自动开</strong>!</li>
+</ul>
+<p><strong>完整工作序列</strong>(JTAG 烧写后,在 Debian 里执行):</p>
+<pre><code>devmem w F8000008 DF0D              # SLCR 解锁
+devmem w F8000174 0                  # THR_CTRL=0
+devmem w F8000178 1                  # 停钟
+devmem w F8000170 00101400           # 分频:IO PLL ÷20 ÷1 = 50MHz
+devmem w F8000178 0                  # 开钟
+devmem w F8000900 0000000F           # 电平转换器使能!
+devmem w 40000000 1                  # CTRL=1 → LED 亮!
+devmem w 40000004 5FB               # SPEED → 呼吸</code></pre>
+<p>注意:板上 Python 32 位 ARM 的 os.pread 偏移量是 signed off_t,>0x7FFFFFFF 的地址变负数 → Bad Address。须用交叉编译的 C devmem 工具(labs/lab09-merge/devmem.c)。</p></div>
+
 <h3>1 · 钩子:这一天你等了两条技能树</h3>
   <p>回想你手上的两件东西:一条技能树是<strong>去年亲历的</strong>主线 Linux 移植——U-Boot、内核、Debian、JTAG 调试,你从零搭起了 ARM 这半边;另一条是<strong>这门课</strong>——从 led_blink 的 33 行到 AXI 从机,你一块块垒起了 FPGA 这半边。</p>
   <p>现在看这行命令:</p>

@@ -22,6 +22,7 @@ module axi_lite_slave #(
     input  wire [31:0]       s_axi_wdata,
     input  wire              s_axi_wvalid,
     output wire              s_axi_wready,
+    input  wire              s_axi_wlast,   // AXI3:末拍标记(单拍写恒 1)
     // ---------- 写响应通道 B ----------
     output reg               s_axi_bvalid,
     input  wire              s_axi_bready,
@@ -47,14 +48,16 @@ module axi_lite_slave #(
     // 写路径(与 lab08 相同的"各自记账,到齐落值",多了 case 译码)
     // ========================================================
     reg              aw_seen, w_seen;
+    reg              wlastbuf;       // AXI3:锁存 WLAST(单拍写=1)
     reg [ADDR_W-1:0] awbuf;          // 成交拍锁存的地址(译码用它的低位)
     reg [31:0]       wbuf;           // 成交拍锁存的数据
     reg [31:0]       reg_ctrl;       // 0x00 CTRL
     reg [31:0]       reg_speed;      // 0x04 SPEED        ← DIFF:多一个寄存器
-    wire write_fire = aw_seen && w_seen;
+    wire write_fire = aw_seen && w_seen && wlastbuf;  // AXI3:须确认末拍
 
-    assign s_axi_awready = !aw_seen;
-    assign s_axi_wready  = !w_seen;
+    // 背压修复(codex):BVALID 挂着时不收新写——防丢响应
+    assign s_axi_awready = aresetn && !aw_seen && !s_axi_bvalid;
+    assign s_axi_wready  = aresetn && !w_seen  && !s_axi_bvalid;
 
     always @(posedge aclk) begin
         if (!aresetn) begin
@@ -69,6 +72,7 @@ module axi_lite_slave #(
             if (s_axi_wvalid && s_axi_wready) begin
                 w_seen <= 1'b1;
                 wbuf   <= s_axi_wdata;
+                wlastbuf <= s_axi_wlast;   // AXI3:随数据锁存末拍标记
             end
             if (write_fire) begin
                 case (awbuf[2])                  // ← DIFF:地址译码。字对齐,第 2 位区分 0x00/0x04

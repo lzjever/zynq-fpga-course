@@ -1,87 +1,100 @@
 // ============================================================
 // Lab 09 · 会师顶层:PS7 直例化 + AXI-Lite 从机 + 呼吸灯
 // ============================================================
-// 时钟域方案甲(FINAL 裁定):整个设计只活在 FCLK0 一个时钟域里。
-//   - N18(板上 50MHz 晶振)在本设计退役:如果逻辑跑 N18、寄存器
-//     活在 FCLK0 域,ARM 写进来的多比特 SPEED 就是一颗 CDC 雷
-//     (数值撕裂,ch03 的教训)。一刀切进同域,雷不存在。
-//   - 代价:FCLK0 由 PS 说了算——所以"使能 FCLK0"那条 devmem
-//     命令,是这门课真正意义上的"给电路接电源"(见 README 命令卡)。
-//
-// PS7 直例化说明:
-//   - PS7 是库原语,像例化普通模块一样用,**不进 Block Design**;
-//   - 原语端口名与 BD/IP 封装版不同(已对 2026.1 原语库核实):
-//     FCLK 时钟脚叫 FCLKCLK(4 位总线,这里取 [0]),GP0 总线脚全无下划线
-//     (MAXIGP0ACLK/MAXIGP0AWADDR/…;封装版才写作 FCLK_CLK0/M_AXI_GP0_*);
-//     拿不准就综合一遍,Vivado 会直接点名未定义的端口名;
-//   - PS7 有几百个端口(DDR/MIO/中断……),没列出的自动挂空——
-//     PS 那半边早已被 FSBL/u-boot 配置好并在跑 Debian,轮不到比特流操心。
-//   - GP0 是 AXI3 方言(ch08 方案甲):下面只接 AXI4-Lite 用得着的线,
-//     AXI3 独有信号(ID/突发类)全部挂空置之不理。
+// 时钟域方案甲:整个设计只活在 FCLK0 一个时钟域里。
+// AXI3 适配(codex 方案 b,2026-11-20):
+//   - GP0 是 AXI3 方言,单拍事务也须返回 BID/RID/RLAST
+//   - 顶层反射 ID(BID=锁存的 AWID,RID=锁存的 ARID)
+//   - RLAST 常高:本从机每笔读只有一拍,RLAST 只在 RVALID=1 时有意义
+//   - WLAST 由 PS 驱动,传给从机确认"这是最后一拍数据"
+//   - aresetn 接 PS7.FCLKRESETN[0](不再绑死高)
 module axi_led_top (
-    output wire led        // R14,低电平点亮(本顶层在引脚侧取反)—— 本设计唯一的物理引脚
+    output wire led        // R14,低电平点亮(本顶层在引脚侧取反)
 );
 
     // ============ ① 复位策略 ============
-    // 本设计不需要复位:FCLK0 一停,全体触发器冻结(值保住);时钟回来,继续跑。
-    wire aresetn = 1'b1;
+    // 从 PS7 的 FCLKRESETN[0] 取复位(PS 可控制 PL 复位)
+    wire [3:0] fclk_reset_n_bus;
+    wire aresetn = fclk_reset_n_bus[0];
 
-    // ============ ② PS7 原语:从 ARM 那半边引出 FCLK0 和 GP0 ============
-    wire [3:0] fclk_bus;               // FCLKCLK 是 4 位总线(FCLK0~FCLK3),全接回来
-    wire fclk0 = fclk_bus[0];          // 只用 FCLK0:整个设计的唯一节拍(频率由 SLCR 寄存器定,默认配 50MHz)
+    // ============ ② PS7 原语 ============
+    wire [3:0] fclk_bus;
+    wire fclk0 = fclk_bus[0];
 
-    // GP0 总线(lab08 的 S_AXI_* 线,这里接上真 ARM)
+    // GP0 总线(含 AXI3 独有信号)
     wire [31:0] gp0_awaddr;
     wire        gp0_awvalid, gp0_awready;
+    wire [11:0] gp0_awid;             // AXI3:写地址 ID(PS 驱动)
     wire [31:0] gp0_wdata;
     wire        gp0_wvalid, gp0_wready;
+    wire        gp0_wlast;             // AXI3:写末拍标记(PS 驱动)
     wire        gp0_bvalid, gp0_bready;
     wire [1:0]  gp0_bresp;
     wire [31:0] gp0_araddr;
     wire        gp0_arvalid, gp0_arready;
+    wire [11:0] gp0_arid;             // AXI3:读地址 ID(PS 驱动)
     wire [31:0] gp0_rdata;
     wire        gp0_rvalid, gp0_rready;
     wire [1:0]  gp0_rresp;
 
+    // AXI3 ID 反射:锁存 AWID/ARID → 回给 BID/RID
+    reg [11:0] gp0_bid, gp0_rid;
+
+    always @(posedge fclk0) begin
+        if (!aresetn) begin
+            gp0_bid <= 12'd0;
+            gp0_rid <= 12'd0;
+        end else begin
+            if (gp0_awvalid && gp0_awready)
+                gp0_bid <= gp0_awid;
+            if (gp0_arvalid && gp0_arready)
+                gp0_rid <= gp0_arid;
+        end
+    end
+
     PS7 PS7_i (
-        .FCLKCLK         (fclk_bus),  // 时钟输出:4 位总线,只取 [0] 当 FCLK0(见上方 fclk0 声明)
-        .MAXIGP0ACLK     (fclk0),     // GP0 总线时钟同源 —— 同域,无 CDC
-        // ---- 写通道(AXI3 主侧 ↔ 我们的 AXI4-Lite)----
+        .FCLKCLK         (fclk_bus),
+        .FCLKRESETN      (fclk_reset_n_bus),   // PS→PL 复位(低有效)
+        .MAXIGP0ACLK     (fclk0),
+        // ---- 写通道 ----
         .MAXIGP0AWADDR (gp0_awaddr),
         .MAXIGP0AWVALID(gp0_awvalid),
         .MAXIGP0AWREADY(gp0_awready),
         .MAXIGP0AWPROT (),
+        .MAXIGP0AWID   (gp0_awid),             // AXI3:接回来!
         .MAXIGP0WDATA  (gp0_wdata),
         .MAXIGP0WVALID (gp0_wvalid),
         .MAXIGP0WREADY (gp0_wready),
         .MAXIGP0WSTRB  (),
+        .MAXIGP0WLAST  (gp0_wlast),             // AXI3:接回来!
         .MAXIGP0BVALID (gp0_bvalid),
         .MAXIGP0BREADY (gp0_bready),
         .MAXIGP0BRESP  (gp0_bresp),
-        // ---- AXI3 独有信号,挂空 = 置之不理(ch08 方案甲)----
-        .MAXIGP0AWID   (), .MAXIGP0WID (), .MAXIGP0WLAST (),
-        .MAXIGP0BID    (),
+        .MAXIGP0BID    (gp0_bid),               // AXI3:反射 AWID!
         // ---- 读通道 ----
         .MAXIGP0ARADDR (gp0_araddr),
         .MAXIGP0ARVALID(gp0_arvalid),
         .MAXIGP0ARREADY(gp0_arready),
         .MAXIGP0ARPROT (),
+        .MAXIGP0ARID   (gp0_arid),              // AXI3:接回来!
         .MAXIGP0RVALID (gp0_rvalid),
         .MAXIGP0RREADY (gp0_rready),
         .MAXIGP0RDATA  (gp0_rdata),
         .MAXIGP0RRESP  (gp0_rresp),
-        .MAXIGP0ARID   (), .MAXIGP0RID (), .MAXIGP0RLAST ()
-        // 其余几百个端口(DDR/MIO/中断/EMIO…)未列出 = 挂空,PS 侧自有人管
+        .MAXIGP0RID    (gp0_rid),               // AXI3:反射 ARID!
+        .MAXIGP0RLAST  (1'b1)                   // AXI3:单拍读,RLAST 恒 1
+        // 其余端口(DDR/MIO/中断…)挂空
     );
 
-    // ============ ③ 你的从机(lab08 的两寄存器版) ============
-    wire [31:0] ctrl;    // 0x00 偏移的影子
-    wire [31:0] speed;   // 0x04 偏移的影子
+    // ============ ③ 从机(lab08 两寄存器版,含背压修复) ============
+    wire [31:0] ctrl;
+    wire [31:0] speed;
 
     axi_lite_slave u_slave (
         .aclk(fclk0), .aresetn(aresetn),
         .s_axi_awaddr(gp0_awaddr[3:0]), .s_axi_awvalid(gp0_awvalid), .s_axi_awready(gp0_awready),
         .s_axi_wdata (gp0_wdata),      .s_axi_wvalid (gp0_wvalid),  .s_axi_wready (gp0_wready),
+        .s_axi_wlast (gp0_wlast),      // AXI3:末拍标记传给从机
         .s_axi_bvalid(gp0_bvalid),     .s_axi_bready (gp0_bready),  .s_axi_bresp  (gp0_bresp),
         .s_axi_araddr(gp0_araddr[3:0]),.s_axi_arvalid(gp0_arvalid), .s_axi_arready(gp0_arready),
         .s_axi_rvalid(gp0_rvalid),     .s_axi_rready (gp0_rready),  .s_axi_rresp  (gp0_rresp),
@@ -89,17 +102,14 @@ module axi_led_top (
         .ctrl(ctrl), .speed(speed)
     );
 
-    // ============ ④ L0 点灯 / L1 呼吸:一个寄存器决定挡位 ============
+    // ============ ④ 点灯/呼吸 ============
     wire breath_led;
     pwm_breather u_breath (
         .clk  (fclk0),
-        .speed(speed[15:0]),        // SPEED 只取低 16 位(思考题:写 0x10000 会怎样?)
+        .speed(speed[15:0]),
         .led  (breath_led)
     );
 
-    // SPEED=0 → 手动挡:LED 直接等于 CTRL 的 bit0(L0 点灯)
-    // SPEED>0 → 呼吸挡:LED 跟着呼吸灯跑,速度由 SPEED 定(L1 调速)
-    // R14 低电平点亮:引脚侧单点取反(内部一路保持"1=点亮意图"的约定)
     assign led = ~((speed[15:0] == 16'd0) ? ctrl[0] : breath_led);
 
 endmodule

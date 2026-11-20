@@ -52,6 +52,8 @@
   <p>三绿 → 走主路。未绿 → 全章走 <strong>Variant B</strong>(Vivado JTAG 烧写 + devmem),除装载动作外一切相同,<strong>课程照常毕业</strong>。</p>
 <p><strong>Variant B 实测战报(同日)</strong>:JTAG 烧写 PL 成功(bit 进了);但 Debian 侧 devmem 写 AXI 地址(0x40000000)后系统挂死(AXI 总线级,JTAG 验尸 DAP 脏)。分析:JTAG 烧只配 PL 不配 PS7 侧时钟/复位——FCLK0 使能(SLCR 写)与 AXI 访问之间可能有顺序/时序问题,或 AXI3/Lite 协议坑(见"待实测门")。<strong>Variant B 需进一步调试,暂标"已知问题"</strong>。如果学员想做会师,L0 最低方案=Lab01 的 bit 通过 JTAG 烧写(与 Debian 无交互,已在 Lab01 验证可行);L1 以上(AXI 交互)等本问题解决后再做。</p>
 <p><strong>可对号入座的串口遗言签名</strong>:日志最后两行是 <code>fpgaload: loading out-of-tree module taints kernel.</code> 与 <code>fpga_manager fpga0: writing ... to Xilinx Zynq FPGA Manager</code>,随后彻底静默——见到这两行=撞上本问题。另有GICv1 冷知识:安全态内核下 Group1 中断以 FIQ 送达(这就是全 Group1 方案杀死启动的原因——定时器也变成没人处理的 FIQ,jiffies 冻结在启动第 5 秒,JTAG 双读 jiffies 可判)。</p></div>
+  <div class="box box-warn"><div class="box-title">判定边界 · 三绿 ≠ GP0 通</div>
+  <p>三绿(灯亮 + ssh 活 + state=operating)证明的是<strong>PL 配上了、PS 活着</strong>——验收用的 lab01.bin 里根本没有 AXI 从机,所以它<strong>不能证明 GP0 通路可访问</strong>。GP0 真正打通还依赖:FCLK0 真的在跑(它同时充当总线 ACLK)、互连接受你的 AXI3/Lite 从机时序(坑 6 的预案)、PS-PL <strong>电平转换器</strong>使能(SLCR 的 LVL_SHFTR_EN,未开时 GP0 访问会直接挂死)。这些只有 L0 那条 devmem 写才算验收——三绿只是入场券。</p></div>
 
   <div class="box box-warn"><div class="t">战报更新(2026-11-20 实测)·主路与备路对调</div>
 <p>三种 GIC 分组方案(原始/全 Group1/全 Group0)均在 insmod 触发 PCAP 完成中断的瞬间冻结系统(JTAG 验尸:三次卡点分别在 FIQ 处理循环、内核启动 5 秒、中断进出路径)——<strong>病根不在 GIC 分组,在该内核 FIQ/NMI 机制与 PCAP 中断的组合,属内核级待解问题</strong>。</p>
@@ -133,10 +135,10 @@
   <h3>4 · FCLK0 域方案甲:N18 退役,谁给电路接电源</h3>
   <p>本设计有一个重大的人事变动:<strong>N18(板上 50MHz 晶振)退役了</strong>。从 lab01 到 lab07,它一直是你的心跳;现在整个设计改活在 FCLK0 域——时钟由 PS 供给。为什么?</p>
   <div class="box box-warn"><div class="box-title">不换域的那颗雷(ch03 回马枪)</div>
-  <p>假设设计继续跑 N18,而你的 CTRL/SPEED 寄存器活在 FCLK0 域(总线时钟只能用 FCLK,这是 PS7 的硬规矩)。ARM 写一个 32 位的 SPEED,这 32 位跨进 N18 域——<strong>多比特跨时钟域,数值撕裂</strong>:N18 采样瞬间恰好撞上多位翻转,SPEED 可能既不是旧值也不是新值(ch03 里你亲眼让计数器撕出过 7→15)。呼吸速度偶尔抽风、复现无门——这种 bug 是作品里的定时炸弹。</p>
+  <p>假设设计继续跑 N18,而你的 CTRL/SPEED 寄存器活在 FCLK0 域(本实验选择总线时钟与逻辑共用 FCLK0;严格说 GP0 的 ACLK 也可由 PL 侧回送供给——那是方案乙的自由,本课不走)。ARM 写一个 32 位的 SPEED,这 32 位跨进 N18 域——<strong>多比特跨时钟域,数值撕裂</strong>:N18 采样瞬间恰好撞上多位翻转,SPEED 可能既不是旧值也不是新值(ch03 里你亲眼让计数器撕出过 7→15)。呼吸速度偶尔抽风、复现无门——这种 bug 是作品里的定时炸弹。</p>
   <p>方案甲一刀斩:<strong>全体逻辑搬进 FCLK0 域,一个时钟,雷不存在</strong>。代价只有一条:FCLK0 的开关在 PS 手里——所以"使能 FCLK0"那条 devmem 命令,是这门课真正意义上的<strong>"Linux 的一条命令,给你的电路接上电源"</strong>:时钟不来,设计全体冻结;命令一到,呼吸开始。</p></div>
   <div class="box box-know"><div class="box-title">选做 · 方案乙(想练 CDC 技艺再看)</div>
-  <p>保持双域也能活:对 SPEED 逐位打两拍 + 握手脉冲(Gray 码只适合计数器,不适合任意值)。ch03 的知识在毕业章回收,教学上很美——但给顶点周加活,本课降为选做,默认方案甲。</p></div>
+  <p>保持双域也能活,但必须补齐<strong>三个前提</strong>,缺一个雷就回来:<strong>① 源端锁存整字</strong>——写脉冲期间 SPEED 的 32 位保持不变,不许边发边改;<strong>② 控制信号跨域同步</strong>——"有新值"这个脉冲要先在 N18 域打两拍再采样;<strong>③ 目的端确认后源端才更新</strong>——握手回包同样打两拍回来,源端在此之前不许装下一个值。嫌握手啰嗦就上<strong>异步 FIFO</strong> 一了百了(Gray 码只适合计数器,不适合任意值)。ch03 的知识在毕业章回收,教学上很美——但给顶点周加活,本课降为选做,默认方案甲。</p></div>
   <p>顺带一提,这是全书 <code>parameter</code> 主题的第三级跳:ch01 缩仿真时间、ch07 放大波特率(肉眼 UART)、ch09 换主频——<code>pwm_breather</code> 的时间公式按 FCLK0 重新算一遍(README 命令卡里已给结论)。注意 FCLK0 频率不是天上掉下来的:它由 PS 侧 SLCR(System Level Control Registers,系统级控制寄存器)的 0xF8000170 号寄存器决定,除数装多少、频率就是多少——先读回,再决定写不写。</p>
 
   <h3>5 · 手写 create_clock:时序报告对你的第一句谎话</h3>
@@ -164,9 +166,9 @@ devmem 0xF8000170 32 0x00101401      <span class="c"># 使能,IO PLL 1000MHz ÷2
 <span class="c"># L0 点灯 / 灭灯</span>
 devmem 0x40000000 32 0x00000001
 devmem 0x40000000 32 0x00000000</code></pre>
-  <p>那个魔数的账要算清:0x00101401 = <strong>bit0</strong>(时钟使能 CLKENABLE)| [13:8]=0x14(DIV0=20)| [25:20]=0x1(DIV1=1)| [17:16]=00(源选 IO PLL)——1000MHz ÷ 20 ÷ 1 = 50MHz。位域对照 Zynq TRM 的 FPGA0_CLK_CTRL,别背,会查。<span style="color:#7c3a12;">(解锁命令与位域拼装为待上板验证项。)</span></p>
+  <p>那个魔数的账要算清:0x00101401 = <strong>bit0</strong>(时钟使能 CLKENABLE)| [13:8]=0x14(DIV0=20)| [25:20]=0x1(DIV1=1)| [17:16]=00(源选 IO PLL)——1000MHz ÷ 20 ÷ 1 = 50MHz。位域对照 Zynq TRM 的 FPGA0_CLK_CTRL,别背,会查。<span style="color:#7c3a12;">(待实测注:解锁命令、寄存器字段定义与门控位置均待核验——外部核验进行中,暂标待实测;上板前请以 Zynq TRM 逐字段复核,勿直接照抄魔数。)</span></p>
   <div class="box box-know"><div class="box-title">地址是怎么算出来的(你的本能问题)</div>
-  <p><code>0x4000_0000</code> = GP0 的基址 + 偏移 0x00(CTRL)。单从机直挂 GP0 <strong>没有互连重映射</strong>:Verilog 里接的哪根地址线,ARM 就直达哪个偏移。0x4000_0000+0x04 = SPEED。软件里的"地址映射"四个字,在硬件侧就是一根译码线——两个世界在这里词汇表合并。</p></div>
+  <p><code>0x4000_0000</code> = GP0 的基址 + 偏移 0x00(CTRL)。单从机直挂 GP0 <strong>没有互连重映射</strong>:Verilog 里接的哪根地址线,ARM 就直达哪个偏移。0x4000_0000+0x04 = SPEED。软件里的"地址映射"四个字,在硬件侧就是一根译码线——两个世界在这里词汇表合并。还必须知道一个坑:本从机<strong>只译码地址 bit[2]</strong>——每 8 字节一镜像(0x08 = 0x00、0x0C = 0x04,bit[3] 及以上全部无视),<strong>写错偏移不是被忽略,而是可能真改了寄存器</strong>;配上"未映射偏移也回 OKAY",偏移写错的账只能靠读回核对来查。</p></div>
 
   <h3>7 · 动手:L1 接上呼吸,改速度</h3>
   <p>L0 的 LED 是"电灯开关";L1 把 ch05 的呼吸灯接进挡位:SPEED 非 0 即呼吸挡,数值越大越慢:</p>
@@ -224,7 +226,7 @@ devmem 0x40000004                  <span class="c"># 读回:应回显 0x5FB(读 
   <p><strong>C(排错题)</strong>· 同学说"我 LED 不亮,但 devmem 读回 0x40000000 能正确回显写进去的值"。从机活着、灯却不动——列出你怀疑的三个站点。</p>
   <details><summary>展开答案(先自己答,再对)</summary>
   <p><strong>A</strong>:用户态进程摸不到物理地址;devmem 通过 /dev/mem(内核开的物理内存窗口)替你读写。这也是 mmap 一类工具的共同原理——你移植期早就会,此题是给信心。</p>
-  <p><strong>B</strong>:约束改严一倍,Vivado 按 100MHz 检查同一条电路,WNS 大约减半(可能仍为正,因为这个设计很轻)。但<strong>板上什么都不会变</strong>——约束只影响工具的分析口径,不改电路;真实节拍由 FCLK0 决定。约束写错 ≠ 电路跑错,但要记住:约束是你对工具的承诺,承诺错账就全错。</p>
+  <p><strong>B</strong>:周期从 20ns 压到 10ns,Vivado 按 100MHz 检查同一条电路——同一条件的路径余量线性减少,WNS <strong>大约减少 10ns</strong>(从"20ns − 路径延迟"变成"10ns − 路径延迟";可能仍为正,这个设计很轻),而不是笼统的"减半"。但<strong>板上什么都不会变</strong>——约束只影响工具的分析口径,不改电路;真实节拍由 FCLK0 决定。另注意:重新综合/实现可能改变映射与走线,WNS 未必恰好等于"原值 − 10ns",且每次改完约束都应检查报告有没有冒出 no_clock / unconstrained 路径——那说明约束没吃上,WNS 又成了假账。约束写错 ≠ 电路跑错,但要记住:约束是你对工具的承诺,承诺错账就全错。</p>
   <p><strong>C</strong>:① SPEED 寄存器非 0——挡位 mux 在呼吸挡,CTRL bit0 不通到 LED(写 0x40000004 清零即验);② LED 写的是 0x40000000 吗——写串到未映射偏移(本从机未映射也回 OKAY,见 lab09 思考题);③ R14 引脚/LED 硬件本身(JTAG 烧个 lab01 lab01.bin 隔离验证)。读回正确证明的总线与寄存器半区是好的,排查应向"寄存器之后"走。</p>
   </details>
 

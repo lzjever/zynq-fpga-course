@@ -51,7 +51,10 @@
   <p>① 装载后 LED 亮;② ssh 仍活着(系统没冻);③ <code>cat /sys/class/fpga_manager/fpga0/state</code> 输出 <code>operating</code>。</p>
   <p>三绿 → 走主路。未绿 → 全章走 <strong>Variant B</strong>(Vivado JTAG 烧写 + devmem),除装载动作外一切相同,<strong>课程照常毕业</strong>。</p></div>
 
-  <h3>1 · 钩子:这一天你等了两条技能树</h3>
+  <div class="box box-warn"><div class="t">战报更新(2026-11-20 实测)·主路与备路对调</div>
+<p>三种 GIC 分组方案(原始/全 Group1/全 Group0)均在 insmod 触发 PCAP 完成中断的瞬间冻结系统(JTAG 验尸:三次卡点分别在 FIQ 处理循环、内核启动 5 秒、中断进出路径)——<strong>病根不在 GIC 分组,在该内核 FIQ/NMI 机制与 PCAP 中断的组合,属内核级待解问题</strong>。</p>
+<p><strong>因此本课主线改为 Variant B(Vivado JTAG 烧写 + Debian devmem 点灯)</strong>,fpga_mgr 路线降级为"已知问题研究"(想挑战内核调试的同学按下方战地日记深入)。注意:全 Group1 方案(u-boot 写 0xFFFFFFFF 到 IGROUPR)会破坏内核启动,勿用;全 Group0 版启动正常,可留。</p></div>
+<h3>1 · 钩子:这一天你等了两条技能树</h3>
   <p>回想你手上的两件东西:一条技能树是<strong>去年亲历的</strong>主线 Linux 移植——U-Boot、内核、Debian、JTAG 调试,你从零搭起了 ARM 这半边;另一条是<strong>这门课</strong>——从 led_blink 的 33 行到 AXI 从机,你一块块垒起了 FPGA 这半边。</p>
   <p>现在看这行命令:</p>
   <pre><code>devmem 0x40000000 32 0x00000001</code></pre>

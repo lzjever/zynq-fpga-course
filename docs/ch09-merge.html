@@ -49,7 +49,8 @@
   <div class="box box-warn"><div class="box-title">前置验收门 · FIQ 修复三绿(未过不堵车,走 Variant B)</div>
   <p>主路(FPGA Manager 装载)要求先用 <strong>lab01 的 lab01.bin</strong> 验收 FIQ 修复:</p>
   <p>① 装载后 LED 亮;② ssh 仍活着(系统没冻);③ <code>cat /sys/class/fpga_manager/fpga0/state</code> 输出 <code>operating</code>。</p>
-  <p>三绿 → 走主路。未绿 → 全章走 <strong>Variant B</strong>(Vivado JTAG 烧写 + devmem),除装载动作外一切相同,<strong>课程照常毕业</strong>。</p></div>
+  <p>三绿 → 走主路。未绿 → 全章走 <strong>Variant B</strong>(Vivado JTAG 烧写 + devmem),除装载动作外一切相同,<strong>课程照常毕业</strong>。</p>
+<p><strong>可对号入座的串口遗言签名</strong>:日志最后两行是 <code>fpgaload: loading out-of-tree module taints kernel.</code> 与 <code>fpga_manager fpga0: writing ... to Xilinx Zynq FPGA Manager</code>,随后彻底静默——见到这两行=撞上本问题。另有GICv1 冷知识:安全态内核下 Group1 中断以 FIQ 送达(这就是全 Group1 方案杀死启动的原因——定时器也变成没人处理的 FIQ,jiffies 冻结在启动第 5 秒,JTAG 双读 jiffies 可判)。</p></div>
 
   <div class="box box-warn"><div class="t">战报更新(2026-11-20 实测)·主路与备路对调</div>
 <p>三种 GIC 分组方案(原始/全 Group1/全 Group0)均在 insmod 触发 PCAP 完成中断的瞬间冻结系统(JTAG 验尸:三次卡点分别在 FIQ 处理循环、内核启动 5 秒、中断进出路径)——<strong>病根不在 GIC 分组,在该内核 FIQ/NMI 机制与 PCAP 中断的组合,属内核级待解问题</strong>。</p>

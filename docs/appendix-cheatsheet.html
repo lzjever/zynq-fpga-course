@@ -124,7 +124,15 @@
     <tr><td>怀疑板子热坏了</td><td>XADC 量体温,和基准 55°C 比</td><td>公式与三行命令在 <a href="appendix-board.html">附A.8</a>;显著高于基准且爬升才需要查</td></tr>
   </table>
 
-  <div class="pager">
+  <h3>JTAG 冻结验尸四件套(内核冻住时的取证)</h3>
+<table>
+<tr><th>招式</th><th>命令</th><th>判读</th></tr>
+<tr><td>① 内核活没活</td><td><code>mdw &lt;jiffies地址&gt;</code> 隔 3 秒读两次(nm vmlinux 查地址)</td><td>增量&gt;0=定时器活着;jiffies 冻结=中断投递全灭</td></tr>
+<tr><td>② 卡在哪</td><td><code>halt; reg pc; reg lr; reg sp</code> → 用 <code>arm-linux-gnueabihf-nm vmlinux | sort | awk '$1&lt;="PC值"' | tail -1</code> 解析符号</td><td>PC 落点即案发第一现场</td></tr>
+<tr><td>③ 中断屏蔽状态</td><td><code>reg cpsr</code></td><td>bit7 I=1 IRQ 被屏蔽;bit6 F=1 FIQ 被屏蔽</td></tr>
+<tr><td>④ 借安全态核代写</td><td><code>targets zynq.cpu1; halt; mww phys &lt;安全区地址&gt; &lt;值&gt;</code></td><td>暂停态核以自身安全身份执行写入,FIQ 在调试态被硬件抑制;可注入 SGI(0xF8F01F00)测中断投递</td></tr>
+</table>
+<div class="pager">
     <a href="appendix-glossary.html">← 上一页:附录 B 术语表</a>
     <a href="index.html">回到封面:课程地图 →</a>
   </div>

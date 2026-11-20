@@ -345,7 +345,9 @@
     </ul>
   </div>
 
-  <div class="pager">
+  <div class="box box-know"><div class="t">知识 · PS 冻死时,PL 为什么还活着?</div>
+<p>本项目三次实测:内核被 FIQ 风暴冻成雕像后,PL 里已配置的电路(LED 闪烁)照常运行——因为 PL 是<strong>纯硬件电路</strong>,不依赖内核调度;只要供电和时钟在,计数器就永远数下去。这正是 ch00"电路 vs 程序"心智模型的终极现场版:<strong>程序会死,电路不会</strong>。实用推论:调试时若串口死了但 PL 现象还在,说明"内核挂了、芯片没挂"——拔电重来即可,芯片没有损坏(本板如此冻了一整夜,毫发无伤)。</p></div>
+<div class="pager">
     <a href="ch10-capstone.html">← 上一页:毕业设计</a>
     <a href="appendix-glossary.html">下一页:附录 B 术语表 →</a>
   </div>

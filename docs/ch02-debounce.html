@@ -75,29 +75,32 @@
   <p>思路一句话:<strong>信号想改变"判定电平"?可以,先连续稳定地保持 20ms(100 万拍)给我看。中途抖回原电平哪怕一拍,计时器清零重数。</strong>抖动的单次弹跳只有几微秒到几毫秒,凑不满 100 万拍——全被滤掉。手指真正按稳之后,计时器才能一鼓作气数满,判定才改口。</p>
   <div class="fig" style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px;margin:20px 0;">
   <svg viewBox="0 0 860 310" xmlns="http://www.w3.org/2000/svg">
-    <!-- key_n bounce -->
+    <!-- key_n bounce(极性与 P14 一致:松开=1 高、按下=0 低)-->
     <text x="16" y="66" font-size="12.5" font-family="Consolas,monospace" fill="#1a2332">key_n</text>
-    <polyline points="40,80 110,80 110,60 122,60 122,80 134,80 134,60 148,60 148,80 160,80 160,60 174,60 174,80 186,80 186,60 480,60 480,80 492,80 492,60 504,60 504,80 516,80 516,60 528,60 528,80 540,80 540,60 760,60" fill="none" stroke="#b3541e" stroke-width="2"/>
-    <!-- key_stable -->
+    <polyline points="40,60 110,60 110,80 122,80 122,60 134,60 134,80 148,80 148,60 160,60 160,80 174,80 174,60 186,60 186,80 480,80 480,60 492,60 492,80 504,80 504,60 516,60 516,80 528,80 528,60 540,60 540,80 552,80 552,60 760,60" fill="none" stroke="#b3541e" stroke-width="2"/>
+    <!-- key_stable(1=松开,0=按下)-->
     <text x="16" y="146" font-size="12.5" font-family="Consolas,monospace" fill="#1a2332">key_stable</text>
-    <polyline points="40,160 300,160 300,140 660,140 660,160 760,160" fill="none" stroke="#1d5c8a" stroke-width="2.5"/>
-    <!-- tick -->
+    <polyline points="40,140 300,140 300,160 660,160 660,140 760,140" fill="none" stroke="#1d5c8a" stroke-width="2.5"/>
+    <!-- tick(只在 key_stable 的 1→0 按下沿出一拍)-->
     <text x="16" y="216" font-size="12.5" font-family="Consolas,monospace" fill="#1a2332">tick</text>
-    <polyline points="40,230 298,230 298,210 306,210 306,230 760,230" fill="none" stroke="#2e7d32" stroke-width="2.5"/>
-    <text x="316" y="224" font-size="11.5" fill="#2e7d32">恰好一拍</text>
+    <polyline points="40,230 300,230 300,210 308,210 308,230 760,230" fill="none" stroke="#2e7d32" stroke-width="2.5"/>
+    <text x="318" y="224" font-size="11.5" fill="#2e7d32">恰好一拍</text>
     <!-- annotations -->
     <path d="M 110 40 h 76" stroke="#7c3a12" stroke-width="1.5" fill="none"/>
     <text x="118" y="32" font-size="11.5" fill="#7c3a12">抖动区(弹跳几次~几十次)</text>
     <line x1="186" y1="40" x2="186" y2="240" stroke="#8b95a3" stroke-width="1" stroke-dasharray="4 4"/>
     <text x="150" y="258" font-size="11" fill="#8b95a3">弹跳安分 ↓</text>
     <line x1="300" y1="40" x2="300" y2="240" stroke="#1d5c8a" stroke-width="1" stroke-dasharray="4 4"/>
+    <line x1="660" y1="40" x2="660" y2="240" stroke="#8b95a3" stroke-width="1" stroke-dasharray="4 4"/>
     <path d="M 186 108 h 114" stroke="#1d5c8a" stroke-width="1.5"/>
     <text x="196" y="100" font-size="11.5" fill="#1d5c8a">数满 100 万拍 → 改判</text>
-    <text x="248" y="182" font-size="11.5" fill="#1d5c8a">判定:按下</text>
+    <text x="60" y="132" font-size="11.5" fill="#1d5c8a">判定:松开</text>
+    <text x="340" y="182" font-size="11.5" fill="#1d5c8a">判定:按下</text>
     <text x="384" y="130" font-size="11.5" fill="#4a5568">松开同样要消抖(释放也会抖,但按下沿才报 tick)</text>
-    <text x="616" y="152" font-size="11" fill="#4a5568">稳定 → 改判:松开</text>
+    <text x="664" y="132" font-size="11.5" fill="#1d5c8a">改判:松开</text>
+    <text x="668" y="226" font-size="11" fill="#8b95a3">松开沿 → 不报 tick</text>
   </svg>
-  <div style="font-size:13px;color:#4a5568;margin-top:10px;">图 1 · 消抖 = 时间滤波器(时间轴不成比例:抖动区与稳定窗都做了压缩)</div>
+  <div style="font-size:13px;color:#4a5568;margin-top:10px;">图 1 · 消抖 = 时间滤波器(极性与 P14 一致:松开 = 1 高、按下 = 0 低;时间轴不成比例:抖动区与稳定窗都做了压缩)</div>
   </div>
   <p>注意一件妙事:这个电路<strong>本质是一台只有两个状态的小机器</strong>(判定"松开"↔判定"按下"),转移条件是"稳定满 20ms"。ch06(UART 发送器)会给这种东西正名——<strong>状态机</strong>,并让它挑大梁。今天先不展开,记住这幅两格漫画即可。</p>
 
@@ -111,7 +114,8 @@
   <div class="box box-warn"><div class="box-title">兑现承诺 · 边沿检测为什么必须用 &lt;=(ch00 埋的伏笔)</div>
   <p>ch00 说过:时序块里一律用 <code>&lt;=</code>,说好"ch02 展开"。<strong>这里就是生死攸关的地方</strong>,现在兑现:<br>
   非阻塞赋值 <code>&lt;=</code> 的语义是"<strong>全体先读旧值,时钟沿之后一起更新</strong>"。所以 <code>key_stable_q &lt;= key_stable</code> 在改判的那个时钟沿,读到的是<strong>改判前的旧值</strong>(还是 1);沿过后 key_stable 变 0 而 key_stable_q 还是 1——这一拍 <code>tick</code> 为高。下一拍照片更新,两个都成 0,tick 落下。<strong>恰好一拍,分毫不差。</strong><br>
-  如果这里用阻塞赋值 <code>=</code>:赋值立刻生效,"照片"瞬间变成新值,旧值永远拍不到——tick 要么出不来,要么仿真和综合行为分家,板上时对时错。ch00 铁律一的"为什么",到此结案。</p></div>
+  如果这里用阻塞赋值 <code>=</code>:赋值立刻生效,"照片"瞬间变成新值,旧值永远拍不到——tick 要么出不来,要么仿真和综合行为分家,板上时对时错。ch00 铁律一的"为什么",到此结案。<br>
+  再补一句诚实话:阻塞赋值在这里<strong>到底炸不炸,取决于仿真器对两个 always 块的调度顺序</strong>(阻塞混进时序块属于竞争条件,IEEE 不保证结果,不同仿真器可能给出不同答案)——本课不教你背调度表,只教一条永远不踩雷的规则:<strong>时序块一律 <code>&lt;=</code>,组合逻辑用 <code>=</code></strong>。</p></div>
   <div class="box box-know"><div class="box-title">知识 · 毛刺:组合逻辑的天然抖动</div>
   <p><code>tick</code> 是 <code>assign</code>(组合逻辑)算出来的线。<strong>毛刺(Glitch)</strong>指组合逻辑在输入翻转的瞬间、输出短暂地乱抖一下——门 delay 不齐造成的,真实电路里无法避免。为什么这里不怕?因为 <code>tick</code> 的两个输入都是触发器输出,只在时钟沿后变化;而它的<strong>下游(T 触发器)只在下一个时钟沿采样</strong>——毛刺活不到被采样的那一刻就稳了。记住设计纪律:<strong>组合逻辑的输出,永远只喂给时钟沿,不当时钟用。</strong></p></div>
 
@@ -124,7 +128,7 @@
     <tr><td>R1 稳定判定</td><td>内部维护判定电平 <code>key_stable</code>(1=松开,0=按下)。仅当 <code>key_n</code> 与判定<strong>连续不一致满 STABLE_CYCLES 拍</strong>才改判;中途任何一拍一致即计时清零。<strong>信号名是规定的</strong>——测试台要按名字直接观察它(分层引用,仿真的特权)</td></tr>
     <tr><td>R2 按下沿脉冲</td><td><code>key_stable</code> 每次 1→0(可靠按下),<code>tick</code> 输出<strong>恰好一个时钟宽</strong>的脉冲;松开沿(0→1)不输出</td></tr>
     <tr><td>R3 抗抖</td><td>任何短于稳定窗的抖动/毛刺(含"差 20 拍数满"的长毛刺)不得改变判定、不得出 tick</td></tr>
-    <tr><td>R4 参数化</td><td>以上行为对任意 <code>STABLE_CYCLES</code> 成立(三关之关 3 用 50/200/400 验证)</td></tr>
+    <tr><td>R4 参数化</td><td>以上行为对 <code>STABLE_CYCLES</code> 取 <strong>1 至 1_048_576 拍</strong>成立——参考实现的计数器固定 20 位,上限 2<sup>20</sup> = 1_048_576;需要更大窗口,请先加宽计数器(三关之关 3 用 50/200/400 验证)</td></tr>
   </table>
 
   <h3>动手:先写后看,三关验收</h3>
@@ -257,20 +261,24 @@
     <li>对照记忆:同样的手指,同样的按键,20 行裸版乱翻,消抖版服服帖帖——<strong>差异只隔一层"数满 100 万拍"</strong>;</li>
     <li>把两版现象记进 README 的现象记录表(交作业的一部分)。</li>
   </ol></div>
+  <div class="box box-warn"><div class="box-title">观察条件 · 肉眼验收的两条边界</div>
+  <p>① <strong>肉眼分不清 0 次和 2 次</strong>:若某种 bug 让按下沿、松开沿各翻一次,LED 转一圈回到原状态,看起来和"没翻"一模一样——"50 次零失误"实际验的是"每次按压后 LED 状态有变",要较真请逐次核对亮灭状态(或录视频逐帧数);② <strong>快按可能丢 tick,且属预期</strong>:松开后不足 20ms(稳定窗)就再按,<code>key_stable</code> 还没改判回"松开",第二次按下没有 1→0 沿可报——tick 丢失不是 bug,是滤波器在按规矩办事。验收三连请用正常节奏按。</p></div>
   <div class="box box-warn"><div class="box-title">警告 · 本课你的手指整天在按键区</div>
   <p>丝印 <strong>PL_KEY</strong>(P14)才是我们的按键;丝印 <strong>RST</strong> 的那颗是<strong>整芯片硬复位</strong>:按一下,PL 里你的电路全部消失,Debian 跟着重启。消抖实验按错一次 = 现象全没 + 重烧。肌肉记忆从今天练:按之前瞄一眼丝印。(附录 A 有惨案专页。)</p></div>
   <div class="box box-know"><div class="box-title">选做 · 自由发挥(现象可预测)</div>
-  <p>把 R14 改接到稳定计时器 <code>cnt</code> 的高位(比如 <code>cnt[19]</code>)之类的地方看看?可以,但先写预测:按住按键期间,计时器数到 100 万要 20ms,<code>cnt[19]</code> 在这 20ms 里翻转数次——LED 呈现<strong>极暗的快速闪烁</strong>(又是眼睛在平均!ch01 的知识回来串门)。现象对得上预测才许算"玩过了"。</p></div>
+  <p>把 R14 改接到稳定计时器 <code>cnt</code> 的高位(比如 <code>cnt[19]</code>)之类的地方看看?可以,但先写预测——而且 R14 是<strong>低电平点亮</strong>(输出 0 才亮)。计数窗内 cnt 从 0 数到 999_999:数到 524_288 拍(10.486ms)时 <code>cnt[19]</code> 变 1,改判清零时又回 0。所以每次按下/松开后,现象是<strong>常亮背景上的一次短暂熄灭</strong>:边缘后约 10.5ms 起 LED 熄灭约 9.5ms(475_712 拍),随即亮回——改判后信号与判定一致,cnt 停在 0,LED 常亮等待下一次边缘。<strong>不是</strong>"极暗的快速闪烁":计数器每个窗口只跑一趟,cnt[19] 每窗至多翻两次,没有连续翻转可供眼睛平均。现象对得上预测才许算"玩过了"。</p></div>
 
   <h3>常见坑</h3>
   <div class="box box-warn"><div class="box-title">坑 1 · 裸版"看起来也正常"?</div>
   <p>抖动是概率现象:有的按键组合恰好在采样沿之间弹完,裸版偶尔也"按一次翻一次"。别被一次正常骗了——多按、快按、轻按。工程结论同理:<strong>"从来没错过"不等于"不会错"</strong>,这句话下一章还会回来(而且是带着公式回来)。</p></div>
   <div class="box box-warn"><div class="box-title">坑 2 · 测试台的 20ms 变成 20ns(假通过)</div>
   <p>ch01 预告的坑到了:测试台里写 <code>#20_000_000</code> 想表示 20ms,若 <code>timescale</code> 是 <code>1ns/1ps</code>,它确实等于 20ms——但如果你想仿真"缩小的稳定窗"却忘了同步改 DUT 参数,就会看到假 PASS/假 FAIL。本课测试台<strong>所有时长都用"时钟拍数"写</strong>(<code>repeat (…) @(posedge clk)</code>),换参数换板子都不用改——学走这个习惯。</p></div>
-  <div class="box box-warn"><div class="box-title">坑 3 · tick 报了松开沿:按一次翻两次</div>
-  <p>如果你的边沿检测写成 <code>~key_stable_q &amp; key_stable</code>(0→1,松开沿也报),现象很直白:按一次 LED 翻<strong>两次</strong>(按下翻一次,松开又翻一次)。看到"翻两次"先查极性——需求书 R2 规定只报按下沿。</p></div>
+  <div class="box box-warn"><div class="box-title">坑 3 · 极性写反:tick 报成了松开沿</div>
+  <p>如果把边沿检测写成 <code>~key_stable_q &amp; key_stable</code>(0→1),它检测到的是<strong>松开沿而不是按下沿</strong>——注意这是"替换"不是"多报":一次完整的按-松仍然只有 1 个 tick,只是翻转被挪到了<strong>松手约 20ms 之后</strong>。验收三连的第三连能暴露它:按住 3 秒不放,松手前 LED 纹丝不动,松手后才翻。(真想做到"按一次翻两次",得两个沿都报——比如写成异或 <code>key_stable_q ^ key_stable</code>。)看到翻转时刻不对先查极性——需求书 R2 规定只报按下沿(1→0)。</p></div>
   <div class="box box-warn"><div class="box-title">坑 4 · "数满就锁存"的误解</div>
   <p>常见错误实现:计时器只管累加、不管中途一致不一致("累计满 100 万就改判")。抖动期间的碎片时间加起来也能凑满 100 万拍——毛刺被当成稳定按压,<strong>乱翻从正门回来</strong>。滤波器的灵魂是"连续"二字:抖回原电平哪怕一拍,清零重数。这也是自测 A2 的题。</p></div>
+  <div class="box box-warn"><div class="box-title">坑 5 · 差一拍也过三关——三关验功能,不验精确阈值</div>
+  <p>把比较条件写成 <code>cnt == STABLE_CYCLES</code>(多数一拍)或 <code>cnt == STABLE_CYCLES-2</code>(少一拍),三关<strong>照样全 PASS</strong>:测试台的按压场给了"稳定窗 + 50 拍"的余量,长毛刺场只比窗口短 20 拍——±1 拍的偏差两边都察觉不到。三关验的是<strong>功能</strong>(滤抖、恰好 1 个 tick、换参数仍成立),<strong>不验窗口精确到拍</strong>。要验精确阈值,得在仿真里单独量"弹跳安分到 <code>key_stable</code> 改判"的拍数,与 <code>STABLE_CYCLES</code> 严格对账。</p></div>
 
   <h3>小结</h3>
   <div class="box box-win"><div class="box-title">本章一句话</div>
